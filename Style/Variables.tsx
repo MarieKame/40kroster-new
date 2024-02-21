@@ -1,7 +1,7 @@
 import { Dimensions, Platform } from "react-native";
 
 const windowDimensions = Dimensions.get('window');
-const zoom = Platform.OS=="web"? 1.3:1;
+const zoom = Platform.OS=="web"? 1.4:1;
 const baseUnitMargin = 16;
 const Variables = {
     boxBorder:"solid 1px",
@@ -21,13 +21,13 @@ const Variables = {
         WHBI: 'Warhammer-ItalicBold'
     },
     fontSize:{
-        big:18,
-        normal:12,
-        small:11
+        big:Platform.OS=="web"?24:18,
+        normal:Platform.OS=="web"?16:11,
+        small:Platform.OS=="web"?14:9
     },
     unitMargin:baseUnitMargin*zoom,
     width:windowDimensions.width,
-    unitWidth:windowDimensions.width-(baseUnitMargin*zoom),
+    unitWidth:windowDimensions.width-(baseUnitMargin*zoom + (Platform.OS=="web"?60:0)),
     zoom: zoom
 }
 

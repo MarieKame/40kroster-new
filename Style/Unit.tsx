@@ -8,11 +8,12 @@ const Style = StyleSheet.create({
         borderRadius: Variables.boxBorderRadius,
         borderColor:Variables.colourDark,
         padding:10 * Variables.zoom,
-        width:"100%",
+        width:Variables.unitWidth,
         backgroundColor: Variables.colourBg,
         color: Variables.colourDark,
         zIndex:10 * Variables.zoom,
-        alignSelf:"center"
+        alignSelf:"center",
+        marginBottom:20,
     },
     nameView:{
         flexDirection:"row"
@@ -96,9 +97,6 @@ const Style = StyleSheet.create({
     weaponList:{
         marginTop:4 * Variables.zoom
     },
-    weaponTitle:{
-        fontFamily:Variables.fonts.spaceMarine
-    },
     weaponLine:{
         alignSelf: 'stretch',
         flexDirection:"row",
@@ -110,12 +108,19 @@ const Style = StyleSheet.create({
     },
     specialEquipment:{},
     title:{
-        backgroundColor:Variables.colourAccent
+        lineHeight:16,
+        paddingLeft:4*Variables.zoom,
+        alignSelf: 'stretch',
+        backgroundColor:Variables.colourAccent,
+        fontFamily:Variables.fonts.spaceMarine
     },
     subtitle:{
-        backgroundColor:Variables.colourLightAccent
+        backgroundColor:Variables.colourLightAccent,
+        marginTop:4 * Variables.zoom,
+        margin:2*Variables.zoom
     },
     description:{
+        fontSize:Variables.fontSize.small
     },
     
     weapons:{},
@@ -123,11 +128,16 @@ const Style = StyleSheet.create({
     other:{
         marginTop:4*Variables.zoom
     },
-    rulesTitle:{},
     rule:{
+        flexBasis:"50%",
+        padding:4 * Variables.zoom
+    },
+    ruleTitle:{
+        backgroundColor:Variables.colourLightAccent,
+        paddingLeft:4*Variables.zoom
     },
     more:{
-        marginLeft:4*Variables.zoom
+        marginLeft:8*Variables.zoom
     },
     keywords:{
         flexDirection:"row",

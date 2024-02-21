@@ -2,10 +2,11 @@ import React from "react";
 import {StatsData, UnitData} from "./UnitData";
 import Weapon from './UnitDetails/Weapon';
 import {View} from 'react-native';
-import {Text, Descriptor} from './Components/Text';
+import {Text, Descriptor, ComplexText} from './Components/Text';
 import Style from '../Style/Unit';
 import WeaponStyle from '../Style/Weapon';
 import IsOdd from "./Components/IsOdd";
+import Variables from "../Style/Variables";
 
 interface Props {
     data:UnitData
@@ -54,14 +55,14 @@ class Unit extends React.Component<Props> {
         if (weapons.length > 0) {
             let key= 0; 
             renderedWeapons = <View style={Style.weaponList}>  
-            <View style={[Style.title, Style.weaponLine, Style.weaponSectionTitle]}><Text style={Style.weaponTitle}>{title}</Text>
+            <View style={[Style.title, Style.weaponLine, Style.weaponSectionTitle]}><Text style={Style.title}>{title}</Text>
                 <View style={Style.statsBar}>
-                    <Text style={[WeaponStyle.range, WeaponStyle.data]} key="R">Range</Text>
-                    <Text style={[WeaponStyle.other, WeaponStyle.data]} key="A">A</Text>
-                    <Text style={[WeaponStyle.other, WeaponStyle.data]} key="BS">BS</Text>
-                    <Text style={[WeaponStyle.other, WeaponStyle.data]} key="S">S</Text>
-                    <Text style={[WeaponStyle.other, WeaponStyle.data]} key="AP">AP</Text>
-                    <Text style={[WeaponStyle.other, WeaponStyle.data]} key="D">D</Text>
+                    <Text style={WeaponStyle.statData} key="R">R</Text>
+                    <Text style={WeaponStyle.statData} key="A">A</Text>
+                    <Text style={WeaponStyle.statData} key="BS">BS</Text>
+                    <Text style={WeaponStyle.statData} key="S">S</Text>
+                    <Text style={WeaponStyle.statData} key="AP">AP</Text>
+                    <Text style={WeaponStyle.statData} key="D">D</Text>
                 </View> 
                 </View>
                 {weapons.map((wpn)=>
@@ -71,7 +72,7 @@ class Unit extends React.Component<Props> {
         }
         return renderedWeapons;
     }
-
+    ruleKey = 0;
     render(){
         let stats = this.props.data.GetStats();
         let ivValue;
@@ -96,13 +97,11 @@ class Unit extends React.Component<Props> {
                 {this.props.data.OtherEquipment.map((wpn)=>
                     <View style={[Style.specialEquipment]} key={otherEquipKey++}>
                         <Text style={Style.subtitle}>{wpn.Name}</Text>
-                        <Descriptor>{wpn.Data}</Descriptor>
+                        <ComplexText style={Style.more} fontSize={Variables.fontSize.small}>{wpn.Data}</ComplexText>
                     </View>
                 )}
             </View>;
         }
-
-        let ruleKey=0;
         
         return  <View style={Style.unit}>
                     <View style={Style.nameView}><Text style={Style.name}>{this.props.data.CustomName !== null?this.props.data.CustomName:this.props.data.Name}</Text></View>
@@ -121,12 +120,14 @@ class Unit extends React.Component<Props> {
                             <Descriptor style={[Style.more, Style.bold]}>[
                                 {this.props.data.Rules.map((rule)=>rule.Name).join(', ')}
                             ]</Descriptor>
-                            {this.props.data.Profiles.map((ruleDescriptor)=>
-                            <View style={Style.rule} key={ruleKey++}>
-                                <Text style={Style.subtitle}>{ruleDescriptor.Name}</Text>
-                                <Descriptor style={Style.more}>{ruleDescriptor.Description}</Descriptor>
+                            <View style={{flexDirection: 'row', flexWrap: 'wrap', width:"100%"}}>
+                                {this.props.data.Profiles.map((ruleDescriptor)=>
+                                <View style={Style.rule} key={this.ruleKey++}>
+                                    <Text style={Style.ruleTitle}>{ruleDescriptor.Name}</Text>
+                                    <ComplexText style={Style.more} fontSize={Variables.fontSize.small}>{ruleDescriptor.Description}</ComplexText>
+                                </View>
+                                )}
                             </View>
-                            )}
                         </View>
                     </View>
                     <View style={Style.keywords}>

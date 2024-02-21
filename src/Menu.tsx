@@ -1,5 +1,5 @@
 import React from "react";
-import {Pressable, View, BackHandler, Platform} from 'react-native';
+import {View, BackHandler, Platform, Image} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import JSZip from "jszip";
 import * as DocumentPicker from 'expo-document-picker';
@@ -13,10 +13,11 @@ import RosterMenuEntry from './RosterMenuEntry';
 import Roster from './Roster';
 import Button from "./Components/Button";
 import Variables from "../Style/Variables";
+import Options from './Options';
 
 
 enum DisplayStateType {
-    MENU, DISPLAY_ROSTER
+    MENU, DISPLAY_ROSTER, OPTIONS
 }
 
 const STORAGE_KEY = "stored_rosters_40k_app";
@@ -60,14 +61,18 @@ class Menu extends React.Component{
         super(props);
         this.loadData(this);
         this.fetchFonts(this);
+        let that = this;
 
         try{
             BackHandler.addEventListener('hardwareBackPress', function () {
-                switch(this.state.DisplayState) {
+                switch(that.state.DisplayState) {
                     case DisplayStateType.MENU : 
                         return false;
                     case DisplayStateType.DISPLAY_ROSTER : 
-                        this.setState({DisplayState:DisplayStateType.MENU});
+                        that.setState({DisplayState:DisplayStateType.MENU});
+                        return true;
+                    case DisplayStateType.OPTIONS : 
+                        that.setState({DisplayState:DisplayStateType.MENU});
                         return true;
                 }
                 return false;
@@ -191,24 +196,22 @@ class Menu extends React.Component{
         function displayMenuItem(rosters?: Array<RosterMenuEntry>) {
             if (!rosters) return "";
             return rosters.map((roster, index) => 
-                <View style={{flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', width:"100%"}}>
+                <View style={{flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', width:"100%"}} key={index}>
                     <View style={{width:"50%", flexDirection:"row"}}>
                         <Button onPress={(e) => that.viewRoster(index)} style={{flex:1, height:60}}>{roster.Name}{roster.Cost&&("\n( "+roster.Cost+" )")}</Button>
-                        <Button onPress={(e) => that.deleteRoster(index)} textStyle={{fontSize:20}} style={{width:30, padding:0}} weight="light">🗑</Button>
+                        <Button onPress={(e) => that.deleteRoster(index)} textStyle={{fontSize:20}} style={{width:44}} weight="light">🗑</Button>
                     </View>
                 </View>)
         }
-
-        let options;
-
         let mainScreen;
         switch(this.state.DisplayState) {
             case DisplayStateType.MENU :
                 mainScreen= 
-                    <View style={{padding:10}}>
+                    <View style={{padding:10, width:Variables.width}}>
                         <View style={{flexDirection:"row", width:"100%"}}>
                             <Text style={{fontFamily:Variables.fonts.spaceMarine, verticalAlign:"middle", flex:1, textAlign:"center", textDecorationLine:"underline"}}>Sammie's Roster List</Text>
                             <Button onPress={(e)=>this.docPicker(this)} textStyle={{fontSize:20}}>+</Button>
+                            <Button onPress={(e)=>this.setState({DisplayState:DisplayStateType.OPTIONS})} image={true}><Image style={{width:20, height:20}} source={require("../assets/images/gear.png")}/></Button>
                         </View>
                         <View>{displayMenuItem(this.state.Rosters)}</View>
                     </View>
@@ -216,15 +219,16 @@ class Menu extends React.Component{
                 break;
             case DisplayStateType.DISPLAY_ROSTER :
                 mainScreen= 
-                    <View style={{width:"100%"}}>
+                    <View style={{width:Variables.width}}>
                         <Roster XML={that.state.Rosters[this.state.CurrentRoster].XML} onBack={(e)=>this.setState({DisplayState: DisplayStateType.MENU})} onLoad={(e)=>this.RosterLoaded(e)} />
                     </View>
                 ;
                 break;
+            case DisplayStateType.OPTIONS:
+                mainScreen=<View style={{width:Variables.width}}><Options /></View>;
         }
         return <View>
             {mainScreen}
-            {options}
             </View>;
     };
 };

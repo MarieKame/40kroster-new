@@ -1,5 +1,5 @@
 import React from "react";
-import {View} from 'react-native';
+import {View, Image} from 'react-native';
 import Text, { Descriptor } from '../Components/Text';
 import {ProfileWeaponData, WeaponData} from "../UnitData";
 import Style from '../../Style/Weapon';
@@ -43,12 +43,12 @@ class InternalWeapon extends React.Component<Props> {
             <Descriptor style={this.props.forceName?[Style.name, Style.profile]:Style.name}>{(this.props.forceName?"➤ ":"")+name + " "}{weaponTraits}</Descriptor>
             
             <View style={Style.stats}>
-                <Text style={[Style.range, Style.data]}>{this.props.data.Range()}</Text>
-                <Text style={[Style.other, Style.data]}>{this.props.data.A()}</Text>
-                <Text style={[Style.other, Style.data]}>{this.props.data.BS()}</Text>
-                <Text style={[Style.other, Style.data]}>{this.props.data.S()}</Text>
-                <Text style={[Style.other, Style.data]}>{this.props.data.AP()}</Text>
-                <Text style={[Style.other, Style.data]}>{this.props.data.D()}</Text>
+                {this.props.data.Range()=="Melee"?<View style={Style.statData}><Image style={[Style.melee]} source={require("../../assets/images/melee.png")}/></View>:<Text style={Style.statData}>{this.props.data.Range()}</Text>}
+                <Text style={Style.statData}>{this.props.data.A()}</Text>
+                <Text style={Style.statData}>{this.props.data.BS()}</Text>
+                <Text style={Style.statData}>{this.props.data.S()}</Text>
+                <Text style={Style.statData}>{this.props.data.AP()}</Text>
+                <Text style={Style.statData}>{this.props.data.D()}</Text>
             </View>
         </View>;
     }

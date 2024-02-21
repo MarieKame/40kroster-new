@@ -33,29 +33,30 @@ const Style = StyleSheet.create({
         marginLeft:4 * Variables.zoom,
         maxWidth:Variables.unitWidth-286,
     },
+    melee:{
+        height:10*Variables.zoom,
+        width:10*Variables.zoom,
+        alignSelf:"center",
+        marginTop:2*Variables.zoom
+    },
     traits:{
         color:Variables.colourMain,
-        fontFamily:Variables.fonts.WHB,
-        fontSize:10 * Variables.zoom,
+        fontFamily:Variables.fonts.WHI,
+        fontSize:Variables.fontSize.small,
         alignSelf:"center",
-        paddingLeft:4
+        paddingLeft:4,
     },
     stats:{
         position:"absolute",
         right:0,
         flexDirection:"row"
     },
-    data:{
+    statData:{
         alignContent:"center",
         textAlign:"center",
         borderLeftWidth:1,
-        borderStyle:"dotted"
-    },
-    range:{
-        width:60 * Variables.zoom
-    },
-    other:{
-        width:36 * Variables.zoom
+        borderStyle:"dotted",
+        width:32 * Variables.zoom
     },
     profile:{},
     odd:{

@@ -33,6 +33,7 @@ const Style = StyleSheet.create({
 export interface ButtonProps extends TextProps {
     textStyle?:TextStyle,
     weight?:"light"|"normal"|"heavy"|undefined;
+    image?:boolean
 }
 
 export class Button extends Component<ButtonProps>  {
@@ -51,6 +52,8 @@ export class Button extends Component<ButtonProps>  {
                 style.push(Style.Normal);
                 break;
         }
+        if (this.props.image)
+        return <Pressable style={[style, this.props.style]} onPress={this.props.onPress}>{this.props.children}</Pressable>
         return (
             <Pressable style={[style, this.props.style]} onPress={this.props.onPress}><Text style={[{textAlign:"center"}, this.props.textStyle]}>{this.props.children}</Text></Pressable>
         );
