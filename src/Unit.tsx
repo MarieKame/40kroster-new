@@ -1,12 +1,13 @@
 import React from "react";
 import {StatsData, UnitData} from "./UnitData";
 import Weapon from './UnitDetails/Weapon';
-import {View} from 'react-native';
+import {View, Image} from 'react-native';
 import {Text, Descriptor, ComplexText} from './Components/Text';
 import Style from '../Style/Unit';
 import WeaponStyle from '../Style/Weapon';
 import IsOdd from "./Components/IsOdd";
 import Variables from "../Style/Variables";
+import { FactionSvg, Background } from "../Style/svgs";
 
 interface Props {
     data:UnitData
@@ -102,8 +103,15 @@ class Unit extends React.Component<Props> {
                 )}
             </View>;
         }
+        let faction;
+        this.props.data.Factions.forEach(fa=>{
+            if (Variables.factions.findIndex((f)=> f == fa) !== -1){
+                faction=fa;
+                console.log(faction)
+            }
+        });
         
-        return  <View style={Style.unit}>
+        return  <View style={[Style.unit, {backgroundColor:Variables.colourBg}]}>
                     <View style={Style.nameView}><Text style={Style.name}>{this.props.data.CustomName !== null?this.props.data.CustomName:this.props.data.Name}</Text></View>
                     <View style={Style.allStats}>
                         {this.renderAllStats(stats)}
@@ -130,12 +138,19 @@ class Unit extends React.Component<Props> {
                             </View>
                         </View>
                     </View>
-                    <View style={Style.keywords}>
-                        <Text style={Style.keywordsTitle}>Keywords : </Text>
-                        <Descriptor>{" "+this.props.data.Keywords.join(', ')+" "}</Descriptor>
+                    <View style={Style.keywordsView}>
+                        <View style={Style.keywords}>
+                            <Text style={Style.keywordsTitle}>Keywords : </Text>
+                            <Descriptor style={Style.keyword}>{" "+this.props.data.Keywords.join(', ')+" "}</Descriptor>
+                        </View>
+                        <View style={Style.factions}>
+                            <Text style={Style.keywordsTitle}>Faction Keywords : </Text>
+                            <Descriptor style={Style.keyword}>{" "+this.props.data.Factions.join(', ')+" "}</Descriptor>
+                        </View>
+                        <View style={Style.icon}><Background style={{position:"absolute", left:-15, top:-7}} /><FactionSvg faction={faction} /></View>
                     </View>
                 </View>;
     }
 }
-
+//<View style={Style.icon}>{factionIcon}</View>
 export default Unit;

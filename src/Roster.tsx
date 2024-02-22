@@ -412,23 +412,23 @@ class Roster extends React.Component<Props> {
             ))}</View>;
         } else {
             if (this.state.Menu) {
-                return <View style={{width:Variables.width, alignSelf:"center", padding:10, height:"100%"}}>
+                return <View style={{width:Variables.width, alignSelf:"center", padding:10, height:"100%", backgroundColor:Variables.colourBg}}>
                             <View style={{flexDirection: 'row'}}>
                                 <Button style={{ width:200}} onPress={(e)=>this.props.onBack()}>Back to Main Menu</Button>
                                 <Button style={{position:"absolute", right:0}} onPress={(e)=>this.setState({Menu:false})}>X</Button>
                             </View>
                            <ScrollView>
-                                {UnitData.categories.map((category) => this.ShowCategory(category))}
+                                {Variables.unitCategories.map((category) => this.ShowCategory(category))}
                             </ScrollView>
                         </View>;
             } else {
                 return <View>
                     <ScrollView>
                         <View style={{width:Variables.width, alignSelf:"center", padding:10, height:"100%"}}>
-                            <Unit data={this.state.Units[this.state.Index]} />
+                            <Unit data={this.state.Units[this.state.Index]}/>
                         </View>
                     </ScrollView>
-                    <View style={{position:"absolute", right:20, top:20, zIndex:100, backgroundColor:Variables.colourBg}}>
+                    <View style={{position:"absolute", right:20, top:20, zIndex:100, backgroundColor:Variables.colourBg, borderRadius:10}}>
                         <View style={{flexDirection:"row"}}>
                             <Button onPress={(e)=> this.Previous()} textStyle={{transform:[{rotate:'180deg'}], top:2}}>➤</Button>
                             <Button onPress={(e)=> this.setState({Menu:true})}style={{width:70}}>Menu</Button>

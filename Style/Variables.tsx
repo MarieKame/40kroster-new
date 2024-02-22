@@ -8,11 +8,12 @@ const Variables = {
     boxBorderStyle:"solid",
     boxBorderWidth:1,
     boxBorderRadius:4,
-    colourDark:"black",
-    colourBg:"white",
+    colourDark:"rgb(0,0,0)",
+    colourBg:"rgba(255,255,255,0.9)",
     colourAccent:"pink",
     colourLightAccent:"rgb(252, 233, 236)",
     colourMain:"red",
+    colourGrey:"#FAFAFA",
     fonts:{
         spaceMarine:'Space-Marine',
         WHN: 'Warhammer-Normal',
@@ -28,7 +29,26 @@ const Variables = {
     unitMargin:baseUnitMargin*zoom,
     width:windowDimensions.width,
     unitWidth:windowDimensions.width-(baseUnitMargin*zoom + (Platform.OS=="web"?60:0)),
-    zoom: zoom
+    zoom: zoom,
+    unitCategories:['Epic Hero', 'Character', 'Battleline', 'Infantry', 'Vehicle', 'Monster'],
+    factions:[
+        'Adepta Sororitas', 
+        'Adeptus Astartes', 
+        'Adeptus Custodes', 
+        'Adeptus Mechanicus', 
+        'Aeldari', 
+        'Astra Militarum', 
+        'Chaos Daemons', 
+        'Drukhari', 
+        'Genestealer Cult', 
+        'Necrons', 
+        'Orks', 
+        "T'au", 
+        'Thousand Sons', 
+        'Tyranids', 
+        'World Eaters',
+    ]
+    // from https://drive.google.com/drive/folders/1rGgj9xUmgDZ2VDrAZVYGtWmk2eonrU0D
 }
 
 export default Variables;

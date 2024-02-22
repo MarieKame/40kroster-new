@@ -208,7 +208,7 @@ class Menu extends React.Component{
             case DisplayStateType.MENU :
                 mainScreen= 
                     <View style={{padding:10, width:Variables.width}}>
-                        <View style={{flexDirection:"row", width:"100%"}}>
+                        <View style={{flexDirection:"row", width:"100%", backgroundColor:Variables.colourBg, borderRadius:4}}>
                             <Text style={{fontFamily:Variables.fonts.spaceMarine, verticalAlign:"middle", flex:1, textAlign:"center", textDecorationLine:"underline"}}>Sammie's Roster List</Text>
                             <Button onPress={(e)=>this.docPicker(this)} textStyle={{fontSize:20}}>+</Button>
                             <Button onPress={(e)=>this.setState({DisplayState:DisplayStateType.OPTIONS})} image={true}><Image style={{width:20, height:20}} source={require("../assets/images/gear.png")}/></Button>
@@ -218,16 +218,13 @@ class Menu extends React.Component{
                 ;
                 break;
             case DisplayStateType.DISPLAY_ROSTER :
-                mainScreen= 
-                    <View style={{width:Variables.width}}>
-                        <Roster XML={that.state.Rosters[this.state.CurrentRoster].XML} onBack={(e)=>this.setState({DisplayState: DisplayStateType.MENU})} onLoad={(e)=>this.RosterLoaded(e)} />
-                    </View>
+                mainScreen= <Roster XML={that.state.Rosters[this.state.CurrentRoster].XML} onBack={(e)=>this.setState({DisplayState: DisplayStateType.MENU})} onLoad={(e)=>this.RosterLoaded(e)} />
                 ;
                 break;
             case DisplayStateType.OPTIONS:
-                mainScreen=<View style={{width:Variables.width}}><Options /></View>;
+                mainScreen=<Options onBack={(e)=>this.setState({DisplayState: DisplayStateType.MENU})} />;
         }
-        return <View>
+        return <View style={{width:Variables.width, borderWidth:1, borderColor:Variables.colourDark, borderRadius:Variables.boxBorderRadius, height:"100%"}}>
             {mainScreen}
             </View>;
     };

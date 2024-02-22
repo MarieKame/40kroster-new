@@ -33,29 +33,51 @@ const Style = StyleSheet.create({
 export interface ButtonProps extends TextProps {
     textStyle?:TextStyle,
     weight?:"light"|"normal"|"heavy"|undefined;
-    image?:boolean
+    image?:boolean,
+    forceColour?:string
 }
 
 export class Button extends Component<ButtonProps>  {
     render():ReactNode{
         let style = new Array();
+        let forceTextColour;
         style.push(Style.Button);
-        switch(this.props.weight) {
-            case "light":
-                style.push(Style.Light);
-                break;
-            case "heavy":
-                style.push(Style.Heavy);
-                break;
-            case 'normal':
-            default:
-                style.push(Style.Normal);
-                break;
+        if (this.props.forceColour){
+            const colours = this.props.forceColour.match(/[0-9]+/g);
+            let textColour = "black";
+            if (colours){
+                const brightness = Math.round(((parseInt(colours[0]) * 299) +
+                      (parseInt(colours[1]) * 587) +
+                      (parseInt(colours[2]) * 114)) / 1000);
+                textColour = (brightness > 125) ? 'black' : 'white';
+            }
+            style.push({
+                backgroundColor:this.props.forceColour,
+                borderColor:"black"
+            });
+            forceTextColour = {color:textColour};
+        } else {
+            switch(this.props.weight) {
+                case "light":
+                    style.push(Style.Light);
+                    break;
+                case "heavy":
+                    style.push(Style.Heavy);
+                    break;
+                case 'normal':
+                default:
+                    style.push(Style.Normal);
+                    break;
+            }
         }
         if (this.props.image)
-        return <Pressable style={[style, this.props.style]} onPress={this.props.onPress}>{this.props.children}</Pressable>
+            return <Pressable style={[style, this.props.style]} onPress={this.props.onPress}>{this.props.children}</Pressable>
         return (
-            <Pressable style={[style, this.props.style]} onPress={this.props.onPress}><Text style={[{textAlign:"center"}, this.props.textStyle]}>{this.props.children}</Text></Pressable>
+            <Pressable style={[style, this.props.style]} onPress={this.props.onPress}>
+                <Text style={[{textAlign:"center"}, forceTextColour, this.props.textStyle]}>
+                    {this.props.children}
+                </Text>
+            </Pressable>
         );
     }
 }

@@ -139,16 +139,47 @@ const Style = StyleSheet.create({
     more:{
         marginLeft:8*Variables.zoom
     },
-    keywords:{
+    keywordsView:{
         flexDirection:"row",
+        height:40*Variables.zoom,
+        marginTop:8*Variables.zoom
+    },
+    keywords:{
+        flexBasis:"65%",
+        paddingRight:24*Variables.zoom,
+        flexWrap:"wrap"
+    },
+    factions:{
+        position:"absolute",
+        right:-10,
+        paddingLeft:28,
+        paddingRight:10,
+        width:"43%",
+        height:40*Variables.zoom,
+        backgroundColor:Variables.colourLightAccent,
+        borderTopColor:Variables.colourDark,
+        borderTopWidth:1,
+        borderBottomColor:Variables.colourDark,
+        borderBottomWidth:1,
     },
     keywordsTitle:{
-        fontFamily:Variables.fonts.WHB
+        fontFamily:Variables.fonts.WHB,
+        fontSize:Variables.fontSize.small
+    },
+    keyword:{
+        fontSize:Variables.fontSize.small
     },
     bold:{
         fontFamily:Variables.fonts.WHN,
         fontSize:Variables.fontSize.small,
         color:Variables.colourMain
+    },
+    icon:{
+        position:"absolute",
+        right:"35%",
+        marginLeft:-50,
+        height:50,
+        width:50,
     }
 });
 

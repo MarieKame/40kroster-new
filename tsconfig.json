@@ -3,7 +3,8 @@
   "extends": "expo/tsconfig.base",
   "include": [
     "**/*.ts",
-    "**/*.tsx"
+    "**/*.tsx",
+    "**/*.svg"
   ],
   "paths": {
     "crypto": [

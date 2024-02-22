@@ -1,4 +1,5 @@
 import $ from 'jquery';
+import Variables from '../Style/Variables';
 
 class DescriptorData {
     Name: string;
@@ -218,7 +219,7 @@ class UnitData {
     GetUnitCategory():string{
         let that = this;
         let categoryIndex = -1;
-        UnitData.categories.forEach(function(category){
+        Variables.unitCategories.forEach(function(category){
             let index = that.Keywords.indexOf(category);
             if (index != -1 && categoryIndex == -1) {
                 categoryIndex = index;
@@ -231,7 +232,7 @@ class UnitData {
         let weight = this.Costs.Val;
         let index = 10000000000000;
         const cat = this.GetUnitCategory();
-        UnitData.categories.forEach((category)=>{
+        Variables.unitCategories.forEach((category)=>{
             if (category == cat) {
                 weight+= index;
             }
@@ -246,11 +247,6 @@ class UnitData {
 
     static compareUnits(unit1:UnitData, unit2:UnitData) {
         return unit2.getWeight() - unit1.getWeight();
-    }
-
-    public static categories = ['Epic Hero', 'Character', 'Battleline', 'Infantry', 'Vehicle', 'Monster'];
-
-    constructor() {
     }
 }
 
