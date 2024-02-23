@@ -2,7 +2,7 @@
   "expo": {
     "name": "40kroster-new",
     "slug": "40kroster-new",
-    "version": "1.0.0",
+    "version": "0.0.1",
     "orientation": "landscape",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -27,6 +27,11 @@
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "2249de95-fc26-46f4-be7c-39a0318ce94c"
+      }
     }
   }
 }

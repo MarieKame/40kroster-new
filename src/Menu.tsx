@@ -81,7 +81,9 @@ class Menu extends React.Component{
     };
 
     updateRosterList(newRosterList) {
-        this.setState({Rosters : newRosterList});
+        this.setState({Rosters : newRosterList, Errors:{
+            rosterFile: null
+        }});
         AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newRosterList));
     }
 
@@ -166,17 +168,10 @@ class Menu extends React.Component{
 
     tryAddRoster(rosterXml) {
         let rosterName = this.Validate(rosterXml);
-        console.log(rosterName);
         if (rosterName && rosterXml){
             let newRosterList = this.state.Rosters;
             newRosterList.push(new RosterMenuEntry(rosterName, rosterXml));
             this.updateRosterList(newRosterList);
-            this.setState({
-                Errors:{
-                    rosterFile: null
-                },
-                DisplayState:DisplayStateType.MENU
-            });
         }
     }
 
@@ -195,13 +190,16 @@ class Menu extends React.Component{
 
         function displayMenuItem(rosters?: Array<RosterMenuEntry>) {
             if (!rosters) return "";
-            return rosters.map((roster, index) => 
-                <View style={{flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', width:"100%"}} key={index}>
-                    <View style={{width:"50%", flexDirection:"row"}}>
-                        <Button onPress={(e) => that.viewRoster(index)} style={{flex:1, height:60}}>{roster.Name}{roster.Cost&&("\n( "+roster.Cost+" )")}</Button>
-                        <Button onPress={(e) => that.deleteRoster(index)} textStyle={{fontSize:20}} style={{width:44}} weight="light">🗑</Button>
-                    </View>
-                </View>)
+            return (
+                <View style={{flexDirection: 'row', flexWrap: 'wrap', width:"100%"}}>
+                     {rosters.map((roster, index) => 
+                        <View style={{flexBasis:"50%", flexDirection:"row"}} key={index}>
+                            <Button onPress={(e) => that.viewRoster(index)} style={{flex:1, height:60}}>{roster.Name}{roster.Cost&&("\n( "+roster.Cost+" )")}</Button>
+                            <Button onPress={(e) => that.deleteRoster(index)} textStyle={{fontSize:20}} style={{width:44}} weight="light">🗑</Button>
+                        </View>
+                     )}
+                </View>
+                );
         }
         let mainScreen;
         switch(this.state.DisplayState) {

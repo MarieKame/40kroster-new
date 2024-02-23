@@ -105,9 +105,8 @@ class Unit extends React.Component<Props> {
         }
         let faction;
         this.props.data.Factions.forEach(fa=>{
-            if (Variables.factions.findIndex((f)=> f == fa) !== -1){
+            if (Variables.factions.findIndex((f)=> f[0] == fa) !== -1){
                 faction=fa;
-                console.log(faction)
             }
         });
         

@@ -302,6 +302,17 @@ class Roster extends React.Component<Props> {
         return descriptor;
     }
 
+    getDefaultRules(factions:Array<string>):Array<DescriptorData>{
+        let rules = new Array<DescriptorData>();
+        factions.forEach(faction => {
+            const find = Variables.factions.find(f=>f[0]==faction);
+            if (find) {
+                rules.push(new DescriptorData(find[1], ""));
+            }
+        });
+        return rules;
+    }
+
     ExploreRoster(roster){
         this.state.Name = roster._name;
         this.state.Costs = this.FormatCost(roster.costs.cost).toString();
@@ -358,6 +369,9 @@ class Roster extends React.Component<Props> {
                         }
                     }
                 }
+                if (newUnit.Rules.length == 0){
+                    newUnit.Rules = that.getDefaultRules(newUnit.Factions);
+                }
                 that.state.Units.push(newUnit);
             }
         };
@@ -391,10 +405,10 @@ class Roster extends React.Component<Props> {
         this.setState({Index:index, Menu:false});
     }
 
-    ShowCategory(category:string):ReactNode {
+    ShowCategory(category:string, index:number):ReactNode {
         let that = this;
         if (this.state.Units.filter((unit)=> unit.GetUnitCategory() == category).length == 0) return "";
-        return <View style={{paddingBottom:14}}>
+        return <View style={{paddingBottom:14}} key={index}>
             <Text style={{width:"100%", textAlign:"center", fontFamily:Variables.fonts.spaceMarine, paddingBottom:4}}>— {category} —</Text>
             <View style={{flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', width:"100%"}}>
                 {this.state.Units.map((unit, index) => 
@@ -418,7 +432,7 @@ class Roster extends React.Component<Props> {
                                 <Button style={{position:"absolute", right:0}} onPress={(e)=>this.setState({Menu:false})}>X</Button>
                             </View>
                            <ScrollView>
-                                {Variables.unitCategories.map((category) => this.ShowCategory(category))}
+                                {Variables.unitCategories.map((category, index) => this.ShowCategory(category, index))}
                             </ScrollView>
                         </View>;
             } else {
