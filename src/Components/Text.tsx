@@ -23,7 +23,7 @@ export class ComplexText extends Component<ComplexProps>{
     }
     constructor(props:TextProps){
         super(props);
-        const regex = /([a-z]* time)|(stratagem)|(invulnerable save)|(damage)|(attacks?)|(re-roll)|(wound roll)|([a-z]* phase)|(hit roll)|(roll)|(D[0-9])|([0-9]+CP)|([0-9]+\+?)/i;
+        const regex = /([a-z]* time)|(stratagem)|(invulnerable save)|(damage)|(attacks?)|(r?e?-?rolle?d?)|(wound roll)|([a-z]* phase)|(hit roll)|(advance roll)|(battle-shock)|(charge roll)|(saving throws?)|(D[0-9])|([0-9]+CP)|([0-9]+\+?"?)/i;
         const normalStyle = {};
         const redStyle ={};
         let text = <Text style={{fontSize:this.props.fontSize}}>{this.props.children.toString().split(regex).map(element => 

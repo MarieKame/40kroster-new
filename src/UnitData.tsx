@@ -7,7 +7,8 @@ class DescriptorData {
 
     constructor(name:string, description:string){
         this.Name = name;
-        this.Description = description;
+        this.Description = description.replaceAll("\n\n", "\n").replaceAll(/^(?:[a-z :])+\n(?![-■])/gi, " ");
+        console.log();
     }
 }
 

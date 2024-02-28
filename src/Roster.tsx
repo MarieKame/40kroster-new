@@ -1,10 +1,11 @@
 import React, { ReactNode } from "react";
 import Unit from "./Unit";
 import {UnitData, CostData, WeaponData, ProfileWeaponData, ModelData, StatsData, DescriptorData} from "./UnitData";
-import {View, Text, ScrollView, Platform, Pressable} from 'react-native';
+import {View, ScrollView, Platform} from 'react-native';
 import fastXMLParser from 'fast-xml-parser';
 import Variables from "../Style/Variables";
 import Button from "./Components/Button";
+import {Text, ComplexText} from "./Components/Text";
 
 function isIterable(obj) {
     // checks for null and undefined
@@ -36,11 +37,19 @@ class Roster extends React.Component<Props> {
         Costs:"",
         Units: new Array<UnitData>(),
         Index:0,
-        Menu:false
+        Menu:false,
+        Rules: new Array<DescriptorData>(),
+        Rule:false
     }
 
     FormatCost(cost) : CostData {
         return new CostData(Number(cost._value), cost._name);
+    }
+
+    AddNewRule(data:DescriptorData) {
+        if (!this.state.Rules.find(rule=>rule.Name == data.Name)){
+            this.state.Rules.push(data);
+        }
     }
 
     ExtractRules(rules): Array<DescriptorData> {
@@ -48,10 +57,14 @@ class Roster extends React.Component<Props> {
         if (rules) {
             if (rules.rule.length) {
                 for(let element of rules.rule){
-                    rulesData.push(new DescriptorData(element._name, element.description));
+                    const data = new DescriptorData(element._name, element.description);
+                    rulesData.push(data);
+                    this.AddNewRule(data);
                 }
             } else {
-                rulesData.push(new DescriptorData(rules.rule._name, rules.rule.description));
+                const data = new DescriptorData(rules.rule._name, rules.rule.description);
+                rulesData.push(data);
+                this.AddNewRule(data);
             }
         }
         return rulesData;
@@ -318,6 +331,11 @@ class Roster extends React.Component<Props> {
         this.state.Costs = this.FormatCost(roster.costs.cost).toString();
         let that = this;
         let key = 0;
+        if (roster.forces.force.rules) {
+            for(let element of roster.forces.force.rules.rule) {
+                this.state.Rules.push(new DescriptorData(element._name, element.description));
+            } 
+        }
         for(let element of roster.forces.force.selections.selection) {
             if (element._type === "model" || element._type === "unit") {
                 let newUnit = new UnitData();
@@ -418,6 +436,13 @@ class Roster extends React.Component<Props> {
         </View>;
     }
 
+    ShowRule(rule:DescriptorData, index:number):ReactNode{
+        return <View key={index} style={{marginBottom:10}}>
+                    <Text style={{backgroundColor:Variables.colourAccent, fontFamily:Variables.fonts.spaceMarine, padding:5}}>{rule.Name}</Text>
+                    <ComplexText fontSize={Variables.fontSize.normal} style={{marginLeft:10, marginRight:10}}>{rule.Description}</ComplexText>
+                </View>;
+    }
+
     render(){
         let key= 0;
         if (Platform.OS=="web"){
@@ -435,6 +460,16 @@ class Roster extends React.Component<Props> {
                                 {Variables.unitCategories.map((category, index) => this.ShowCategory(category, index))}
                             </ScrollView>
                         </View>;
+            } else if (this.state.Rule) {
+                return <View style={{width:Variables.width, alignSelf:"center", padding:10, height:"100%", backgroundColor:Variables.colourBg}}>
+                            <View style={{flexDirection: 'row'}}>
+                                <Button style={{ width:200}} onPress={(e)=>this.props.onBack()}>Back to Main Menu</Button>
+                                <Button style={{position:"absolute", right:0}} onPress={(e)=>this.setState({Rule:false})}>X</Button>
+                            </View>
+                           <ScrollView>
+                                {this.state.Rules.map((category, index) => this.ShowRule(category, index))}
+                            </ScrollView>
+                        </View>;
             } else {
                 return <View>
                     <ScrollView>
@@ -445,7 +480,10 @@ class Roster extends React.Component<Props> {
                     <View style={{position:"absolute", right:20, top:20, zIndex:100, backgroundColor:Variables.colourBg, borderRadius:10}}>
                         <View style={{flexDirection:"row"}}>
                             <Button onPress={(e)=> this.Previous()} textStyle={{transform:[{rotate:'180deg'}], top:2}}>➤</Button>
-                            <Button onPress={(e)=> this.setState({Menu:true})}style={{width:70}}>Menu</Button>
+                            <View style={{flexDirection:"column"}}>
+                                <Button onPress={(e)=> this.setState({Menu:true})}style={{width:70}}>Unit List</Button>
+                                <Button onPress={(e)=> this.setState({Rule:true})}style={{width:70}}>Rules</Button>
+                            </View>
                             <Button onPress={(e)=> this.Next()}>➤</Button>
                         </View>
                         <Text style={{textAlign:"center"}}>{(this.state.Index+1) + " / " + this.state.Units.length}</Text>

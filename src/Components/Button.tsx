@@ -7,10 +7,10 @@ const Style = StyleSheet.create({
     Button:{
         borderWidth:1,
         borderRadius:Variables.boxBorderRadius,
-        minHeight:40,
+        minHeight:20,
         minWidth:40,
         margin:4,
-        padding:10,
+        padding:6,
         alignContent:"center",
         justifyContent:"center",
         textAlign:"center",

@@ -36,7 +36,7 @@ const Style = StyleSheet.create({
         backgroundColor:Variables.colourLightAccent
     },
     allStats:{
-        
+        minHeight:60 * Variables.zoom
     },
     statsRow:{
         flexDirection:"row",
@@ -145,7 +145,7 @@ const Style = StyleSheet.create({
         marginTop:8*Variables.zoom
     },
     keywords:{
-        flexBasis:"65%",
+        flexBasis:"60%",
         paddingRight:24*Variables.zoom,
         flexWrap:"wrap"
     },
