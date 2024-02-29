@@ -1,4 +1,3 @@
-import $ from 'jquery';
 import Variables from '../Style/Variables';
 
 class DescriptorData {

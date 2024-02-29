@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useContext } from "react";
 import {StatsData, UnitData} from "./UnitData";
 import Weapon from './UnitDetails/Weapon';
 import {View, Image} from 'react-native';
@@ -8,18 +8,21 @@ import WeaponStyle from '../Style/Weapon';
 import IsOdd from "./Components/IsOdd";
 import Variables from "../Style/Variables";
 import { FactionSvg, Background } from "../Style/svgs";
+import {ColoursContext} from "../Style/ColoursContext";
 
 interface Props {
     data:UnitData
 }
 
 class Unit extends React.Component<Props> {
+    static contextType = ColoursContext; 
+    declare context: React.ContextType<typeof ColoursContext>;
 
     renderStatBox(name:string, value:string, invul:boolean = false){
-        return <View style={(invul)?[Style.box, Style.invul]:Style.box}>
-            {!invul&&<View style={Style.headerView}><Text style={Style.header}>{name}</Text></View>}
+        return <View style={(invul)?[Style.box, Style.invul, {backgroundColor: this.context.Bg, borderColor:this.context.Dark}]:[Style.box, {backgroundColor: this.context.Bg, borderColor:this.context.Dark}]}>
+            {!invul&&<View style={Style.headerView}><Text style={[Style.header, {backgroundColor: this.context.Bg}]}>{name}</Text></View>}
             <Text style={Style.value}>{value}</Text>
-            {invul&&<Text style={Style.invulText}>Invulnerable Save</Text>}
+            {invul&&<Text style={[Style.invulText, {backgroundColor:this.context.LightAccent}]}>Invulnerable Save</Text>}
         </View>;
     }
 
@@ -37,7 +40,7 @@ class Unit extends React.Component<Props> {
                 {this.renderStatBox("W", stats.W())}
                 {this.renderStatBox("LD", stats.LD())}
                 {this.renderStatBox("OC", stats.OC())}
-                <View style={Style.statsNameView}><Text style={Style.statsName}>{name}</Text></View>
+                <View style={Style.statsNameView}><Text style={[Style.statsName, {backgroundColor:this.context.LightAccent}]}>{name}</Text></View>
             </View> ;
     }
 
@@ -56,7 +59,7 @@ class Unit extends React.Component<Props> {
         if (weapons.length > 0) {
             let key= 0; 
             renderedWeapons = <View style={Style.weaponList}>  
-            <View style={[Style.title, Style.weaponLine, Style.weaponSectionTitle]}><Text style={Style.title}>{title}</Text>
+            <View style={[Style.title, Style.weaponLine, Style.weaponSectionTitle, {backgroundColor:this.context.Accent}]}><Text style={[Style.title, {backgroundColor:this.context.Accent}]}>{title}</Text>
                 <View style={Style.statsBar}>
                     <Text style={WeaponStyle.statData} key="R">R</Text>
                     <Text style={WeaponStyle.statData} key="A">A</Text>
@@ -94,10 +97,10 @@ class Unit extends React.Component<Props> {
             let otherEquipKey=0;
             otherEquip= 
             <View style={Style.weaponList}> 
-                <Text style={[Style.title]}>Other Equipment</Text>
+                <Text style={[Style.title, {backgroundColor:this.context.Accent}]}>Other Equipment</Text>
                 {this.props.data.OtherEquipment.map((wpn)=>
                     <View style={[Style.specialEquipment]} key={otherEquipKey++}>
-                        <Text style={Style.subtitle}>{wpn.Name}</Text>
+                        <Text style={[Style.subtitle, {backgroundColor:this.context.LightAccent}]}>{wpn.Name}</Text>
                         <ComplexText style={Style.more} fontSize={Variables.fontSize.small}>{wpn.Data}</ComplexText>
                     </View>
                 )}
@@ -110,7 +113,8 @@ class Unit extends React.Component<Props> {
             }
         });
         
-        return  <View style={[Style.unit, {backgroundColor:Variables.colourBg}]}>
+        return  <View style={[Style.unit, {backgroundColor:this.context.Bg, 
+            borderColor:this.context.Dark}]}>
                     <View style={Style.nameView}><Text style={Style.name}>{this.props.data.CustomName !== null?this.props.data.CustomName:this.props.data.Name}</Text></View>
                     <View style={Style.allStats}>
                         {this.renderAllStats(stats)}
@@ -123,14 +127,14 @@ class Unit extends React.Component<Props> {
                             {otherEquip}
                         </View>
                         <View style={Style.other}>
-                            <Text style={Style.title}>Special Rules</Text>
-                            <Descriptor style={[Style.more, Style.bold]}>[
+                            <Text style={[Style.title, {backgroundColor:this.context.Accent}]}>Special Rules</Text>
+                            <Descriptor style={[Style.more, Style.bold, {color:this.context.Main}]}>[
                                 {this.props.data.Rules.map((rule)=>rule.Name).join(', ')}
                             ]</Descriptor>
                             <View style={{flexDirection: 'row', flexWrap: 'wrap', width:"100%"}}>
                                 {this.props.data.Profiles.map((ruleDescriptor)=>
                                 <View style={Style.rule} key={this.ruleKey++}>
-                                    <Text style={Style.ruleTitle}>{ruleDescriptor.Name}</Text>
+                                    <Text style={[Style.ruleTitle, {backgroundColor:this.context.LightAccent}]}>{ruleDescriptor.Name}</Text>
                                     <ComplexText style={Style.more} fontSize={Variables.fontSize.small}>{ruleDescriptor.Description}</ComplexText>
                                 </View>
                                 )}
@@ -142,7 +146,7 @@ class Unit extends React.Component<Props> {
                             <Text style={Style.keywordsTitle}>Keywords : </Text>
                             <Descriptor style={Style.keyword}>{" "+this.props.data.Keywords.join(', ')+" "}</Descriptor>
                         </View>
-                        <View style={Style.factions}>
+                        <View style={[Style.factions, {backgroundColor:this.context.LightAccent,borderTopColor:this.context.Dark, borderBottomColor:this.context.Dark}]}>
                             <Text style={Style.keywordsTitle}>Faction Keywords : </Text>
                             <Descriptor style={Style.keyword}>{" "+this.props.data.Factions.join(', ')+" "}</Descriptor>
                         </View>

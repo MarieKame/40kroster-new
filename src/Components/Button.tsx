@@ -1,34 +1,8 @@
 import {Pressable, StyleSheet, TextProps, TextStyle} from 'react-native';
 import Text from './Text';
-import {Component, ReactNode} from 'react';
+import {Component, Context, ReactNode, useContext} from 'react';
 import Variables from '../../Style/Variables';
-
-const Style = StyleSheet.create({
-    Button:{
-        borderWidth:1,
-        borderRadius:Variables.boxBorderRadius,
-        minHeight:20,
-        minWidth:40,
-        margin:4,
-        padding:6,
-        alignContent:"center",
-        justifyContent:"center",
-        textAlign:"center",
-        elevation:4
-    },
-    Light:{
-        backgroundColor:Variables.colourLightAccent,
-        borderColor:Variables.colourAccent,
-    },
-    Normal:{
-        backgroundColor:Variables.colourLightAccent,
-        borderColor:Variables.colourMain,
-    },
-    Heavy:{
-        backgroundColor:Variables.colourAccent,
-        borderColor:Variables.colourMain,
-    }
-});
+import {ColoursContext} from '../../Style/ColoursContext';
 
 export interface ButtonProps extends TextProps {
     textStyle?:TextStyle,
@@ -37,8 +11,38 @@ export interface ButtonProps extends TextProps {
     forceColour?:string
 }
 
-export class Button extends Component<ButtonProps>  {
+export class Button extends Component<ButtonProps>  {   
+    static contextType = ColoursContext; 
+    declare context: React.ContextType<typeof ColoursContext>;
+    
     render():ReactNode{
+        const Style = StyleSheet.create({
+            Button:{
+                borderWidth:1,
+                borderRadius:Variables.boxBorderRadius,
+                minHeight:20,
+                minWidth:40,
+                margin:4,
+                padding:6,
+                alignContent:"center",
+                justifyContent:"center",
+                textAlign:"center",
+                elevation:4
+            },
+            Light:{
+                backgroundColor:this.context.LightAccent,
+                borderColor:this.context.Accent,
+            },
+            Normal:{
+                backgroundColor:this.context.LightAccent,
+                borderColor:this.context.Main,
+            },
+            Heavy:{
+                backgroundColor:this.context.Accent,
+                borderColor:this.context.Main,
+            }
+        });
+
         let style = new Array();
         let forceTextColour;
         style.push(Style.Button);

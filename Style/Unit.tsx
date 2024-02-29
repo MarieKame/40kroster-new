@@ -1,16 +1,15 @@
 
 import { StyleSheet } from "react-native";
+import React from "react";
 import Variables from "./Variables";
+import {ColoursContext} from "./ColoursContext";
 
 const Style = StyleSheet.create({
     unit: {
         borderWidth: Variables.boxBorderWidth,
         borderRadius: Variables.boxBorderRadius,
-        borderColor:Variables.colourDark,
         padding:10 * Variables.zoom,
         width:Variables.unitWidth,
-        backgroundColor: Variables.colourBg,
-        color: Variables.colourDark,
         zIndex:10 * Variables.zoom,
         alignSelf:"center",
         marginBottom:20,
@@ -32,8 +31,7 @@ const Style = StyleSheet.create({
         position:"absolute",
         left:-310 * Variables.zoom,
         paddingLeft:304 * Variables.zoom,
-        paddingRight:20 * Variables.zoom,
-        backgroundColor:Variables.colourLightAccent
+        paddingRight:20 * Variables.zoom
     },
     allStats:{
         minHeight:60 * Variables.zoom
@@ -51,11 +49,9 @@ const Style = StyleSheet.create({
         height: 30 * Variables.zoom,
         alignItems:"center",
         justifyContent:"center",
-        backgroundColor: Variables.colourBg,
         zIndex:1,
         borderWidth: Variables.boxBorderWidth,
-        borderRadius: Variables.boxBorderRadius,
-        borderColor:Variables.colourDark
+        borderRadius: Variables.boxBorderRadius
     },
     invul:{
         position: "relative",
@@ -67,8 +63,8 @@ const Style = StyleSheet.create({
         position:"absolute",
         width:150 * Variables.zoom,
         left:33 * Variables.zoom,
-        paddingLeft:6 * Variables.zoom,
-        backgroundColor:Variables.colourLightAccent
+        paddingLeft:6 * Variables.zoom
+        
     },
     headerView:{
         position:"absolute",
@@ -81,7 +77,6 @@ const Style = StyleSheet.create({
         paddingLeft:4 * Variables.zoom,
         paddingRight:4 * Variables.zoom,
         textAlign: "center",
-        backgroundColor: Variables.colourBg,
         borderRadius: Variables.boxBorderRadius,
     },
     value:{
@@ -111,11 +106,9 @@ const Style = StyleSheet.create({
         lineHeight:16,
         paddingLeft:4*Variables.zoom,
         alignSelf: 'stretch',
-        backgroundColor:Variables.colourAccent,
         fontFamily:Variables.fonts.spaceMarine
     },
     subtitle:{
-        backgroundColor:Variables.colourLightAccent,
         marginTop:4 * Variables.zoom,
         margin:2*Variables.zoom
     },
@@ -133,7 +126,6 @@ const Style = StyleSheet.create({
         padding:4 * Variables.zoom
     },
     ruleTitle:{
-        backgroundColor:Variables.colourLightAccent,
         paddingLeft:4*Variables.zoom
     },
     more:{
@@ -156,10 +148,7 @@ const Style = StyleSheet.create({
         paddingRight:10,
         width:"43%",
         height:40*Variables.zoom,
-        backgroundColor:Variables.colourLightAccent,
-        borderTopColor:Variables.colourDark,
         borderTopWidth:1,
-        borderBottomColor:Variables.colourDark,
         borderBottomWidth:1,
     },
     keywordsTitle:{
@@ -171,8 +160,7 @@ const Style = StyleSheet.create({
     },
     bold:{
         fontFamily:Variables.fonts.WHN,
-        fontSize:Variables.fontSize.small,
-        color:Variables.colourMain
+        fontSize:Variables.fontSize.small
     },
     icon:{
         position:"absolute",

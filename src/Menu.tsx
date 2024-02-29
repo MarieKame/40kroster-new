@@ -14,17 +14,20 @@ import Roster from './Roster';
 import Button from "./Components/Button";
 import Variables from "../Style/Variables";
 import Options from './Options';
-
+import { ColoursContext } from "../Style/ColoursContext";
+import { Colour } from "./Options";
 
 enum DisplayStateType {
     MENU, DISPLAY_ROSTER, OPTIONS
 }
 
 const STORAGE_KEY = "stored_rosters_40k_app";
+const COLOURS_KEY = "stored_colours_40k_app";
+const UNIT_CATEGORIES_KEY = "stored_unit_categories_40k_app";
 
-const getData = async () => {
+const getData = async (key:string) => {
     try {
-      const value = await AsyncStorage.getItem(STORAGE_KEY);
+      const value = await AsyncStorage.getItem(key);
       if (value !== null) {
         return value;
       }
@@ -42,7 +45,15 @@ class Menu extends React.Component{
             rosterFile: null
         },
         CurrentRoster: 0,
-        loaded:false
+        fontsLoaded:false,
+        storageLoaded:false,
+        coloursLoaded:false,
+        colourMain:"rgb(255,0,0)",
+        colourDark:"rgb(0,0,0)",
+        colourLightAccent:"rgb(252, 233, 236)",
+        colourAccent:"rgb(255,180,180)",
+        colourBg:"rgba(255,255,255,0.9)",
+        colourGrey:"rgb(245,245,245)"
     };
 
     async fetchFonts (that) {
@@ -52,10 +63,8 @@ class Menu extends React.Component{
             'Warhammer-Italic': require('../assets/fonts/VipnagorgiallaRg-Italic.ttf'),
             'Warhammer-Bold': require('../assets/fonts/VipnagorgiallaRg-Bold.ttf'),
             'Warhammer-ItalicBold': require('../assets/fonts/VipnagorgiallaRg-BoldItalic.ttf'),
-        }).then(()=>{that.setState({loaded:true})});
+        }).then(()=>{that.setState({fontsLoaded:true})});
     }
-
-
     
     constructor(props) {
         super(props);
@@ -144,12 +153,75 @@ class Menu extends React.Component{
         });
     }
 
+    getColoursAsString():string{
+        return this.state.colourDark+';'+this.state.colourBg+';'+this.state.colourAccent+';'+this.state.colourLightAccent+';'+this.state.colourMain+';'+this.state.colourGrey;
+    }
+
+    LoadColoursFromString(colours:string) {
+        const split = colours.split(';');
+        this.state.colourDark = split[0];
+        this.state.colourBg = split[1];
+        this.state.colourAccent = split[2];
+        this.state.colourLightAccent = split[3];
+        this.state.colourMain = split[4];
+        this.state.colourGrey = split[5];
+    }
+
+    applyColourChangeGlobally(colour:Colour, value:string, that:Menu) {
+        switch(colour){
+            case Colour.BG:
+                that.setState({colourBg:value}, ()=>AsyncStorage.setItem(COLOURS_KEY, that.getColoursAsString()))
+                break;
+            case Colour.MAIN:
+                that.setState({colourMain:value}, ()=>AsyncStorage.setItem(COLOURS_KEY, that.getColoursAsString()))
+                break;
+            case Colour.ACCENT:
+                that.setState({colourAccent:value}, ()=>AsyncStorage.setItem(COLOURS_KEY, that.getColoursAsString()))
+                break;
+            case Colour.LIGHT:
+                that.setState({colourLightAccent:value}, ()=>AsyncStorage.setItem(COLOURS_KEY, that.getColoursAsString()))
+                break;
+            case Colour.DARK:
+                that.setState({colourDark:value}, ()=>AsyncStorage.setItem(COLOURS_KEY, that.getColoursAsString()))
+                break;
+        }
+    }
+
+    saveUnitCategoriesChange(categories:string){
+        AsyncStorage.setItem(UNIT_CATEGORIES_KEY, categories);
+    }
+
+    resetColours(that:Menu){
+        that.setState({
+            colourMain:"rgb(255,0,0)",
+            colourDark:"rgb(0,0,0)",
+            colourLightAccent:"rgb(252, 233, 236)",
+            colourAccent:"rgb(255,180,180)",
+            colourBg:"rgba(255,255,255,0.9)",
+            colourGrey:"rgb(245,245,245)"
+        }, ()=>{
+            AsyncStorage.setItem(COLOURS_KEY, that.getColoursAsString());
+        });
+    }
+
     async loadData(that){
-        getData().then((rostersJson) => {
+        getData(STORAGE_KEY).then((rostersJson) => {
             if (rostersJson) {
                 that.setState({
-                    Rosters:JSON.parse(rostersJson)
+                    Rosters:JSON.parse(rostersJson),
+                    storageLoaded:true
                 });
+            }
+        });
+        getData(COLOURS_KEY).then((coloursString) => {
+            if (coloursString) {
+                this.LoadColoursFromString(coloursString);
+            }
+            that.setState({coloursLoaded:true});
+        });
+        getData(UNIT_CATEGORIES_KEY).then((types) => {
+            if (types){
+                Variables.unitCategories = types.split(",").map(category=>category.trim().split(" ").map(word=>word[0].toUpperCase()+word.substring(1)).join(" "))
             }
         });
     }
@@ -182,8 +254,7 @@ class Menu extends React.Component{
     }
 
     render() {
-
-        if (!this.state.loaded){
+        if (!(this.state.fontsLoaded && this.state.coloursLoaded && this.state.storageLoaded)){
             return (<View />);
         }
         let that = this;
@@ -206,10 +277,10 @@ class Menu extends React.Component{
             case DisplayStateType.MENU :
                 mainScreen= 
                     <View style={{padding:10, width:Variables.width}}>
-                        <View style={{flexDirection:"row", width:"100%", backgroundColor:Variables.colourBg, borderRadius:4}}>
+                        <View style={{flexDirection:"row", width:"100%", backgroundColor:this.state.colourBg, borderRadius:4}}>
                             <Text style={{fontFamily:Variables.fonts.spaceMarine, verticalAlign:"middle", flex:1, textAlign:"center", textDecorationLine:"underline"}}>Sammie's Roster List</Text>
                             <Button onPress={(e)=>this.docPicker(this)} textStyle={{fontSize:20}}>+</Button>
-                            <Button onPress={(e)=>this.setState({DisplayState:DisplayStateType.OPTIONS})} image={true}><Image style={{width:20, height:20}} source={require("../assets/images/gear.png")}/></Button>
+                            <Button onPress={(e)=>this.setState({DisplayState:DisplayStateType.OPTIONS})} image={true}><Image style={{width:20, height:20, tintColor:this.state.colourDark}} source={require("../assets/images/gear.png")}/></Button>
                         </View>
                         <View>{displayMenuItem(this.state.Rosters)}</View>
                     </View>
@@ -220,11 +291,13 @@ class Menu extends React.Component{
                 ;
                 break;
             case DisplayStateType.OPTIONS:
-                mainScreen=<Options onBack={(e)=>this.setState({DisplayState: DisplayStateType.MENU})} />;
+                mainScreen=<Options onBack={(e)=>this.setState({DisplayState: DisplayStateType.MENU})} onColourChange={(colour:Colour, value:string)=>this.applyColourChangeGlobally(colour, value, this)} onCategoriesChange={this.saveUnitCategoriesChange} onReset={()=>this.resetColours(this)}/>;
         }
-        return <View style={{width:Variables.width, borderWidth:1, borderColor:Variables.colourDark, borderRadius:Variables.boxBorderRadius, height:"100%"}}>
-            {mainScreen}
-            </View>;
+        return  <ColoursContext.Provider value={{Main:this.state.colourMain, Dark: this.state.colourDark, Bg:this.state.colourBg, Accent:this.state.colourAccent, LightAccent:this.state.colourLightAccent, Grey:this.state.colourGrey}}> 
+                    <View style={{width:Variables.width, borderWidth:1, borderColor:this.state.colourDark, borderRadius:Variables.boxBorderRadius, height:"100%"}}>
+                        {mainScreen}
+                    </View>
+                </ColoursContext.Provider>;
     };
 };
 

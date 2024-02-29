@@ -6,6 +6,7 @@ import fastXMLParser from 'fast-xml-parser';
 import Variables from "../Style/Variables";
 import Button from "./Components/Button";
 import {Text, ComplexText} from "./Components/Text";
+import {ColoursContext} from "../Style/ColoursContext";
 
 function isIterable(obj) {
     // checks for null and undefined
@@ -32,6 +33,8 @@ class WpnStats{
 }
 
 class Roster extends React.Component<Props> {
+    static contextType = ColoursContext; 
+    declare context: React.ContextType<typeof ColoursContext>;
     state = {
         Name: "",
         Costs:"",
@@ -438,7 +441,7 @@ class Roster extends React.Component<Props> {
 
     ShowRule(rule:DescriptorData, index:number):ReactNode{
         return <View key={index} style={{marginBottom:10}}>
-                    <Text style={{backgroundColor:Variables.colourAccent, fontFamily:Variables.fonts.spaceMarine, padding:5}}>{rule.Name}</Text>
+                    <Text style={{backgroundColor:this.context.Accent, fontFamily:Variables.fonts.spaceMarine, padding:5}}>{rule.Name}</Text>
                     <ComplexText fontSize={Variables.fontSize.normal} style={{marginLeft:10, marginRight:10}}>{rule.Description}</ComplexText>
                 </View>;
     }
@@ -451,7 +454,7 @@ class Roster extends React.Component<Props> {
             ))}</View>;
         } else {
             if (this.state.Menu) {
-                return <View style={{width:Variables.width, alignSelf:"center", padding:10, height:"100%", backgroundColor:Variables.colourBg}}>
+                return <View style={{width:Variables.width, alignSelf:"center", padding:10, height:"100%", backgroundColor:this.context.Bg}}>
                             <View style={{flexDirection: 'row'}}>
                                 <Button style={{ width:200}} onPress={(e)=>this.props.onBack()}>Back to Main Menu</Button>
                                 <Button style={{position:"absolute", right:0}} onPress={(e)=>this.setState({Menu:false})}>X</Button>
@@ -461,7 +464,7 @@ class Roster extends React.Component<Props> {
                             </ScrollView>
                         </View>;
             } else if (this.state.Rule) {
-                return <View style={{width:Variables.width, alignSelf:"center", padding:10, height:"100%", backgroundColor:Variables.colourBg}}>
+                return <View style={{width:Variables.width, alignSelf:"center", padding:10, height:"100%", backgroundColor:this.context.Bg}}>
                             <View style={{flexDirection: 'row'}}>
                                 <Button style={{ width:200}} onPress={(e)=>this.props.onBack()}>Back to Main Menu</Button>
                                 <Button style={{position:"absolute", right:0}} onPress={(e)=>this.setState({Rule:false})}>X</Button>
@@ -477,7 +480,7 @@ class Roster extends React.Component<Props> {
                             <Unit data={this.state.Units[this.state.Index]}/>
                         </View>
                     </ScrollView>
-                    <View style={{position:"absolute", right:20, top:20, zIndex:100, backgroundColor:Variables.colourBg, borderRadius:10}}>
+                    <View style={{position:"absolute", right:20, top:20, zIndex:100, backgroundColor:this.context.Bg, borderRadius:10}}>
                         <View style={{flexDirection:"row"}}>
                             <Button onPress={(e)=> this.Previous()} textStyle={{transform:[{rotate:'180deg'}], top:2}}>➤</Button>
                             <View style={{flexDirection:"column"}}>

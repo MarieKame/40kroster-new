@@ -4,6 +4,7 @@ import Text, { Descriptor } from '../Components/Text';
 import {ProfileWeaponData, WeaponData} from "../UnitData";
 import Style from '../../Style/Weapon';
 import IsOdd from "../Components/IsOdd";
+import { ColoursContext } from "../../Style/ColoursContext";
 
 interface Props {
     data:WeaponData,
@@ -15,11 +16,13 @@ interface Props {
 }
 
 class InternalWeapon extends React.Component<Props> {
+    static contextType = ColoursContext; 
+    declare context: React.ContextType<typeof ColoursContext>;
     render() {
         let name = this.props.forceName?this.props.forceName:this.props.data.Name;
         let weaponTraits;
         if (this.props.data.Traits().length > 0) {
-            weaponTraits = <Text style={Style.traits}>[
+            weaponTraits = <Text style={[Style.traits, {color:this.context.Main}]}>[
                 {" "+this.props.data.Traits().join(', ')+" "}
             ]</Text>;
         }
@@ -29,7 +32,7 @@ class InternalWeapon extends React.Component<Props> {
             if (this.props.profileQtt === 3) {
                 style = Style.quantity3;
             }
-            addProfileQtt = <Text style={[style, Style.moreThanOne]}>{this.props.data.Count+"x"}</Text>
+            addProfileQtt = <Text style={[style, Style.moreThanOne, {backgroundColor:this.context.LightAccent, borderColor:this.context.Dark}]}>{this.props.data.Count+"x"}</Text>
         }
         let qtt;
         if (this.props.showQuantity){
@@ -37,13 +40,13 @@ class InternalWeapon extends React.Component<Props> {
         } else {
             qtt = <Text style={Style.quantity1}> </Text>
         }
-        return <View style={this.props.isOdd.Get()?[Style.info, Style.odd]:Style.info}>
+        return <View style={this.props.isOdd.Get()?[Style.info, Style.odd, {backgroundColor:this.context.LightAccent}]:Style.info}>
             {qtt}
             {addProfileQtt}
             <Descriptor style={this.props.forceName?[Style.name, Style.profile]:Style.name}>{(this.props.forceName?"➤ ":"")+name + " "}{weaponTraits}</Descriptor>
             
             <View style={Style.stats}>
-                {this.props.data.Range()=="Melee"?<View style={Style.statData}><Image style={[Style.melee]} source={require("../../assets/images/melee.png")}/></View>:<Text style={Style.statData}>{this.props.data.Range()}</Text>}
+                {this.props.data.Range()=="Melee"?<View style={Style.statData}><Image style={[Style.melee, {tintColor:this.context.Dark}]} source={require("../../assets/images/melee.png")}/></View>:<Text style={Style.statData}>{this.props.data.Range()}</Text>}
                 <Text style={Style.statData}>{this.props.data.A()}</Text>
                 <Text style={Style.statData}>{this.props.data.BS()}</Text>
                 <Text style={Style.statData}>{this.props.data.S()}</Text>

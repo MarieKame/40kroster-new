@@ -8,12 +8,6 @@ const Variables = {
     boxBorderStyle:"solid",
     boxBorderWidth:1,
     boxBorderRadius:4,
-    colourDark:"rgb(0,0,0)",
-    colourBg:"rgba(255,255,255,0.9)",
-    colourAccent:"pink",
-    colourLightAccent:"rgb(252, 233, 236)",
-    colourMain:"red",
-    colourGrey:"#FAFAFA",
     fonts:{
         spaceMarine:'Space-Marine',
         WHN: 'Warhammer-Normal',

@@ -9,13 +9,11 @@ const Style = StyleSheet.create({
     moreThanOne:{
         position:"absolute",
         zIndex:10,
-        backgroundColor:Variables.colourLightAccent,
         width:22 * Variables.zoom,
         textAlign:"center",
         borderLeftWidth:1,
         borderTopLeftRadius:Variables.boxBorderRadius,
-        borderBottomLeftRadius:Variables.boxBorderRadius,
-        borderColor:Variables.colourDark
+        borderBottomLeftRadius:Variables.boxBorderRadius
     },
     quantity1:{
         width:22 * Variables.zoom,
@@ -40,7 +38,6 @@ const Style = StyleSheet.create({
         marginTop:2*Variables.zoom
     },
     traits:{
-        color:Variables.colourMain,
         fontFamily:Variables.fonts.WHI,
         fontSize:Variables.fontSize.small,
         alignSelf:"center",
@@ -60,7 +57,6 @@ const Style = StyleSheet.create({
     },
     profile:{},
     odd:{
-        backgroundColor:Variables.colourLightAccent,
         zIndex:-1
     },
 });
