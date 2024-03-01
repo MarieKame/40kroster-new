@@ -26,6 +26,8 @@ const Variables = {
     unitWidth:windowDimensions.width+androidMenuSpace-(baseUnitMargin*zoom + (Platform.OS=="web"?60:0)),
     zoom: zoom,
     unitCategories:['Epic Hero', 'Character', 'Battleline', 'Infantry', 'Vehicle', 'Monster'],
+    displayFirst:"melee",
+    username:"General",
     factions:[
         ['Adepta Sororitas', 'Acts of Faith'], 
         ['Adeptus Astartes', 'Oath of Moment'], 

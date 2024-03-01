@@ -8,16 +8,21 @@ import Variables from "../Style/Variables";
 import AutoExpandingTextInput from "./Components/AutoExpandingTextInput";
 import { HsvColor } from "react-native-color-picker/dist/typeHelpers";
 import {ColoursContext} from "../Style/ColoursContext";
+import RadioButtonGroup, { RadioButtonItem } from "expo-radio-button";
 
 interface Props {
     onBack:CallableFunction,
     onColourChange:CallableFunction,
     onCategoriesChange:CallableFunction,
-    onReset:CallableFunction
+    onReset:CallableFunction,
+    onNameDisplayChange:CallableFunction
 }
 
 export enum Colour{
     BG, MAIN, ACCENT, LIGHT, DARK
+}
+enum Themes{
+    DEFAULT, THORNS, EATERS, PLAGUE, THOUSAND, WOLVES, ANGELS, SORORITAS, NIDS
 }
 
 class Options extends Component<Props> {
@@ -32,7 +37,9 @@ class Options extends Component<Props> {
         accent:"",
         light:"",
         dark:"",
-        svLayout:null
+        svLayout:null,
+        displayFirst:Variables.displayFirst,
+        username:Variables.username
     };
     constructor(props, context:(typeof ColoursContext)){
         super(props, context);
@@ -67,12 +74,115 @@ class Options extends Component<Props> {
             Variables.unitCategories = this.state.unitCategoriesText.split(",").map((cat)=>cat.trim());
             this.props.onCategoriesChange(this.state.unitCategoriesText);
         });
-        this.props.onReset();
+        this.props.onReset([
+            /*colourMain:*/"rgb(255,0,0)",
+            /*colourDark:*/"rgb(0,0,0)",
+            /*colourLightAccent:*/"rgb(252, 233, 236)",
+            /*colourAccent:*/"rgb(255,180,180)",
+            /*colourBg:*/"rgba(255,255,255,0.9)",
+            /*colourGrey:*/"rgb(245,245,245)"
+        ]);
+    }
+
+    setColours(theme:Themes){
+        let colours = {
+            colourMain:"rgb(255,0,0)",
+            colourDark:"rgb(0,0,0)",
+            colourLightAccent:"rgb(252, 233, 236)",
+            colourAccent:"rgb(255,180,180)",
+            colourBg:"rgba(255,255,255,0.9)"
+        }
+        switch(theme){
+            case Themes.THORNS:
+                colours = {
+                    colourMain:"rgb(14,233,182)",
+                    colourDark:"rgb(255,255,255)",
+                    colourLightAccent:"rgb(0, 78, 76)",
+                    colourAccent:"rgb(7,103,106)",
+                    colourBg:"rgba(0,41,46,0.9)"
+                };
+                break;
+            case Themes.EATERS:
+                colours = {
+                    colourMain:"rgb(255,0,26)",
+                    colourDark:"rgb(255,188,187)",
+                    colourLightAccent:"rgb(80, 0, 28)",
+                    colourAccent:"rgb(128,0,8)",
+                    colourBg:"rgba(46,0,0,0.9)"
+                };
+                break;
+            case Themes.PLAGUE:
+                colours = {
+                    colourBg:"rgba(82,128,82,0.9)",
+                    colourMain:"rgb(255,255,255)",
+                    colourAccent:"rgb(79,149,84)",
+                    colourLightAccent:"rgb(96, 161, 100)",
+                    colourDark:"rgb(177,255,182)",
+                };
+                break;
+            case Themes.THOUSAND:
+                colours = {
+                    colourBg:"rgba(31,83,187,0.9)",
+                    colourMain:"rgb(255,228,90)",
+                    colourAccent:"rgb(163,131,47)",
+                    colourLightAccent:"rgb(69, 109, 209)",
+                    colourDark:"rgb(215,241,255)",
+                };
+                break;
+            case Themes.WOLVES:
+                colours = {
+                    colourBg:"rgba(185,235,255,0.9)",
+                    colourAccent:"rgb(145,220,255)",
+                    colourLightAccent:"rgb(171, 223, 255)",
+                    colourMain:"rgb(145,139,0)",
+                    colourDark:"rgb(0,0,0)",
+                };
+                break;
+            case Themes.ANGELS:
+                colours = {
+                    colourBg:"rgba(0,46,12,0.9)",
+                    colourAccent:"rgb(16,30,8)",
+                    colourLightAccent:"rgb(15, 68, 32)",
+                    colourMain:"rgb(215,0,5)",
+                    colourDark:"rgb(255,246,193)",
+                };
+                break;
+            case Themes.SORORITAS:
+                colours = {
+                    colourBg:"rgba(165,136,136,0.9)",
+                    colourAccent:"rgb(181,13,0)",
+                    colourLightAccent:"rgb(199, 154, 156)",
+                    colourMain:"rgb(0,0,0)",
+                    colourDark:"rgb(255,255,255)",
+                };
+                break;
+            case Themes.NIDS:
+                colours = {
+                    colourBg:"rgba(59,0,78,0.9)",
+                    colourAccent:"rgb(128,0,177)",
+                    colourLightAccent:"rgb(91,0,135)",
+                    colourMain:"rgb(247,169,0)",
+                    colourDark:"rgb(255,255,255)",
+                };
+                break;
+                
+            case Themes.DEFAULT:
+            default:
+                break;
+        }
+        this.setState({
+            bg:colours.colourBg,
+            main:colours.colourMain,
+            accent:colours.colourAccent,
+            light:colours.colourLightAccent,
+            dark:colours.colourDark
+        });
+        this.props.onReset([colours.colourMain, colours.colourDark, colours.colourLightAccent, colours.colourAccent, colours.colourBg, "rgb(245,245,245)"])
     }
 
     editColour(colour:Colour) {
         if (this.state.svLayout) {
-            this.state.svLayout.scrollTo({x:0, y:100})
+            this.state.svLayout.scrollTo({x:0, y:270})
         }
         this.setState({currentlyEditing:colour});
         switch(colour){
@@ -120,26 +230,72 @@ class Options extends Component<Props> {
         this.props.onColourChange(this.state.currentlyEditing, value);
     }
 
+    updateDisplayFirst(display:string){
+        this.setState({displayFirst:display})
+        Variables.displayFirst = display;
+        this.props.onNameDisplayChange(this.state.username+";;;"+display);
+    }
+
+    updateUsername(username:string) {
+        this.setState({username:username});
+        Variables.username = username;
+        this.props.onNameDisplayChange(username+";;;"+this.state.displayFirst);
+    }
+
     render(){
+        const textStyle = {fontSize:Variables.fontSize.big, marginBottom:10, backgroundColor:this.state.accent, padding:6, borderRadius:6};
+        const sectionStyle= {backgroundColor:this.state.bg, marginBottom:10, padding:4, borderRadius:4};
         return <View style={{padding:10, width:"100%"}}>
             <View>
                 <Button onPress={(e)=>this.props.onBack()} style={{width:100, position:"absolute", right:0}}>Back</Button>
                 <Button onPress={(e)=>this.restoreToDefaults()} style={{width:100, position:"absolute", right:120}}>Restore defaults</Button>
             </View>
-            <ScrollView style={{marginTop:40}} onLayout={(event)=> this.setState({svLayout:event.target})}>
-                <Text style={{fontSize:Variables.fontSize.big, marginBottom:10}}>Change Unit Categories, separated by a comma (,) :</Text>
-                <AutoExpandingTextInput multiline editable value={this.state.unitCategoriesText} onSubmit={text=>this.tryUpdateUnitCategories(text)} />
-                <View style={{flexDirection:"row", paddingTop:30, paddingBottom:30}}>
-                    <View style={{width:"50%"}}>
-                        <Text style={{fontSize:Variables.fontSize.big, marginBottom:10}}>Change Theme Colours :</Text>
-                        <Button onPress={(e)=>this.editColour(Colour.BG)} forceColour={this.state.bg}>Background</Button>
-                        <Button onPress={(e)=>this.editColour(Colour.MAIN)} forceColour={this.state.main}>Main</Button>
-                        <Button onPress={(e)=>this.editColour(Colour.ACCENT)} forceColour={this.state.accent}>Accent</Button>
-                        <Button onPress={(e)=>this.editColour(Colour.LIGHT)} forceColour={this.state.light}>Lighter Accent</Button>
-                        <Button onPress={(e)=>this.editColour(Colour.DARK)} forceColour={this.state.dark}>Text</Button>
+            <ScrollView style={{marginTop:50}} onLayout={(event)=> this.setState({svLayout:event.target})}>
+                <View style={sectionStyle}>
+                    
+                    <View style={{flexDirection:"row", paddingBottom:10}}>
+                        <View style={{width:"49%", marginRight:10}}>
+                            <Text style={textStyle}>Username :</Text>
+                            <AutoExpandingTextInput multiline editable value={this.state.username} onSubmit={text=>this.updateUsername(text)} />
+                        </View>
+                        <View style={{width:"49%"}}>
+                            <Text style={textStyle}>Display First :</Text>
+                            <RadioButtonGroup selected={this.state.displayFirst} onSelected={(e)=>this.updateDisplayFirst(e)} radioBackground={this.state.accent} containerStyle={{flexDirection:"row", justifyContent:"center"}} containerOptionStyle={{margin:5, marginLeft:20, marginRight:20}}>
+                                <RadioButtonItem value="melee" label={<Text>Melee</Text>}/>
+                                <RadioButtonItem value="ranged" label={<Text>Ranged</Text>}/>
+                            </RadioButtonGroup>
+                        </View>
                     </View>
-                    <View style={{width:"50%", paddingTop:40}}>
-                        {this.state.editingColour&&<ColorPicker oldColor={this.state.editingColour} onColorChange={colour=> this.applyColourChange(colour)} onColorSelected={()=>this.setState({editingColour:null})} style={{height:200}} sliderComponent={Slider}/>}
+                    <Text style={textStyle}>Unit Categories (separated by , ) :</Text>
+                    <AutoExpandingTextInput multiline editable value={this.state.unitCategoriesText} onSubmit={text=>this.tryUpdateUnitCategories(text)} />
+                </View>
+                <View style={sectionStyle}>
+                    <Text style={textStyle}>Premade Themes :</Text>
+                    <View style={{flexDirection:"row", flexWrap:"wrap", width:"100%"}}>
+                        <Button style={{width:"32%"}} forceColour="rgb(252, 233, 236)" onPress={(e)=>this.setColours(Themes.DEFAULT)}>Default</Button>
+                        <Button style={{width:"32%"}} forceColour="rgb(0, 78, 76)" onPress={(e)=>this.setColours(Themes.THORNS)}>Order of the Blessed Thorn</Button>
+                        <Button style={{width:"32%"}} forceColour="rgb(128, 0, 8)" onPress={(e)=>this.setColours(Themes.EATERS)}>World Eaters</Button>
+                        <Button style={{width:"32%"}} forceColour="rgb(79,149,84)" onPress={(e)=>this.setColours(Themes.PLAGUE)}>Death Guard</Button>
+                        <Button style={{width:"32%"}} forceColour="rgb(31,83,187)" onPress={(e)=>this.setColours(Themes.THOUSAND)}>Thousand Sons</Button>
+                        <Button style={{width:"32%"}} forceColour="rgb(145,220,255)" onPress={(e)=>this.setColours(Themes.WOLVES)}>Space Wolves</Button>
+                        <Button style={{width:"32%"}} forceColour="rgb(16,30,8)" onPress={(e)=>this.setColours(Themes.ANGELS)}>Dark Angels</Button>
+                        <Button style={{width:"32%"}} forceColour="rgb(181,13,0)" onPress={(e)=>this.setColours(Themes.SORORITAS)}>Adepta Sororitas</Button>
+                        <Button style={{width:"32%"}} forceColour="rgb(91,0,135)" onPress={(e)=>this.setColours(Themes.NIDS)}>Tyranids</Button>
+                    </View>
+                </View>
+                <View style={sectionStyle}>
+                    <View style={{flexDirection:"row", paddingTop:30, paddingBottom:30}}>
+                        <View style={{width:"50%"}}>
+                            <Text style={textStyle}>Change Theme Colours :</Text>
+                            <Button onPress={(e)=>this.editColour(Colour.BG)} forceColour={this.state.bg}>{"Background - " + this.state.bg}</Button>
+                            <Button onPress={(e)=>this.editColour(Colour.ACCENT)} forceColour={this.state.accent}>{"Title Background - " + this.state.accent}</Button>
+                            <Button onPress={(e)=>this.editColour(Colour.LIGHT)} forceColour={this.state.light}>{"Subtitle Background - " + this.state.light}</Button>
+                            <Button onPress={(e)=>this.editColour(Colour.MAIN)} forceColour={this.state.main}>{"Accent  - " + this.state.main}</Button>
+                            <Button onPress={(e)=>this.editColour(Colour.DARK)} forceColour={this.state.dark}>{"Text - " + this.state.dark}</Button>
+                        </View>
+                        <View style={{width:"40%", paddingTop:40, paddingLeft:"5%"}}>
+                            {this.state.editingColour&&<ColorPicker oldColor={this.state.editingColour} onColorChange={colour=> this.applyColourChange(colour)} onColorSelected={()=>this.setState({editingColour:null})} style={{height:200}} sliderComponent={Slider}/>}
+                        </View>
                     </View>
                 </View>
             </ScrollView>

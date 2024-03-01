@@ -141,7 +141,7 @@ class WeaponData {
         let split = data.split(',');
         this._Range = Number.isInteger(parseInt(split[0]))?parseInt(split[0]):null;
         this._A = split[1];
-        this._BS = Number.isInteger(parseInt(split[2]))?parseInt(split[1]):null;
+        this._BS = Number.isInteger(parseInt(split[2]))?parseInt(split[2]):null;
         this._S = split[3];
         this._AP = split[4];
         this._D = split[5];

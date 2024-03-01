@@ -122,8 +122,9 @@ class Unit extends React.Component<Props> {
                     </View>
                     <View style={Style.details}>
                         <View style={Style.weapons}>
-                            {this.renderWeapons(this.props.data.MeleeWeapons, "Melee Weapons")}
+                            {Variables.displayFirst=="melee"&&this.renderWeapons(this.props.data.MeleeWeapons, "Melee Weapons")}
                             {this.renderWeapons(this.props.data.RangedWeapons, "Ranged Weapons")}
+                            {Variables.displayFirst=="ranged"&&this.renderWeapons(this.props.data.MeleeWeapons, "Melee Weapons")}
                             {otherEquip}
                         </View>
                         <View style={Style.other}>

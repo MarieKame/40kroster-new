@@ -25,6 +25,7 @@ enum DisplayStateType {
 const STORAGE_KEY = "stored_rosters_40k_app";
 const COLOURS_KEY = "stored_colours_40k_app";
 const UNIT_CATEGORIES_KEY = "stored_unit_categories_40k_app";
+const NAME_DISPLAY_KEY = "stored_name_display_40k_app";
 
 const getData = async (key:string) => {
     try {
@@ -192,14 +193,18 @@ class Menu extends React.Component{
         AsyncStorage.setItem(UNIT_CATEGORIES_KEY, categories);
     }
 
-    resetColours(that:Menu){
+    saveNameDisplayChange(nameDisplay:string) {
+        AsyncStorage.setItem(NAME_DISPLAY_KEY, nameDisplay);
+    }
+
+    resetColours(colours:Array<string>, that:Menu){
         that.setState({
-            colourMain:"rgb(255,0,0)",
-            colourDark:"rgb(0,0,0)",
-            colourLightAccent:"rgb(252, 233, 236)",
-            colourAccent:"rgb(255,180,180)",
-            colourBg:"rgba(255,255,255,0.9)",
-            colourGrey:"rgb(245,245,245)"
+            colourMain:colours[0],
+            colourDark:colours[1],
+            colourLightAccent:colours[2],
+            colourAccent:colours[3],
+            colourBg:colours[4],
+            colourGrey:colours[5]
         }, ()=>{
             AsyncStorage.setItem(COLOURS_KEY, that.getColoursAsString());
         });
@@ -225,6 +230,13 @@ class Menu extends React.Component{
                 Variables.unitCategories = types.split(",").map(category=>category.trim().split(" ").map(word=>word[0].toUpperCase()+word.substring(1)).join(" "))
             }
         });
+        getData(NAME_DISPLAY_KEY).then((nameDisplay)=>{
+            if (nameDisplay) {
+                let split = nameDisplay.split(";;;");
+                Variables.username = split[0];
+                Variables.displayFirst = split[1];
+            }
+        })
     }
 
     Validate(xml):string|null {
@@ -261,10 +273,6 @@ class Menu extends React.Component{
         NavigationBar.setVisibilityAsync("hidden");
         let that = this;
 
-        /*getWindow().getDecorView().setSystemUiVisibility(
-            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-            | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);*/
-
         function displayMenuItem(rosters?: Array<RosterMenuEntry>) {
             if (!rosters) return "";
             return (
@@ -284,7 +292,7 @@ class Menu extends React.Component{
                 mainScreen= 
                     <View style={{padding:10, width:Variables.width}}>
                         <View style={{flexDirection:"row", width:"100%", backgroundColor:this.state.colourBg, borderRadius:4}}>
-                            <Text style={{fontFamily:Variables.fonts.spaceMarine, verticalAlign:"middle", flex:1, textAlign:"center", textDecorationLine:"underline"}}>Sammie's Roster List</Text>
+                            <Text style={{fontFamily:Variables.fonts.spaceMarine, verticalAlign:"middle", flex:1, textAlign:"center", textDecorationLine:"underline"}}>{Variables.username}'s Roster List</Text>
                             <Button onPress={(e)=>this.docPicker(this)} textStyle={{fontSize:20}}>+</Button>
                             <Button onPress={(e)=>this.setState({DisplayState:DisplayStateType.OPTIONS})} image={true}><Image style={{width:20, height:20, tintColor:this.state.colourDark, marginLeft:3}} source={require("../assets/images/gear.png")}/></Button>
                         </View>
@@ -297,7 +305,7 @@ class Menu extends React.Component{
                 ;
                 break;
             case DisplayStateType.OPTIONS:
-                mainScreen=<Options onBack={(e)=>this.setState({DisplayState: DisplayStateType.MENU})} onColourChange={(colour:Colour, value:string)=>this.applyColourChangeGlobally(colour, value, this)} onCategoriesChange={this.saveUnitCategoriesChange} onReset={()=>this.resetColours(this)}/>;
+                mainScreen=<Options onBack={(e)=>this.setState({DisplayState: DisplayStateType.MENU})} onColourChange={(colour:Colour, value:string)=>this.applyColourChangeGlobally(colour, value, this)} onCategoriesChange={this.saveUnitCategoriesChange} onReset={(colours)=>this.resetColours(colours, this)} onNameDisplayChange={(nd)=>this.saveNameDisplayChange(nd)}/>;
         }
         return  <ColoursContext.Provider value={{Main:this.state.colourMain, Dark: this.state.colourDark, Bg:this.state.colourBg, Accent:this.state.colourAccent, LightAccent:this.state.colourLightAccent, Grey:this.state.colourGrey}}> 
                     <View style={{width:Variables.width, borderWidth:1, borderColor:this.state.colourDark, borderRadius:Variables.boxBorderRadius, height:"100%"}}>

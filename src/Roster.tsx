@@ -212,7 +212,6 @@ class Roster extends React.Component<Props> {
                 }
             }
         } else {
-            console.log("here" + selection._number)
             that.TreatSelection({treatedSelections : model.treatedSelections}, Number(selection._number), selection._name, selection.profiles);
         }
     }
@@ -408,9 +407,6 @@ class Roster extends React.Component<Props> {
                 newUnit.RangedWeapons.sort(sortWeapon);
                 if (newUnit.Rules.length == 0){
                     newUnit.Rules = that.getDefaultRules(newUnit.Factions);
-                }
-                if (newUnit.Name=="Retributor Squad"){
-                    console.log(element)
                 }
                 that.state.Units.push(newUnit);
             }
