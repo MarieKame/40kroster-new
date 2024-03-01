@@ -206,11 +206,14 @@ class Roster extends React.Component<Props> {
                         that.TreatSelection({treatedSelections : model.treatedSelections}, count, name, elementIn.selections.selection.profiles);
                     } else {
                         for(let elementInIn of elementIn.selections.selection){
-                            that.TreatSelection({treatedSelections : model.treatedSelections}, elementInIn._number, elementInIn._name, elementInIn.profiles)
+                            that.TreatSelection({treatedSelections : model.treatedSelections}, Number(elementInIn._number), elementInIn._name, elementInIn.profiles)
                         }
                     }
                 }
             }
+        } else {
+            console.log("here" + selection._number)
+            that.TreatSelection({treatedSelections : model.treatedSelections}, Number(selection._number), selection._name, selection.profiles);
         }
     }
 
@@ -390,8 +393,24 @@ class Roster extends React.Component<Props> {
                         }
                     }
                 }
+                function sortWeapon(wpn1:WeaponData, wpn2:WeaponData):number{
+                    if (wpn1.Count > wpn2.Count)
+                        return -1;
+                    if (wpn1.Count < wpn2.Count)
+                        return 1;
+                    if (wpn1 instanceof ProfileWeaponData && !(wpn2 instanceof ProfileWeaponData))
+                        return 1;
+                    if (!(wpn1 instanceof ProfileWeaponData) && wpn2 instanceof ProfileWeaponData)
+                        return -1;
+                    return 0;
+                }
+                newUnit.MeleeWeapons.sort(sortWeapon);
+                newUnit.RangedWeapons.sort(sortWeapon);
                 if (newUnit.Rules.length == 0){
                     newUnit.Rules = that.getDefaultRules(newUnit.Factions);
+                }
+                if (newUnit.Name=="Retributor Squad"){
+                    console.log(element)
                 }
                 that.state.Units.push(newUnit);
             }

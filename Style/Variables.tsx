@@ -3,6 +3,7 @@ import { Dimensions, Platform } from "react-native";
 const windowDimensions = Dimensions.get('window');
 const zoom = Platform.OS=="web"? 1.4:1;
 const baseUnitMargin = 16;
+const androidMenuSpace = Platform.OS=="web"?0:48;
 const Variables = {
     boxBorder:"solid 1px",
     boxBorderStyle:"solid",
@@ -21,8 +22,8 @@ const Variables = {
         small:Platform.OS=="web"?14:9
     },
     unitMargin:baseUnitMargin*zoom,
-    width:windowDimensions.width,
-    unitWidth:windowDimensions.width-(baseUnitMargin*zoom + (Platform.OS=="web"?60:0)),
+    width:windowDimensions.width + androidMenuSpace,
+    unitWidth:windowDimensions.width+androidMenuSpace-(baseUnitMargin*zoom + (Platform.OS=="web"?60:0)),
     zoom: zoom,
     unitCategories:['Epic Hero', 'Character', 'Battleline', 'Infantry', 'Vehicle', 'Monster'],
     factions:[

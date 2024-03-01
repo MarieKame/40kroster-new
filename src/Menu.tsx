@@ -3,6 +3,7 @@ import {View, BackHandler, Platform, Image} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import JSZip from "jszip";
 import * as DocumentPicker from 'expo-document-picker';
+import * as NavigationBar from 'expo-navigation-bar';
 import * as Font from 'expo-font';
 import * as expoFS from 'expo-file-system';
 import fastXMLParser from 'fast-xml-parser';
@@ -257,7 +258,12 @@ class Menu extends React.Component{
         if (!(this.state.fontsLoaded && this.state.coloursLoaded && this.state.storageLoaded)){
             return (<View />);
         }
+        NavigationBar.setVisibilityAsync("hidden");
         let that = this;
+
+        /*getWindow().getDecorView().setSystemUiVisibility(
+            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+            | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);*/
 
         function displayMenuItem(rosters?: Array<RosterMenuEntry>) {
             if (!rosters) return "";
@@ -280,7 +286,7 @@ class Menu extends React.Component{
                         <View style={{flexDirection:"row", width:"100%", backgroundColor:this.state.colourBg, borderRadius:4}}>
                             <Text style={{fontFamily:Variables.fonts.spaceMarine, verticalAlign:"middle", flex:1, textAlign:"center", textDecorationLine:"underline"}}>Sammie's Roster List</Text>
                             <Button onPress={(e)=>this.docPicker(this)} textStyle={{fontSize:20}}>+</Button>
-                            <Button onPress={(e)=>this.setState({DisplayState:DisplayStateType.OPTIONS})} image={true}><Image style={{width:20, height:20, tintColor:this.state.colourDark}} source={require("../assets/images/gear.png")}/></Button>
+                            <Button onPress={(e)=>this.setState({DisplayState:DisplayStateType.OPTIONS})} image={true}><Image style={{width:20, height:20, tintColor:this.state.colourDark, marginLeft:3}} source={require("../assets/images/gear.png")}/></Button>
                         </View>
                         <View>{displayMenuItem(this.state.Rosters)}</View>
                     </View>
