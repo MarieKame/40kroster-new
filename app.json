@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "40kroster-new",
-    "slug": "40kroster-new",
-    "version": "0.0.1",
+    "name": "BattleCards",
+    "slug": "BattleCards",
+    "version": "1.0.0",
     "orientation": "landscape",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
