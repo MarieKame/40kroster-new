@@ -5,9 +5,9 @@ import Menu from './src/Menu';
 
 export default function App() {
   return (
-    <View>
-      <ImageBackground source={require('./assets/images/background.jpg')} resizeMode="cover" style={{justifyContent:"center"}}>
-        <Menu />
+    <View style={{flex:1}}>
+      <ImageBackground source={require('./assets/images/background.jpg')} resizeMode="cover" style={{justifyContent:"center", flex:1}}>
+        <Menu/>
         <StatusBar hidden={true} />
       </ImageBackground>
     </View>

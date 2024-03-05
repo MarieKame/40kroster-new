@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Component } from "react";
 import {View, BackHandler, Platform, Image} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import JSZip from "jszip";
@@ -7,6 +7,9 @@ import * as NavigationBar from 'expo-navigation-bar';
 import * as Font from 'expo-font';
 import * as expoFS from 'expo-file-system';
 import fastXMLParser from 'fast-xml-parser';
+import { DefaultTheme, NavigationContainer, NavigationProp } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+const Stack = createNativeStackNavigator();
 
 import Text from './Components/Text';
 
@@ -19,6 +22,7 @@ import { KameContext } from "../Style/KameContext";
 import { Colour } from "./Options";
 import { LeaderData } from "./UnitData";
 import Popup, { PopupOption } from "./Components/Popup";
+import RosterMenu from "./RosterMenu";
 
 enum DisplayStateType {
     MENU, DISPLAY_ROSTER, OPTIONS
@@ -53,6 +57,7 @@ class LeaderDataEntry {
 }
 
 class Menu extends React.Component{
+    public static Instance:Menu;
     state = {
         Rosters: new Array<RosterMenuEntry>(),
         DisplayState: DisplayStateType.MENU,
@@ -90,6 +95,7 @@ class Menu extends React.Component{
         this.loadData(this);
         this.fetchFonts(this);
         let that = this;
+        Menu.Instance = this;
 
         try{
             BackHandler.addEventListener('hardwareBackPress', function () {
@@ -113,18 +119,6 @@ class Menu extends React.Component{
             rosterFile: null
         }});
         AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newRosterList));
-    }
-
-    viewRoster(index) {
-        this.setState({
-            CurrentRoster:index, 
-            DisplayState: DisplayStateType.DISPLAY_ROSTER
-        });
-    }
-    deleteRoster(index) {
-        let newRosterList = this.state.Rosters;
-        newRosterList.splice(index, 1);
-        this.updateRosterList(newRosterList);
     }
 
     jszipLoadAsync(that, file) {
@@ -343,47 +337,86 @@ class Menu extends React.Component{
         NavigationBar.setVisibilityAsync("hidden");
         let that = this;
 
-        function displayMenuItem(rosters?: Array<RosterMenuEntry>) {
-            if (!rosters) return "";
-            return (
-                <View style={{flexDirection: 'row', flexWrap: 'wrap', width:"100%"}}>
-                     {rosters.map((roster, index) => 
-                        <View style={{flexBasis:"50%", flexDirection:"row"}} key={index}>
-                            <Button onPress={(e) => that.viewRoster(index)} style={{flex:1, height:60}}>{roster.Name}{roster.Cost&&("\n( "+roster.Cost+" )")}</Button>
-                            <Button onPress={(e) => that.deleteRoster(index)} textStyle={{fontSize:20}} style={{width:44}} weight="light">🗑</Button>
-                        </View>
-                     )}
-                </View>
-                );
-        }
-        let mainScreen;
-        switch(this.state.DisplayState) {
-            case DisplayStateType.MENU :
-                mainScreen= 
-                    <View style={{padding:10, width:Variables.width}}>
-                        <View style={{flexDirection:"row", width:"100%", backgroundColor:this.state.colourBg, borderRadius:4}}>
-                            <Text style={{fontFamily:Variables.fonts.spaceMarine, verticalAlign:"middle", flex:1, textAlign:"center", textDecorationLine:"underline"}}>{Variables.username}'s Roster List</Text>
-                            <Button onPress={(e)=>this.docPicker(this)} textStyle={{fontSize:20}}>+</Button>
-                            <Button onPress={(e)=>this.setState({DisplayState:DisplayStateType.OPTIONS})} image={true}><Image style={{width:20, height:20, tintColor:this.state.colourDark, marginLeft:3}} source={require("../assets/images/gear.png")}/></Button>
-                        </View>
-                        <View>{displayMenuItem(this.state.Rosters)}</View>
-                    </View>
-                ;
-                break;
-            case DisplayStateType.DISPLAY_ROSTER :
-                mainScreen= <Roster XML={that.state.Rosters[this.state.CurrentRoster].XML} forceLeaders={that.FindCurrentLeaderData()} onBack={(e)=>this.setState({DisplayState: DisplayStateType.MENU})} onLoad={(e)=>this.RosterLoaded(e)} onUpdateLeaders={(newLeaders)=>this.SaveLeadersData(newLeaders, this.state.Rosters[this.state.CurrentRoster].Name)} />
-                ;
-                break;
-            case DisplayStateType.OPTIONS:
-                mainScreen=<Options onBack={(e)=>this.setState({DisplayState: DisplayStateType.MENU})} onColourChange={(colour:Colour, value:string)=>this.applyColourChangeGlobally(colour, value, this)} onCategoriesChange={this.saveUnitCategoriesChange} onReset={(colours)=>this.resetColours(colours, this)} onNameDisplayChange={(nd)=>this.saveNameDisplayChange(nd)}/>;
-        }
+        const config = {
+            animation: 'spring',
+            config: {
+              stiffness: 1000,
+              damping: 500,
+              mass: 3,
+              overshootClamping: true,
+              restDisplacementThreshold: 0.01,
+              restSpeedThreshold: 0.01,
+            },
+          };
+
         return  <KameContext.Provider value={{Main:this.state.colourMain, Dark: this.state.colourDark, Bg:this.state.colourBg, Accent:this.state.colourAccent, LightAccent:this.state.colourLightAccent, Grey:this.state.colourGrey, Popup:this.CallPopup}}> 
-                    <View style={{width:Variables.width, borderWidth:1, borderColor:this.state.colourDark, borderRadius:Variables.boxBorderRadius, height:"100%"}}>
-                        {mainScreen}
-                    </View>
+                    <NavigationContainer theme={{...DefaultTheme, colors:{...DefaultTheme.colors, background:"transparent"}}} >
+                        <Stack.Navigator initialRouteName="Home" screenOptions={{headerShown: false}}>
+                            <Stack.Screen name="Home" options={{animation:"slide_from_left"}}>
+                                {(props)=> <MenuDisplay {...props} that={this}/>}
+                            </Stack.Screen>
+                            <Stack.Screen name="Roster" options={{animation:"slide_from_right", animationTypeForReplace:"pop"}}>
+                                {(props)=> <Roster {...props} XML={that.state.Rosters[this.state.CurrentRoster].XML} forceLeaders={that.FindCurrentLeaderData()} onLoad={(e)=>this.RosterLoaded(e)} onUpdateLeaders={(newLeaders)=>this.SaveLeadersData(newLeaders, this.state.Rosters[this.state.CurrentRoster].Name)} />}
+                            </Stack.Screen>
+                            <Stack.Screen name="RosterMenu" options={{animation:"fade"}}>
+                                {(props)=> <RosterMenu {...props}/>}
+                            </Stack.Screen>
+                            <Stack.Screen name="Options" options={{animation:"slide_from_right"}}>
+                                {(props)=> <Options {...props} onColourChange={(colour:Colour, value:string)=>this.applyColourChangeGlobally(colour, value, this)} onCategoriesChange={this.saveUnitCategoriesChange} onReset={(colours)=>this.resetColours(colours, this)} onNameDisplayChange={(nd)=>this.saveNameDisplayChange(nd)}/>}
+                            </Stack.Screen>
+                        </Stack.Navigator>
+                    </NavigationContainer>
                     <Popup question={this.state.popupQuestion} options={this.state.popupOptions} default={this.state.popupDefault} key={this.state.popupQuestion} />
                 </KameContext.Provider>;
     };
 };
+
+interface MenuDisplayProps{
+    that:Menu,
+    navigation:{navigate}
+}
+class MenuDisplay extends Component<MenuDisplayProps> {
+    static contextType = KameContext; 
+    declare context: React.ContextType<typeof KameContext>;
+
+    viewRoster(index) {
+        Menu.Instance.setState({
+            CurrentRoster:index
+        });
+        this.props.navigation.navigate("Roster");
+    }
+
+    deleteRoster(index) {
+        let newRosterList = Menu.Instance.state.Rosters;
+        newRosterList.splice(index, 1);
+        Menu.Instance.updateRosterList(newRosterList);
+    }
+
+    displayMenuItem(rosters: Array<RosterMenuEntry>) {
+        if (!rosters) return "";
+        const that = this;
+        return (
+            <View style={{flexDirection: 'row', flexWrap: 'wrap', width:"100%"}}>
+                 {rosters.map((roster, index) => 
+                    <View style={{flexBasis:"50%", flexDirection:"row"}} key={index}>
+                        <Button onPress={(e) => that.viewRoster(index)} style={{flex:1, height:60}}>{roster.Name}{roster.Cost&&("\n( "+roster.Cost+" )")}</Button>
+                        <Button onPress={(e) => that.deleteRoster(index)} textStyle={{fontSize:20}} style={{width:44}} weight="light">🗑</Button>
+                    </View>
+                 )}
+            </View>
+            );
+    }
+
+    render(){
+        return <View style={{padding:10, width:Variables.width}}>
+            <View style={{flexDirection:"row", width:"100%", backgroundColor:this.context.Bg, borderRadius:4}}>
+                <Text style={{fontFamily:Variables.fonts.spaceMarine, verticalAlign:"middle", flex:1, textAlign:"center", textDecorationLine:"underline"}}>{Variables.username}'s Roster List</Text>
+                <Button onPress={(e)=>this.props.that.docPicker(this)} textStyle={{fontSize:20}}>+</Button>
+                <Button onPress={(e)=>this.props.navigation.navigate('Options')} image={true}><Image style={{width:20, height:20, tintColor:this.context.Dark, marginLeft:3}} source={require("../assets/images/gear.png")}/></Button>
+            </View>
+            <View>{this.displayMenuItem(this.props.that.state.Rosters)}</View>
+        </View>
+    }
+}
 
 export default Menu;

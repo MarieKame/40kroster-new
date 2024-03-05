@@ -12,11 +12,11 @@ import RadioButtonGroup, { RadioButtonItem } from "expo-radio-button";
 import Checkbox from "expo-checkbox";
 
 interface Props {
-    onBack:CallableFunction,
     onColourChange:CallableFunction,
     onCategoriesChange:CallableFunction,
     onReset:CallableFunction,
-    onNameDisplayChange:CallableFunction
+    onNameDisplayChange:CallableFunction,
+    navigation:{goBack}
 }
 
 export enum Colour{
@@ -255,7 +255,7 @@ class Options extends Component<Props> {
         const sectionStyle= {backgroundColor:this.state.bg, marginBottom:10, padding:4, borderRadius:4};
         return <View style={{padding:10, width:"100%"}}>
             <View>
-                <Button onPress={(e)=>this.props.onBack()} style={{width:100, position:"absolute", right:0}}>Back</Button>
+                <Button onPress={(e)=>this.props.navigation.goBack()} style={{width:100, position:"absolute", right:0}}>Back</Button>
                 <Button onPress={(e)=>this.restoreToDefaults()} style={{width:100, position:"absolute", right:120}}>Restore defaults</Button>
             </View>
             <ScrollView style={{marginTop:50}} onLayout={(event)=> this.setState({svLayout:event.target})}>

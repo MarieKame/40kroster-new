@@ -18,7 +18,7 @@ function isIterable(obj) {
 
 interface Props {
     XML:string,
-    onBack:CallableFunction,
+    navigation:{navigate},
     onLoad:CallableFunction,
     onUpdateLeaders:CallableFunction,
     forceLeaders?:Array<LeaderData>
@@ -38,7 +38,7 @@ enum RosterMenuCategories {
     UNIT_LIST, RULES, REMINDERS
 }
 
-class Reminder{
+export class Reminder{
     Data:DescriptorData;
     UnitName:string;
     Phase:string|null;
@@ -55,6 +55,7 @@ const Phases={
 }
 
 class Roster extends React.Component<Props> {
+    static Instance:Roster;
     static contextType = KameContext; 
     declare context: React.ContextType<typeof KameContext>;
     state = {
@@ -478,6 +479,7 @@ class Roster extends React.Component<Props> {
         const parser = new fastXMLParser.XMLParser({ignoreAttributes:false, attributeNamePrefix :"_", textNodeName:"textValue"});
         this.ExploreRoster(parser.parse(props.XML).roster);
         this.props.onLoad(this.state.Costs);
+        Roster.Instance = this;
     }
 
     Previous(){
@@ -499,39 +501,6 @@ class Roster extends React.Component<Props> {
         this.setState({Index:index, Menu:false});
     }
 
-    ShowCategory(category:string, index:number):ReactNode {
-        let that = this;
-        if (this.state.Units.filter((unit)=> unit.GetUnitCategory() == category).length == 0) return "";
-        return <View style={{paddingBottom:14}} key={index}>
-            <Text style={{width:"100%", textAlign:"center", fontFamily:Variables.fonts.spaceMarine, paddingBottom:4}}>— {category} —</Text>
-            <View style={{flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', width:"100%"}}>
-                {this.state.Units.map((unit, index) => 
-                    unit.GetUnitCategory() == category&&<View style={{width:"50%"}}><Button onPress={(e)=>that.DisplayUnit(index)} weight={(index==that.state.Index)?"heavy":"normal"}>{unit.CustomName?unit.CustomName:unit.Name}</Button></View>
-                )}
-            </View>
-        </View>;
-    }
-
-    ShowRemindersFor(phase:string, index:number):ReactNode{
-
-        return <View key={index+"reminderPhase"} style={{marginBottom:10, padding:4}}>
-                    {phase&&<Text style={{backgroundColor:this.context.Accent, fontFamily:Variables.fonts.spaceMarine, padding:5, marginBottom:4}}>{phase+" Phase"}</Text>}
-                    {this.state.Reminders.map((reminder, reminderIndex)=>
-                    reminder.Phase==phase&&
-                        <View key={index+reminderIndex}><Text style={{backgroundColor:this.context.LightAccent, fontFamily:Variables.fonts.spaceMarine, padding:5}}>{reminder.UnitName + " - " + reminder.Data.Name}</Text>
-                        <ComplexText fontSize={Variables.fontSize.normal} style={{marginLeft:10, marginRight:10}}>{reminder.Data.Description}</ComplexText></View>
-                    )}
-                    
-                </View>;
-    }
-
-    ShowRule(rule:DescriptorData, index:number):ReactNode{
-        return <View key={index} style={{marginBottom:10}}>
-                    <Text style={{backgroundColor:this.context.Accent, fontFamily:Variables.fonts.spaceMarine, padding:5}}>{rule.Name}</Text>
-                    <ComplexText fontSize={Variables.fontSize.normal} style={{marginLeft:10, marginRight:10}}>{rule.Description}</ComplexText>
-                </View>;
-    }
-
     UpdateLeader(leader:LeaderData, that:Roster) {
         let leaders = that.state.Leaders;
         const index = leaders.findIndex(leader2=>leader2.UniqueId==leader.UniqueId);
@@ -547,62 +516,26 @@ class Roster extends React.Component<Props> {
                 <Unit data={unitData} key={key++} Leaders={this.state.Leaders} onUpdateLeader={(leader)=>this.UpdateLeader(leader,this)} />
             ))}</View>;
         } else {
-            if (this.state.Menu) {
-                let menuContents;
-                switch(this.state.MenuSection) {
-                    case RosterMenuCategories.UNIT_LIST:
-                        menuContents=
-                           <ScrollView>
-                                {Variables.unitCategories.map((category, index) => this.ShowCategory(category, index))}
-                            </ScrollView>;
-                            break;
-                    case RosterMenuCategories.RULES:
-                        menuContents=
-                           <ScrollView>
-                                {this.state.Rules.map((category, index) => this.ShowRule(category, index))}
-                            </ScrollView>;
-                            break;
-                    case RosterMenuCategories.REMINDERS:
-                        menuContents=
-                            <ScrollView>
-                                 {[null, "Any", "Command", "Movement", "Shooting", "Charge", "Fight"].map((phase, index) => this.ShowRemindersFor(phase, index))}
-                             </ScrollView>;
-                            break;
-
-                }
-                return <View style={{width:Variables.width, alignSelf:"center", padding:10, height:"100%"}}>
-                            <View style={{flexDirection: 'row', left:-4}}>
-                                <Button key="main" style={{position:"absolute", right:44, top:-4}} onPress={(e)=>this.props.onBack()}>Main Menu</Button>
-                                <Button key="x" style={{position:"absolute", right:-4, top:-4}} onPress={(e)=>this.setState({Menu:false})}>X</Button>
-                                <Button key="list" tab={true} onPress={(e)=>this.setState({MenuSection:RosterMenuCategories.UNIT_LIST})} weight={this.state.MenuSection==RosterMenuCategories.UNIT_LIST?"heavy":"normal"}>Unit List</Button>
-                                <Button key="rules" tab={true} onPress={(e)=>this.setState({MenuSection:RosterMenuCategories.RULES})} weight={this.state.MenuSection==RosterMenuCategories.RULES?"heavy":"normal"}>Rules</Button>
-                                <Button key="remi" tab={true} onPress={(e)=>this.setState({MenuSection:RosterMenuCategories.REMINDERS})} weight={this.state.MenuSection==RosterMenuCategories.REMINDERS?"heavy":"normal"}>Reminders</Button>
-                            </View>
-                            <View style={{backgroundColor:this.context.Bg, top:-4, paddingTop:10, bottom:10, height:Variables.height - 52}}>
-                                {menuContents}
-                            </View>
-                </View>;
-            } else {
-                return <View>
-                    <ScrollView>
-                        <View style={{width:Variables.width, alignSelf:"center", padding:10, height:"100%"}}>
-                            <Unit data={this.state.Units[this.state.Index]} Leaders={this.state.Leaders} onUpdateLeader={(leader)=>this.UpdateLeader(leader,this)} />
-                        </View>
-                    </ScrollView>
-                    <View style={{position:"absolute", right:20, top:20, zIndex:100, backgroundColor:this.context.Bg, borderRadius:10}}>
-                        <View style={{flexDirection:"row"}}>
-                            <Button key="back" onPress={(e)=> this.Previous()} textStyle={{transform:[{rotate:'180deg'}], top:2}}>➤</Button>
-                            <View style={{flexDirection:"column"}}>
-                                <Button onPress={(e)=> this.setState({Menu:true, MenuSection:RosterMenuCategories.UNIT_LIST})}style={{width:70}}>Menu</Button>
-                            </View>
-                            <Button key="for" onPress={(e)=> this.Next()}>➤</Button>
-                        </View>
-                        <Text style={{textAlign:"center"}}>{(this.state.Index+1) + " / " + this.state.Units.length}</Text>
+            return <View>
+                <ScrollView>
+                    <View style={{width:Variables.width, alignSelf:"center", padding:10, height:"100%"}}>
+                        <Unit data={this.state.Units[this.state.Index]} Leaders={this.state.Leaders} onUpdateLeader={(leader)=>this.UpdateLeader(leader,this)} />
                     </View>
-                </View>;
-            }
+                </ScrollView>
+                <View style={{position:"absolute", right:20, top:20, zIndex:100, backgroundColor:this.context.Bg, borderRadius:10}}>
+                    <View style={{flexDirection:"row"}}>
+                        <Button key="back" onPress={(e)=> this.Previous()} textStyle={{transform:[{rotate:'180deg'}], top:2}}>➤</Button>
+                        <View style={{flexDirection:"column"}}>
+                            <Button onPress={(e)=> this.props.navigation.navigate('RosterMenu')}style={{width:70}}>Menu</Button>
+                        </View>
+                        <Button key="for" onPress={(e)=> this.Next()}>➤</Button>
+                    </View>
+                    <Text style={{textAlign:"center"}}>{(this.state.Index+1) + " / " + this.state.Units.length}</Text>
+                </View>
+            </View>;
         }
     }
+    
 }
 
 export default Roster;
