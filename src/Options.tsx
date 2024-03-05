@@ -7,8 +7,9 @@ import Button from "./Components/Button";
 import Variables from "../Style/Variables";
 import AutoExpandingTextInput from "./Components/AutoExpandingTextInput";
 import { HsvColor } from "react-native-color-picker/dist/typeHelpers";
-import {ColoursContext} from "../Style/ColoursContext";
+import {KameContext} from "../Style/KameContext";
 import RadioButtonGroup, { RadioButtonItem } from "expo-radio-button";
+import Checkbox from "expo-checkbox";
 
 interface Props {
     onBack:CallableFunction,
@@ -26,8 +27,8 @@ enum Themes{
 }
 
 class Options extends Component<Props> {
-    static contextType = ColoursContext; 
-    declare context: React.ContextType<typeof ColoursContext>;
+    static contextType = KameContext; 
+    declare context: React.ContextType<typeof KameContext>;
     state={
         unitCategoriesText:"",
         editingColour:null,
@@ -39,9 +40,10 @@ class Options extends Component<Props> {
         dark:"",
         svLayout:null,
         displayFirst:Variables.displayFirst,
-        username:Variables.username
+        username:Variables.username,
+        displayLeaderInfo:Variables.displayLeaderInfo
     };
-    constructor(props, context:(typeof ColoursContext)){
+    constructor(props, context:(typeof KameContext)){
         super(props, context);
         this.state.unitCategoriesText = Variables.unitCategories.join(", ");
         this.state.bg = this.context.Bg;
@@ -230,16 +232,22 @@ class Options extends Component<Props> {
         this.props.onColourChange(this.state.currentlyEditing, value);
     }
 
+    updateDisplayLeaderInfo(value:boolean, that:Options) {
+        that.setState({displayLeaderInfo:value})
+        Variables.displayLeaderInfo = value;
+        that.props.onNameDisplayChange(that.state.username+";;;"+that.state.displayFirst+";;;"+(value?"true":"false"));
+    }
+
     updateDisplayFirst(display:string){
         this.setState({displayFirst:display})
         Variables.displayFirst = display;
-        this.props.onNameDisplayChange(this.state.username+";;;"+display);
+        this.props.onNameDisplayChange(this.state.username+";;;"+display+";;;"+(this.state.displayLeaderInfo?"true":"false"));
     }
 
     updateUsername(username:string) {
         this.setState({username:username});
         Variables.username = username;
-        this.props.onNameDisplayChange(username+";;;"+this.state.displayFirst);
+        this.props.onNameDisplayChange(username+";;;"+this.state.displayFirst+";;;"+(this.state.displayLeaderInfo?"true":"false"));
     }
 
     render(){
@@ -254,16 +262,23 @@ class Options extends Component<Props> {
                 <View style={sectionStyle}>
                     
                     <View style={{flexDirection:"row", paddingBottom:10}}>
-                        <View style={{width:"49%", marginRight:10}}>
+                        <View style={{width:"29%", marginRight:10}}>
                             <Text style={textStyle}>Username :</Text>
                             <AutoExpandingTextInput multiline editable value={this.state.username} onSubmit={text=>this.updateUsername(text)} />
                         </View>
-                        <View style={{width:"49%"}}>
+                        <View style={{width:"39%", marginRight:10}}>
                             <Text style={textStyle}>Display First :</Text>
                             <RadioButtonGroup selected={this.state.displayFirst} onSelected={(e)=>this.updateDisplayFirst(e)} radioBackground={this.state.accent} containerStyle={{flexDirection:"row", justifyContent:"center"}} containerOptionStyle={{margin:5, marginLeft:20, marginRight:20}}>
                                 <RadioButtonItem value="melee" label={<Text>Melee</Text>}/>
                                 <RadioButtonItem value="ranged" label={<Text>Ranged</Text>}/>
                             </RadioButtonGroup>
+                        </View>
+                        <View style={{width:"29%", height:"100%"}}>
+                            <Text style={textStyle}>Leader Info :</Text>
+                            <View style={{flexDirection:"row", justifyContent:"center", alignItems:"center", paddingRight:10, paddingBottom:4, height:40}}>
+                                <Checkbox value={this.state.displayLeaderInfo} onValueChange={value=>this.updateDisplayLeaderInfo(value, this)} style={{marginRight:4}}/>
+                                <Text>Force Display</Text>
+                            </View>
                         </View>
                     </View>
                     <Text style={textStyle}>Unit Categories (separated by , ) :</Text>

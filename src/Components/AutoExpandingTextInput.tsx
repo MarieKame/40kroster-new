@@ -1,15 +1,15 @@
 import { Component, Context } from "react";
 import { TextInput, TextInputProps } from "react-native";
 import Variables from "../../Style/Variables";
-import { ColoursContext } from "../../Style/ColoursContext";
+import { KameContext } from "../../Style/KameContext";
 
 interface AEProps extends TextInputProps {
   onSubmit:CallableFunction
 }
 
 class AutoExpandingTextInput extends Component<AEProps> {
-  static contextType = ColoursContext; 
-  declare context: React.ContextType<typeof ColoursContext>;
+  static contextType = KameContext; 
+  declare context: React.ContextType<typeof KameContext>;
   state={
     height:0,
     value:""

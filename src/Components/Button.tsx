@@ -2,7 +2,7 @@ import {Pressable, StyleSheet, TextProps, TextStyle} from 'react-native';
 import Text from './Text';
 import {Component, Context, ReactNode, useContext} from 'react';
 import Variables from '../../Style/Variables';
-import {ColoursContext} from '../../Style/ColoursContext';
+import {KameContext} from '../../Style/KameContext';
 
 export interface ButtonProps extends TextProps {
     textStyle?:TextStyle,
@@ -13,8 +13,8 @@ export interface ButtonProps extends TextProps {
 }
 
 export class Button extends Component<ButtonProps>  {   
-    static contextType = ColoursContext; 
-    declare context: React.ContextType<typeof ColoursContext>;
+    static contextType = KameContext; 
+    declare context: React.ContextType<typeof KameContext>;
     
     render():ReactNode{
         const Style = StyleSheet.create({

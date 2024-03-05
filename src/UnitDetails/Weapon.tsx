@@ -4,7 +4,7 @@ import Text, { Descriptor } from '../Components/Text';
 import {ProfileWeaponData, WeaponData} from "../UnitData";
 import Style from '../../Style/Weapon';
 import IsOdd from "../Components/IsOdd";
-import { ColoursContext } from "../../Style/ColoursContext";
+import { KameContext } from "../../Style/KameContext";
 
 interface Props {
     data:WeaponData,
@@ -16,8 +16,8 @@ interface Props {
 }
 
 class InternalWeapon extends React.Component<Props> {
-    static contextType = ColoursContext; 
-    declare context: React.ContextType<typeof ColoursContext>;
+    static contextType = KameContext; 
+    declare context: React.ContextType<typeof KameContext>;
     render() {
         let name = this.props.forceName?this.props.forceName:this.props.data.Name;
         let weaponTraits;

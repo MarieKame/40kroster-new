@@ -2,7 +2,7 @@
 import { StyleSheet } from "react-native";
 import React from "react";
 import Variables from "./Variables";
-import {ColoursContext} from "./ColoursContext";
+import {KameContext} from "./KameContext";
 
 const Style = StyleSheet.create({
     unit: {

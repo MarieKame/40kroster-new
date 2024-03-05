@@ -28,6 +28,7 @@ const Variables = {
     zoom: zoom,
     unitCategories:['Epic Hero', 'Character', 'Battleline', 'Infantry', 'Vehicle', 'Monster'],
     displayFirst:"melee",
+    displayLeaderInfo:false,
     username:"General",
     factions:[
         ['Adepta Sororitas', 'Acts of Faith'], 

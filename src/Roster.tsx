@@ -6,7 +6,7 @@ import fastXMLParser from 'fast-xml-parser';
 import Variables from "../Style/Variables";
 import Button from "./Components/Button";
 import {Text, ComplexText} from "./Components/Text";
-import {ColoursContext} from "../Style/ColoursContext";
+import {KameContext} from "../Style/KameContext";
 
 function isIterable(obj) {
     // checks for null and undefined
@@ -19,7 +19,9 @@ function isIterable(obj) {
 interface Props {
     XML:string,
     onBack:CallableFunction,
-    onLoad:CallableFunction
+    onLoad:CallableFunction,
+    onUpdateLeaders:CallableFunction,
+    forceLeaders?:Array<LeaderData>
 }
 
 class StatAndName {
@@ -53,8 +55,8 @@ const Phases={
 }
 
 class Roster extends React.Component<Props> {
-    static contextType = ColoursContext; 
-    declare context: React.ContextType<typeof ColoursContext>;
+    static contextType = KameContext; 
+    declare context: React.ContextType<typeof KameContext>;
     state = {
         Name: "",
         Costs:"",
@@ -370,6 +372,10 @@ class Roster extends React.Component<Props> {
         this.state.Costs = this.FormatCost(roster.costs.cost).toString();
         let that = this;
         let key = 0;
+        const doLeaders = this.props.forceLeaders==null;
+        if (!doLeaders) {
+            this.state.Leaders=this.props.forceLeaders;
+        }
         if (roster.forces.force.rules) {
             for(let element of roster.forces.force.rules.rule) {
                 this.state.Rules.push(new DescriptorData(element._name, element.description));
@@ -443,15 +449,27 @@ class Roster extends React.Component<Props> {
                     newUnit.Rules = that.getDefaultRules(newUnit.Factions);
                 }
                 that.state.Units.push(newUnit);
-                if (newUnit.GetLeaderData()){
+                if (doLeaders && newUnit.GetLeaderData()){
                     this.state.Leaders.push(newUnit.GetLeaderData());
                 }
             }
         };
+        this.state.Reminders = this.state.Reminders.filter((reminder1, index, reminders) => 
+            reminders.findIndex((reminder2) => 
+                reminder1.UnitName==reminder2.UnitName && reminder1.Data.Name == reminder2.Data.Name
+            ) == index);
         this.state.Reminders.sort((reminder1, reminder2)=>{
-            return Phases[reminder1.Phase] - Phases[reminder2.Phase];
+            return Phases[reminder1.Phase] !== Phases[reminder2.Phase]
+                        ?Phases[reminder1.Phase] - Phases[reminder2.Phase]
+                        :(reminder1.UnitName !== reminder2.UnitName)
+                            ? reminder1.UnitName.localeCompare(reminder2.UnitName)
+                            : reminder1.Data.Name.localeCompare(reminder2.Data.Name);
         });
         this.state.Units.sort(UnitData.compareUnits);
+        if (doLeaders) {
+            this.state.Leaders.sort((leader1, leader2)=>this.state.Units.findIndex(unit=>leader1.Name.indexOf(unit.Name)!==-1)-this.state.Units.findIndex(unit=>leader2.Name.indexOf(unit.Name)!==-1))
+            this.props.onUpdateLeaders(this.state.Leaders);
+        }
     }
 
     constructor(props) {
@@ -514,11 +532,19 @@ class Roster extends React.Component<Props> {
                 </View>;
     }
 
+    UpdateLeader(leader:LeaderData, that:Roster) {
+        let leaders = that.state.Leaders;
+        const index = leaders.findIndex(leader2=>leader2.UniqueId==leader.UniqueId);
+        leaders[index] = leader;
+        that.props.onUpdateLeaders(leaders);
+        that.setState({Leaders:leaders});
+    }
+
     render(){
         let key= 0;
         if (Platform.OS=="web"){
             return <View style={{width:Variables.width, alignSelf:"center", padding:10}}>{this.state.Units.map(unitData => (
-                <Unit data={unitData} key={key++} Leaders={this.state.Leaders}/>
+                <Unit data={unitData} key={key++} Leaders={this.state.Leaders} onUpdateLeader={(leader)=>this.UpdateLeader(leader,this)} />
             ))}</View>;
         } else {
             if (this.state.Menu) {
@@ -560,7 +586,7 @@ class Roster extends React.Component<Props> {
                 return <View>
                     <ScrollView>
                         <View style={{width:Variables.width, alignSelf:"center", padding:10, height:"100%"}}>
-                            <Unit data={this.state.Units[this.state.Index]} Leaders={this.state.Leaders}/>
+                            <Unit data={this.state.Units[this.state.Index]} Leaders={this.state.Leaders} onUpdateLeader={(leader)=>this.UpdateLeader(leader,this)} />
                         </View>
                     </ScrollView>
                     <View style={{position:"absolute", right:20, top:20, zIndex:100, backgroundColor:this.context.Bg, borderRadius:10}}>

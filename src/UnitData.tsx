@@ -170,16 +170,19 @@ class ProfileWeaponData extends WeaponData {
 }
 
 class LeaderData{
+    private static UniqueBase = 0;
     Name:string;
     Leading:Array<string>;
     Effects:Array<DescriptorData>;
     CurrentlyLeading:number;
+    UniqueId:number;
 
     constructor(name:string, leading:Array<string>){
         this.Name = name;
         this.Leading = leading;
         this.Effects = new Array<DescriptorData>();
         this.CurrentlyLeading=-1;
+        this.UniqueId = LeaderData.UniqueBase++;
     }
 }
 
@@ -293,7 +296,9 @@ class UnitData {
     }
 
     static compareUnits(unit1:UnitData, unit2:UnitData) {
-        return unit2.getWeight() - unit1.getWeight();
+        const weight1 = unit1.getWeight();
+        const weight2 = unit2.getWeight();
+        return (weight2 !== weight1)?weight2-weight1:unit1.Name.localeCompare(unit2.Name);
     }
 }
 

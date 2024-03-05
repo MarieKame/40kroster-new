@@ -15,8 +15,10 @@ import Roster from './Roster';
 import Button from "./Components/Button";
 import Variables from "../Style/Variables";
 import Options from './Options';
-import { ColoursContext } from "../Style/ColoursContext";
+import { KameContext } from "../Style/KameContext";
 import { Colour } from "./Options";
+import { LeaderData } from "./UnitData";
+import Popup, { PopupOption } from "./Components/Popup";
 
 enum DisplayStateType {
     MENU, DISPLAY_ROSTER, OPTIONS
@@ -26,6 +28,7 @@ const STORAGE_KEY = "stored_rosters_40k_app";
 const COLOURS_KEY = "stored_colours_40k_app";
 const UNIT_CATEGORIES_KEY = "stored_unit_categories_40k_app";
 const NAME_DISPLAY_KEY = "stored_name_display_40k_app";
+const LEADERS_KEY = "stored_leaders_40k_app";
 
 const getData = async (key:string) => {
     try {
@@ -38,6 +41,16 @@ const getData = async (key:string) => {
       return null;
     }
   };
+
+class LeaderDataEntry {
+    Data:Array<LeaderData>;
+    RosterName:string;
+
+    constructor(data:Array<LeaderData>, rosterName:string) {
+        this.Data = data;
+        this.RosterName = rosterName;
+    }
+}
 
 class Menu extends React.Component{
     state = {
@@ -55,7 +68,11 @@ class Menu extends React.Component{
         colourLightAccent:"rgb(252, 233, 236)",
         colourAccent:"rgb(255,180,180)",
         colourBg:"rgba(255,255,255,0.9)",
-        colourGrey:"rgb(245,245,245)"
+        colourGrey:"rgb(245,245,245)",
+        LeadersData:new Array<LeaderDataEntry>(),
+        popupQuestion:null,
+        popupOptions:null,
+        popupDefault:null,
     };
 
     async fetchFonts (that) {
@@ -231,12 +248,19 @@ class Menu extends React.Component{
             }
         });
         getData(NAME_DISPLAY_KEY).then((nameDisplay)=>{
-            if (nameDisplay) {
+            if (nameDisplay) { 
                 let split = nameDisplay.split(";;;");
                 Variables.username = split[0];
                 Variables.displayFirst = split[1];
+                Variables.displayLeaderInfo = split[2]=="true";
             }
-        })
+        });
+        getData(LEADERS_KEY).then((leadersJson)=>{
+            if (leadersJson) {
+                const parsed = JSON.parse(leadersJson);
+                that.setState({LeadersData:parsed});
+            }
+        });
     }
 
     Validate(xml):string|null {
@@ -252,11 +276,29 @@ class Menu extends React.Component{
     }
 
     tryAddRoster(rosterXml) {
-        let rosterName = this.Validate(rosterXml);
-        if (rosterName && rosterXml){
-            let newRosterList = this.state.Rosters;
+        function add(that:Menu){
+            let newRosterList = that.state.Rosters;
             newRosterList.push(new RosterMenuEntry(rosterName, rosterXml));
-            this.updateRosterList(newRosterList);
+            that.updateRosterList(newRosterList);
+        }
+        let rosterName = this.Validate(rosterXml);
+        let that = this;
+        if (rosterName && rosterXml){
+            if (this.state.Rosters.find(roster=>rosterName==roster.Name)){
+                this.CallPopup(
+                    "There is already a roster with this name; overwrite?",
+                    [{option:"Yes", callback:()=>{
+                        let leadersData = that.state.LeadersData;
+                        leadersData.splice(that.FindLeaderDataIndex(rosterName), 1)
+                        that.setState({LeadersData:leadersData});
+                        AsyncStorage.setItem(LEADERS_KEY, JSON.stringify(leadersData));
+                        add(that);
+                    }}],
+                    "No"
+                )
+            } else {
+                add(that);
+            }
         }
     }
 
@@ -264,6 +306,34 @@ class Menu extends React.Component{
         let rosters = this.state.Rosters;
         rosters[this.state.CurrentRoster].Cost = cost;
         this.updateRosterList(rosters);
+    }
+
+    FindCurrentLeaderData():Array<LeaderData>|null {
+        const index = this.FindLeaderDataIndex(this.state.Rosters[this.state.CurrentRoster].Name);
+        return index===-1?null:this.state.LeadersData[index].Data;
+    }
+
+    FindLeaderDataIndex(name:string):number {
+        return this.state.LeadersData.findIndex(leaderData=>leaderData.RosterName==name);
+    }
+
+    SaveLeadersData(leaders:Array<LeaderData>, name:string){
+        const index = this.FindLeaderDataIndex(name);
+        let leadersData = this.state.LeadersData;
+        if (index !== -1) {
+            leadersData.splice(index, 1);
+        }
+        leadersData.push(new LeaderDataEntry(leaders, name));
+        this.setState({LeadersData:leadersData});
+        AsyncStorage.setItem(LEADERS_KEY, JSON.stringify(leadersData));
+    }
+
+    CallPopup(question:string, options:Array<PopupOption>,def:string){
+        this.setState({
+            popupQuestion:question,
+            popupOptions:options,
+            popupDefault:def,
+        });
     }
 
     render() {
@@ -301,17 +371,18 @@ class Menu extends React.Component{
                 ;
                 break;
             case DisplayStateType.DISPLAY_ROSTER :
-                mainScreen= <Roster XML={that.state.Rosters[this.state.CurrentRoster].XML} onBack={(e)=>this.setState({DisplayState: DisplayStateType.MENU})} onLoad={(e)=>this.RosterLoaded(e)} />
+                mainScreen= <Roster XML={that.state.Rosters[this.state.CurrentRoster].XML} forceLeaders={that.FindCurrentLeaderData()} onBack={(e)=>this.setState({DisplayState: DisplayStateType.MENU})} onLoad={(e)=>this.RosterLoaded(e)} onUpdateLeaders={(newLeaders)=>this.SaveLeadersData(newLeaders, this.state.Rosters[this.state.CurrentRoster].Name)} />
                 ;
                 break;
             case DisplayStateType.OPTIONS:
                 mainScreen=<Options onBack={(e)=>this.setState({DisplayState: DisplayStateType.MENU})} onColourChange={(colour:Colour, value:string)=>this.applyColourChangeGlobally(colour, value, this)} onCategoriesChange={this.saveUnitCategoriesChange} onReset={(colours)=>this.resetColours(colours, this)} onNameDisplayChange={(nd)=>this.saveNameDisplayChange(nd)}/>;
         }
-        return  <ColoursContext.Provider value={{Main:this.state.colourMain, Dark: this.state.colourDark, Bg:this.state.colourBg, Accent:this.state.colourAccent, LightAccent:this.state.colourLightAccent, Grey:this.state.colourGrey}}> 
+        return  <KameContext.Provider value={{Main:this.state.colourMain, Dark: this.state.colourDark, Bg:this.state.colourBg, Accent:this.state.colourAccent, LightAccent:this.state.colourLightAccent, Grey:this.state.colourGrey, Popup:this.CallPopup}}> 
                     <View style={{width:Variables.width, borderWidth:1, borderColor:this.state.colourDark, borderRadius:Variables.boxBorderRadius, height:"100%"}}>
                         {mainScreen}
                     </View>
-                </ColoursContext.Provider>;
+                    <Popup question={this.state.popupQuestion} options={this.state.popupOptions} default={this.state.popupDefault} key={this.state.popupQuestion} />
+                </KameContext.Provider>;
     };
 };
 

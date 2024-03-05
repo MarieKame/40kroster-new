@@ -8,17 +8,18 @@ import WeaponStyle from '../Style/Weapon';
 import IsOdd from "./Components/IsOdd";
 import Variables from "../Style/Variables";
 import { FactionSvg, Background } from "../Style/svgs";
-import {ColoursContext} from "../Style/ColoursContext";
+import {KameContext} from "../Style/KameContext";
 import Checkbox from 'expo-checkbox';
 
 interface Props {
     data:UnitData,
-    Leaders:Array<LeaderData>
+    Leaders:Array<LeaderData>,
+    onUpdateLeader:CallableFunction
 }
 
 class Unit extends React.Component<Props> {
-    static contextType = ColoursContext; 
-    declare context: React.ContextType<typeof ColoursContext>;
+    static contextType = KameContext; 
+    declare context: React.ContextType<typeof KameContext>;
 
     state = {
         refresh:1
@@ -142,7 +143,7 @@ class Unit extends React.Component<Props> {
                             ]</Descriptor>
                             <View style={{flexDirection: 'row', flexWrap: 'wrap', width:"100%"}}>
                                 {this.props.data.Profiles.map((ruleDescriptor)=>
-                                <View style={Style.rule} key={this.ruleKey++}>
+                                (Variables.displayLeaderInfo||ruleDescriptor.Name!=="Leader")&&<View style={Style.rule} key={this.ruleKey++}>
                                     <Text style={[Style.ruleTitle, {backgroundColor:this.context.LightAccent}]}>{ruleDescriptor.Name}</Text>
                                     <ComplexText style={Style.more} fontSize={Variables.fontSize.small}>{ruleDescriptor.Description}</ComplexText>
                                 </View>
@@ -153,10 +154,17 @@ class Unit extends React.Component<Props> {
                     {leaders.length !== 0 &&
                     <View>
                         <Text style={[Style.title, {backgroundColor:this.context.Accent, marginBottom:4}]}>Leaders</Text>
-                        <View style={{flexDirection:"row"}}>
+                        <View style={{flexDirection:"row", flexWrap:"wrap"}}>
                             {leaders.map((leader, index)=>
-                                <View key={index+this.state.refresh} style={{flexDirection:"row", justifyContent:"center", alignItems:"center", paddingRight:10}}>
-                                    <Checkbox disabled={leader.CurrentlyLeading!==-1 && leader.CurrentlyLeading!==this.props.data.Key} color={this.context.Main} style={{marginRight:4}} value={leader.CurrentlyLeading==this.props.data.Key} onValueChange={(value)=>{this.setState({refresh:this.state.refresh+1}); leader.CurrentlyLeading=value?this.props.data.Key:-1}}/>
+                                <View key={index} style={{flexDirection:"row", justifyContent:"center", alignItems:"center", paddingRight:10, paddingBottom:4}}>
+                                    <Checkbox 
+                                        disabled={leader.CurrentlyLeading!==-1 && leader.CurrentlyLeading!==this.props.data.Key} 
+                                        color={this.context.Main} 
+                                        style={{marginRight:4}} 
+                                        value={leader.CurrentlyLeading==this.props.data.Key} 
+                                        onValueChange={(value)=>{
+                                            leader.CurrentlyLeading=value?this.props.data.Key:-1; 
+                                            this.props.onUpdateLeader(leader)}}/>
                                     <Text>{leader.Name}</Text>
                                 </View>
                             )}

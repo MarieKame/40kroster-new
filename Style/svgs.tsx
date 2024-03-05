@@ -1,6 +1,6 @@
 import React from "react"
 import Svg, { SvgProps, Path, Polygon } from "react-native-svg"
-import {ColoursContext} from "./ColoursContext";
+import {KameContext} from "./KameContext";
 
 export interface ISvgProps extends SvgProps {
   xmlns?: string;
@@ -23,8 +23,8 @@ const SvgComp= (props: ISvgProps) => (
 );
 
 export class Background extends React.Component<ISvgProps> {
-  static contextType = ColoursContext; 
-  declare context: React.ContextType<typeof ColoursContext>;
+  static contextType = KameContext; 
+  declare context: React.ContextType<typeof KameContext>;
     render(){
         return <SvgComp xmlns="http://www.w3.org/2000/svg" xmlSpace="preserve" {...this.props} fill={this.context.LightAccent} height={250} width={250} stroke={this.context.Main} strokeWidth={5}>
         <Polygon points="111.823,0 16.622,111.823 111.823,223.646 207.025,111.823 "/>
@@ -33,8 +33,8 @@ export class Background extends React.Component<ISvgProps> {
 }
 
 export class FactionSvg extends React.Component<ISvgProps> {
-  static contextType = ColoursContext; 
-  declare context: React.ContextType<typeof ColoursContext>;
+  static contextType = KameContext; 
+  declare context: React.ContextType<typeof KameContext>;
     render(){
         let fill;
         switch (this.props.faction) {

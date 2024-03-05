@@ -1,11 +1,11 @@
 import {Text as RNText, TextProps, View} from 'react-native';
 import {Component, ReactNode} from 'react';
 import Variables from '../../Style/Variables';
-import {ColoursContext} from '../../Style/ColoursContext';
+import {KameContext} from '../../Style/KameContext';
 
 export class Text extends Component<TextProps>  {
-    static contextType = ColoursContext; 
-    declare context: React.ContextType<typeof ColoursContext>;
+    static contextType = KameContext; 
+    declare context: React.ContextType<typeof KameContext>;
     render():ReactNode{
         return <RNText style={[{fontFamily:Variables.fonts.WHN, fontSize:Variables.fontSize.normal, color:this.context.Dark}, this.props.style]}>{this.props.children}</RNText>
     }
@@ -21,12 +21,12 @@ interface ComplexProps extends TextProps {
     fontSize?;
 }
 export class ComplexText extends Component<ComplexProps>{
-    static contextType = ColoursContext; 
-    declare context: React.ContextType<typeof ColoursContext>;
+    static contextType = KameContext; 
+    declare context: React.ContextType<typeof KameContext>;
     state={
         text:null
     }
-    constructor(props:TextProps, context:(typeof ColoursContext)){
+    constructor(props:TextProps, context:(typeof KameContext)){
         super(props, context);
         const regex = /([a-z]* time)|(stratagem)|(invulnerable save)|(damage)|(attacks?)|(r?e?-?rolle?d?)|(wound roll)|([a-z]* phase)|(hit roll)|(advance roll)|(battle-shock)|(charge roll)|(saving throws?)|(D[0-9])|([0-9]+CP)|([0-9]+\+?"?)/i;
         const normalStyle = {};
