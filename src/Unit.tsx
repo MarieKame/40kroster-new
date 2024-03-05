@@ -1,7 +1,7 @@
-import React, { useContext } from "react";
-import {StatsData, UnitData} from "./UnitData";
+import React from "react";
+import {StatsData, UnitData, LeaderData} from "./UnitData";
 import Weapon from './UnitDetails/Weapon';
-import {View, Image} from 'react-native';
+import {View} from 'react-native';
 import {Text, Descriptor, ComplexText} from './Components/Text';
 import Style from '../Style/Unit';
 import WeaponStyle from '../Style/Weapon';
@@ -9,14 +9,20 @@ import IsOdd from "./Components/IsOdd";
 import Variables from "../Style/Variables";
 import { FactionSvg, Background } from "../Style/svgs";
 import {ColoursContext} from "../Style/ColoursContext";
+import Checkbox from 'expo-checkbox';
 
 interface Props {
-    data:UnitData
+    data:UnitData,
+    Leaders:Array<LeaderData>
 }
 
 class Unit extends React.Component<Props> {
     static contextType = ColoursContext; 
     declare context: React.ContextType<typeof ColoursContext>;
+
+    state = {
+        refresh:1
+    }
 
     renderStatBox(name:string, value:string, invul:boolean = false){
         return <View style={(invul)?[Style.box, Style.invul, {backgroundColor: this.context.Bg, borderColor:this.context.Dark}]:[Style.box, {backgroundColor: this.context.Bg, borderColor:this.context.Dark}]}>
@@ -112,6 +118,8 @@ class Unit extends React.Component<Props> {
                 faction=fa;
             }
         });
+        let leaders = this.props.Leaders.filter(leader=>leader.Leading.findIndex(lead=>lead.toLocaleLowerCase()==this.props.data.Name.toLocaleLowerCase()) !== -1);
+        
         
         return  <View style={[Style.unit, {backgroundColor:this.context.Bg, 
             borderColor:this.context.Dark}]}>
@@ -142,6 +150,29 @@ class Unit extends React.Component<Props> {
                             </View>
                         </View>
                     </View>
+                    {leaders.length !== 0 &&
+                    <View>
+                        <Text style={[Style.title, {backgroundColor:this.context.Accent, marginBottom:4}]}>Leaders</Text>
+                        <View style={{flexDirection:"row"}}>
+                            {leaders.map((leader, index)=>
+                                <View key={index+this.state.refresh} style={{flexDirection:"row", justifyContent:"center", alignItems:"center", paddingRight:10}}>
+                                    <Checkbox disabled={leader.CurrentlyLeading!==-1 && leader.CurrentlyLeading!==this.props.data.Key} color={this.context.Main} style={{marginRight:4}} value={leader.CurrentlyLeading==this.props.data.Key} onValueChange={(value)=>{this.setState({refresh:this.state.refresh+1}); leader.CurrentlyLeading=value?this.props.data.Key:-1}}/>
+                                    <Text>{leader.Name}</Text>
+                                </View>
+                            )}
+                        </View>
+                        <View style={{flexDirection: 'row', flexWrap: 'wrap', width:"100%"}}>
+                            {leaders.map((leader, index1) =>
+                                leader.Effects.map((effect, index2)=>
+                                    leader.CurrentlyLeading==this.props.data.Key&&<View style={Style.rule} key={index1+index2+leader.Name}>
+                                        <Text style={[Style.ruleTitle, {backgroundColor:this.context.LightAccent}]}>{effect.Name}</Text>
+                                        <ComplexText style={Style.more} fontSize={Variables.fontSize.small}>{effect.Description}</ComplexText>
+                                    </View>    
+                                ) 
+                            )}
+                        </View>
+                    </View>
+                    }
                     <View style={Style.keywordsView}>
                         <View style={Style.keywords}>
                             <Text style={Style.keywordsTitle}>Keywords : </Text>

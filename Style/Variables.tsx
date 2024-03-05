@@ -24,6 +24,7 @@ const Variables = {
     unitMargin:baseUnitMargin*zoom,
     width:windowDimensions.width + androidMenuSpace,
     unitWidth:windowDimensions.width+androidMenuSpace-(baseUnitMargin*zoom + (Platform.OS=="web"?60:0)),
+    height:windowDimensions.height,
     zoom: zoom,
     unitCategories:['Epic Hero', 'Character', 'Battleline', 'Infantry', 'Vehicle', 'Monster'],
     displayFirst:"melee",

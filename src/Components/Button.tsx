@@ -9,6 +9,7 @@ export interface ButtonProps extends TextProps {
     weight?:"light"|"normal"|"heavy"|undefined;
     image?:boolean,
     forceColour?:string
+    tab?:boolean
 }
 
 export class Button extends Component<ButtonProps>  {   
@@ -17,9 +18,7 @@ export class Button extends Component<ButtonProps>  {
     
     render():ReactNode{
         const Style = StyleSheet.create({
-            Button:{
-                borderWidth:1,
-                borderRadius:Variables.boxBorderRadius,
+            All:{
                 minHeight:20,
                 minWidth:40,
                 margin:4,
@@ -28,6 +27,17 @@ export class Button extends Component<ButtonProps>  {
                 justifyContent:"center",
                 textAlign:"center",
                 elevation:4
+            },
+            Button:{
+                borderWidth:1,
+                borderRadius:Variables.boxBorderRadius
+            },
+            Tab:{
+                borderTopWidth:1,
+                borderLeftWidth:1,
+                borderRightWidth:1,
+                borderTopLeftRadius:Variables.boxBorderRadius,
+                borderTopRightRadius:Variables.boxBorderRadius,
             },
             Light:{
                 backgroundColor:this.context.LightAccent,
@@ -45,7 +55,12 @@ export class Button extends Component<ButtonProps>  {
 
         let style = new Array();
         let forceTextColour;
-        style.push(Style.Button);
+        style.push(Style.All);
+        if (this.props.tab){
+            style.push(Style.Tab)
+        } else {
+            style.push(Style.Button);
+        }
         if (this.props.forceColour){
             const colours = this.props.forceColour.match(/[0-9]+/g);
             let textColour = "black";

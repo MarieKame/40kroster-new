@@ -7,7 +7,6 @@ class DescriptorData {
     constructor(name:string, description:string){
         this.Name = name;
         this.Description = description.replaceAll("\n\n", "\n").replaceAll(/^(?:[a-z :])+\n(?![-■])/gi, " ");
-        console.log();
     }
 }
 
@@ -170,6 +169,20 @@ class ProfileWeaponData extends WeaponData {
     }
 }
 
+class LeaderData{
+    Name:string;
+    Leading:Array<string>;
+    Effects:Array<DescriptorData>;
+    CurrentlyLeading:number;
+
+    constructor(name:string, leading:Array<string>){
+        this.Name = name;
+        this.Leading = leading;
+        this.Effects = new Array<DescriptorData>();
+        this.CurrentlyLeading=-1;
+    }
+}
+
 class UnitData {
     Name : string;
     CustomName : string;
@@ -184,6 +197,8 @@ class UnitData {
 
     Costs: CostData;
     Models: Array<ModelData>|ModelData;
+
+    private Leader?:LeaderData|false = null;
 
     private differentStats(modelList:Array<ModelData>):Array<StatsData>|StatsData{
         let stats = new Array<StatsData>();
@@ -228,6 +243,38 @@ class UnitData {
         return this.Keywords[categoryIndex];
     }
 
+    GetLeaderData():LeaderData|null{
+        if (this.Leader)
+            return this.Leader;
+        if (this.Leader === false)
+            return null;
+        const that = this;
+        this.Profiles.forEach(function(profile){
+            if (profile.Name == "Leader") {
+                that.Leader = new LeaderData(that.CustomName?that.CustomName+" ("+that.Name+") ":that.Name, profile.Description.match(/(?<=[-■]).*/ig).map(item=>item.trim()));
+            }
+        });
+        if (this.Leader === null) {
+            this.Leader=false;
+            return null;
+        }
+        this.Profiles.forEach(function(profile){
+            if (profile.Description.match(/(leading)|(bearer[’'`]s unit)/ig)) {
+                if (that.Leader) {
+                    that.Leader.Effects.push(profile)
+                }
+            }
+        });
+        this.OtherEquipment.forEach(function(profile){
+            if (profile.Data.match(/(leading)|(bearer[’'`]s unit)/ig)) {
+                if (that.Leader) {
+                    that.Leader.Effects.push(new DescriptorData(profile.Name, profile.Data))
+                }
+            }
+        });
+        return this.Leader;
+    }
+
     private getWeight():number{
         let weight = this.Costs.Val;
         let index = 10000000000000;
@@ -256,4 +303,5 @@ WeaponData,
 ProfileWeaponData,
 ModelData,
 StatsData,
-DescriptorData};
+DescriptorData,
+LeaderData};

@@ -34,7 +34,7 @@ const Style = StyleSheet.create({
         paddingRight:20 * Variables.zoom
     },
     allStats:{
-        minHeight:60 * Variables.zoom
+        minHeight:40 * Variables.zoom
     },
     statsRow:{
         flexDirection:"row",
