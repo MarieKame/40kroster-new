@@ -141,7 +141,7 @@ class Menu extends React.Component{
         });
     }
 
-    async docPicker(that) {
+    async docPicker(that:Menu) {
         DocumentPicker.getDocumentAsync().then((response) => {
         if (!response.canceled && response.assets.length > 0) {
             let asset = response.assets[0];
@@ -270,8 +270,8 @@ class Menu extends React.Component{
     }
 
     tryAddRoster(rosterXml) {
-        function add(that:Menu){
-            let newRosterList = that.state.Rosters;
+        function add(initialRoster:Array<RosterMenuEntry>, that:Menu){
+            let newRosterList = initialRoster;
             newRosterList.push(new RosterMenuEntry(rosterName, rosterXml));
             that.updateRosterList(newRosterList);
         }
@@ -283,15 +283,17 @@ class Menu extends React.Component{
                     "There is already a roster with this name; overwrite?",
                     [{option:"Yes", callback:()=>{
                         let leadersData = that.state.LeadersData;
-                        leadersData.splice(that.FindLeaderDataIndex(rosterName), 1)
+                        leadersData.splice(that.FindLeaderDataIndex(rosterName, that), 1)
                         that.setState({LeadersData:leadersData});
                         AsyncStorage.setItem(LEADERS_KEY, JSON.stringify(leadersData));
-                        add(that);
+                        let rosterList = that.state.Rosters;
+                        rosterList.splice(rosterList.findIndex(roster=>roster.Name==rosterName), 1);
+                        add(rosterList, that);
                     }}],
                     "No"
                 )
             } else {
-                add(that);
+                add(that.state.Rosters, that);
             }
         }
     }
@@ -302,17 +304,17 @@ class Menu extends React.Component{
         this.updateRosterList(rosters);
     }
 
-    FindCurrentLeaderData():Array<LeaderData>|null {
-        const index = this.FindLeaderDataIndex(this.state.Rosters[this.state.CurrentRoster].Name);
-        return index===-1?null:this.state.LeadersData[index].Data;
+    FindCurrentLeaderData(that:Menu):Array<LeaderData>|null {
+        const index = that.FindLeaderDataIndex(that.state.Rosters[that.state.CurrentRoster].Name, that);
+        return index===-1?null:that.state.LeadersData[index].Data;
     }
 
-    FindLeaderDataIndex(name:string):number {
-        return this.state.LeadersData.findIndex(leaderData=>leaderData.RosterName==name);
+    FindLeaderDataIndex(name:string, that:Menu):number {
+        return that.state.LeadersData.findIndex(leaderData=>leaderData.RosterName==name);
     }
 
-    SaveLeadersData(leaders:Array<LeaderData>, name:string){
-        const index = this.FindLeaderDataIndex(name);
+    SaveLeadersData(leaders:Array<LeaderData>, name:string, that:Menu){
+        const index = this.FindLeaderDataIndex(name, that);
         let leadersData = this.state.LeadersData;
         if (index !== -1) {
             leadersData.splice(index, 1);
@@ -356,7 +358,7 @@ class Menu extends React.Component{
                                 {(props)=> <MenuDisplay {...props} that={this}/>}
                             </Stack.Screen>
                             <Stack.Screen name="Roster" options={{animation:"slide_from_right", animationTypeForReplace:"pop"}}>
-                                {(props)=> <Roster {...props} XML={that.state.Rosters[this.state.CurrentRoster].XML} forceLeaders={that.FindCurrentLeaderData()} onLoad={(e)=>this.RosterLoaded(e)} onUpdateLeaders={(newLeaders)=>this.SaveLeadersData(newLeaders, this.state.Rosters[this.state.CurrentRoster].Name)} />}
+                                {(props)=> <Roster {...props} XML={that.state.Rosters[this.state.CurrentRoster].XML} forceLeaders={that.FindCurrentLeaderData(that)} onLoad={(e)=>this.RosterLoaded(e)} onUpdateLeaders={(newLeaders)=>this.SaveLeadersData(newLeaders, this.state.Rosters[this.state.CurrentRoster].Name, that)} />}
                             </Stack.Screen>
                             <Stack.Screen name="RosterMenu" options={{animation:"fade"}}>
                                 {(props)=> <RosterMenu {...props}/>}
@@ -406,12 +408,12 @@ class MenuDisplay extends Component<MenuDisplayProps> {
             </View>
             );
     }
-
+ 
     render(){
         return <View style={{padding:10, width:Variables.width}}>
             <View style={{flexDirection:"row", width:"100%", backgroundColor:this.context.Bg, borderRadius:4}}>
                 <Text style={{fontFamily:Variables.fonts.spaceMarine, verticalAlign:"middle", flex:1, textAlign:"center", textDecorationLine:"underline"}}>{Variables.username}'s Roster List</Text>
-                <Button onPress={(e)=>this.props.that.docPicker(this)} textStyle={{fontSize:20}}>+</Button>
+                <Button onPress={(e)=>this.props.that.docPicker(Menu.Instance)} textStyle={{fontSize:20}}>+</Button>
                 <Button onPress={(e)=>this.props.navigation.navigate('Options')} image={true}><Image style={{width:20, height:20, tintColor:this.context.Dark, marginLeft:3}} source={require("../assets/images/gear.png")}/></Button>
             </View>
             <View>{this.displayMenuItem(this.props.that.state.Rosters)}</View>
