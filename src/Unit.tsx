@@ -130,7 +130,7 @@ class Unit extends React.Component<Props> {
         }
         return  <View style={[Style.unit, {backgroundColor:this.context.Bg, 
             borderColor:this.context.Dark}]}>
-                    <View style={Style.nameView}><Text style={Style.name}>{this.props.data.CustomName !== null?this.props.data.CustomName:this.props.data.Name}</Text></View>
+                    <View style={Style.nameView}><Text style={Style.name}>{((this.props.data.CustomName !== null && this.props.data.CustomName !== "")?this.props.data.CustomName:this.props.data.Name) + ((this.props.data.Count>1)?" (x" + this.props.data.Count + ")":"")}</Text></View>
                     <View style={Style.allStats}>
                         {this.renderAllStats(stats)}
                         {IV}

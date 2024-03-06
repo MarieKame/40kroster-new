@@ -1,4 +1,4 @@
-import React, { Component } from "react";
+import React, { Component, useMemo } from "react";
 import {View, BackHandler, Platform, Image} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import JSZip from "jszip";
@@ -23,10 +23,6 @@ import { Colour } from "./Options";
 import { LeaderData } from "./UnitData";
 import Popup, { PopupOption } from "./Components/Popup";
 import RosterMenu from "./RosterMenu";
-
-enum DisplayStateType {
-    MENU, DISPLAY_ROSTER, OPTIONS
-}
 
 const STORAGE_KEY = "stored_rosters_40k_app";
 const COLOURS_KEY = "stored_colours_40k_app";
@@ -58,9 +54,9 @@ class LeaderDataEntry {
 
 class Menu extends React.Component{
     public static Instance:Menu;
+    
     state = {
         Rosters: new Array<RosterMenuEntry>(),
-        DisplayState: DisplayStateType.MENU,
         Errors: {
             rosterFile: null
         },
@@ -94,24 +90,11 @@ class Menu extends React.Component{
         super(props);
         this.loadData(this);
         this.fetchFonts(this);
-        let that = this;
         Menu.Instance = this;
 
-        try{
-            BackHandler.addEventListener('hardwareBackPress', function () {
-                switch(that.state.DisplayState) {
-                    case DisplayStateType.MENU : 
-                        return false;
-                    case DisplayStateType.DISPLAY_ROSTER : 
-                        that.setState({DisplayState:DisplayStateType.MENU});
-                        return true;
-                    case DisplayStateType.OPTIONS : 
-                        that.setState({DisplayState:DisplayStateType.MENU});
-                        return true;
-                }
-                return false;
-              });
-        } catch(e) {}
+        /*if(localSearchParams?.shareIntent && localSearchParams?.shareIntent) {
+            console.log(localSearchParams?.shareIntent);
+        }*/
     };
 
     updateRosterList(newRosterList) {
@@ -222,6 +205,7 @@ class Menu extends React.Component{
     }
 
     async loadData(that){
+        //await expoFS.readDirectoryAsync("file://data/net.battlescribe.mobile.rostereditor/files/rosters").then(dir=>console.log(dir));
         getData(STORAGE_KEY).then((rostersJson) => {
             if (rostersJson) {
                 that.setState({

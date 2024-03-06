@@ -32,6 +32,7 @@
     "expo-module-scripts": "^3.4.1",
     "expo-navigation-bar": "~2.8.1",
     "expo-radio-button": "^1.0.8",
+    "expo-share-intent": "^1.0.1",
     "expo-splash-screen": "~0.26.4",
     "expo-status-bar": "~1.11.1",
     "fast-xml-parser": "^4.3.4",

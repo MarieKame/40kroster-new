@@ -23,7 +23,7 @@ class RosterMenu extends Component<Props> {
     declare context: React.ContextType<typeof KameContext>;
 
     state = {
-        MenuSection:RosterMenuCategories.STRATAGEMS
+        MenuSection:RosterMenuCategories.UNIT_LIST
     }
 
     ShowStratagemSection(name:string, text:string) {
@@ -59,7 +59,7 @@ class RosterMenu extends Component<Props> {
                     {// @ts-ignore
                         getPhases(stratagem.item).map((phase, index)=> {
                             let content;
-                            const imageStyle={width:24, height:24, tintColor:this.context.Dark, top:2, left:-4};
+                            const imageStyle={width:24, height:24, tintColor:this.context.Dark, top:2, left:-5};
                             switch(phase) {
                                 case "Any":
                                     content = <Image style={imageStyle} source={require("../assets/images/stratAny.png")}/>;
@@ -100,7 +100,7 @@ class RosterMenu extends Component<Props> {
             <Text style={{width:"100%", textAlign:"center", fontFamily:Variables.fonts.spaceMarine, paddingBottom:4}}>— {category} —</Text>
             <View style={{flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', width:"100%"}}>
                 {Roster.Instance.state.Units.map((unit, index) => 
-                    unit.GetUnitCategory() == category&&<View style={{width:"50%"}}><Button onPress={(e)=>{Roster.Instance.DisplayUnit(index); this.props.navigation.goBack();}} weight={(index==Roster.Instance.state.Index)?"heavy":"normal"}>{unit.CustomName?unit.CustomName:unit.Name}</Button></View>
+                    (unit.GetUnitCategory() == category && Roster.Instance.state.UnitsToSkip.indexOf(index)==-1)&&<View style={{width:"50%"}}><Button onPress={(e)=>{Roster.Instance.DisplayUnit(index); this.props.navigation.goBack();}} weight={(index==Roster.Instance.state.Index)?"heavy":"normal"}>{unit.CustomName?unit.CustomName:unit.Name}</Button></View>
                 )}
             </View>
         </View>;

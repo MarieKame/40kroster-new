@@ -65,6 +65,7 @@ class Roster extends React.Component<Props> {
         Faction:"",
         Detachment:"",
         Units: new Array<UnitData>(),
+        UnitsToSkip: new Array<number>(),
         Leaders: new Array<LeaderData>(),
         Index:0,
         Menu:false,
@@ -112,7 +113,12 @@ class Roster extends React.Component<Props> {
 
     ExtractProfiles(profiles, unitName): Array<DescriptorData> {
         let profilesData = new Array<DescriptorData>();
-        if (!isIterable(profiles.profile)) return profilesData;
+        if (!isIterable(profiles.profile)){
+            console.log(profiles.profile);
+            const data=new DescriptorData(profiles.profile._name, this.getCharacteristic(profiles.profile.characteristics.characteristic));
+            profilesData.push(data);
+            return profilesData;
+        } 
         for(let element of profiles.profile){
             if (element._name !== unitName && element.characteristics) {
                 const data=new DescriptorData(element._name, this.getCharacteristic(element.characteristics.characteristic));
@@ -326,7 +332,7 @@ class Roster extends React.Component<Props> {
             } else if (selections.selection.selections) {
                 profile = selections.selection.selections.selection.profiles.profile;
             }
-            if (profile && profile._type && profile._type == "model") {
+            if (profile && ((profile._type && profile._type == "model") || (profile._typeName && profile._typeName == "Unit"))) {
                 return new ModelData(profile._name, new StatsData(that.ExtractStats(profile, profile._name), invul))
             }
             
@@ -482,6 +488,14 @@ class Roster extends React.Component<Props> {
                             : reminder1.Data.Name.localeCompare(reminder2.Data.Name);
         });
         this.state.Units.sort(UnitData.compareUnits);
+        this.state.Units.forEach((unit1, index)=>{
+            this.state.Units.slice(index+1).forEach((unit2, index2)=>{
+                if (unit1.Equals(unit2)) {
+                    this.state.UnitsToSkip.push(index2 + index + 1);
+                    unit1.Count++;
+                }
+            });
+        });
         function Name(leader:LeaderData){
             return leader.CustomName?leader.CustomName+" ("+leader.BaseName+") ":leader.BaseName;
         }
@@ -503,11 +517,18 @@ class Roster extends React.Component<Props> {
     Previous(){
         let newIndex = (this.state.Index-1);
         newIndex= newIndex<0?this.state.Units.length-1:newIndex;
+        while (this.state.UnitsToSkip.indexOf(newIndex)!==-1) {
+            newIndex--;
+            newIndex= newIndex<0?this.state.Units.length-1:newIndex;
+        }
         this.setState({Index:newIndex});
     }
 
     Next(){
-        const newIndex = (this.state.Index+1)%this.state.Units.length;
+        let newIndex = (this.state.Index+1)%this.state.Units.length;
+        while (this.state.UnitsToSkip.indexOf(newIndex)!==-1) {
+            newIndex = (newIndex+1)%this.state.Units.length
+        }
         this.setState({Index:newIndex});
     }
 
@@ -548,7 +569,7 @@ class Roster extends React.Component<Props> {
                         </View>
                         <Button key="for" onPress={(e)=> this.Next()}>➤</Button>
                     </View>
-                    <Text style={{textAlign:"center"}}>{(this.state.Index+1) + " / " + this.state.Units.length}</Text>
+                    <Text style={{textAlign:"center"}}>{(this.state.Index+1) + " / " + (this.state.Units.length  - this.state.UnitsToSkip.length) + (this.state.UnitsToSkip.length>0?" ( "+this.state.Units.length+" )":"")}</Text>
                 </View>
             </View>;
         }

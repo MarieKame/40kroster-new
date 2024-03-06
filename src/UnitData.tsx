@@ -204,6 +204,7 @@ class UnitData {
     RangedWeapons:Array<WeaponData>;
     OtherEquipment:Array<WeaponData>;
     Key:number;
+    Count:number = 1;
 
     Costs: CostData;
     Models: Array<ModelData>|ModelData;
@@ -300,6 +301,14 @@ class UnitData {
 
     HasNoModel() {
         return this.Models == null || (this.Models instanceof Array && this.Models.length == 0);
+    }
+
+    private flat():string{
+        return this.Name+this.CustomName+this.Profiles.toString()+this.Rules.toString()+this.MeleeWeapons.toString()+this.RangedWeapons.toString()+this.OtherEquipment.toString();
+    }
+
+    Equals(other:UnitData):boolean{
+        return this.flat() == other.flat();
     }
 
     static compareUnits(unit1:UnitData, unit2:UnitData) {
