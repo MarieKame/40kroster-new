@@ -247,6 +247,8 @@ class Menu extends React.Component{
                 Variables.username = split[0];
                 Variables.displayFirst = split[1];
                 Variables.displayLeaderInfo = split[2]=="true";
+                Variables.mergeLeaderWeapons = split[3]=="true";
+                Variables.displayTransportRule = split[4]=="true";
             }
         });
         getData(LEADERS_KEY).then((leadersJson)=>{

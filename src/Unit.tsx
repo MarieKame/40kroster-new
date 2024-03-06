@@ -1,5 +1,5 @@
 import React from "react";
-import {StatsData, UnitData, LeaderData} from "./UnitData";
+import {StatsData, UnitData, LeaderData, WeaponData} from "./UnitData";
 import Weapon from './UnitDetails/Weapon';
 import {View} from 'react-native';
 import {Text, Descriptor, ComplexText} from './Components/Text';
@@ -60,7 +60,7 @@ class Unit extends React.Component<Props> {
         }
     }
 
-    renderWeapons(weapons, title){
+    renderWeapons(weapons:Array<WeaponData>, title, leaders:Array<LeaderData>, leadersWeapons:Array<Array<WeaponData>>){
         let renderedWeapons;
         let isOdd = new IsOdd();
         if (weapons.length > 0) {
@@ -78,6 +78,9 @@ class Unit extends React.Component<Props> {
                 </View>
                 {weapons.map((wpn)=>
                     <Weapon data={wpn} showQuantity={true} key={key++} Style={Style.weaponLine} isOdd={isOdd}/>
+                )}
+                {Variables.mergeLeaderWeapons&&leaders.map((leader, index)=>leadersWeapons[index].map(wpn=>
+                    <Weapon data={wpn} showQuantity={true} key={key++} Style={Style.weaponLine} isOdd={isOdd} prefix={leader.BaseName}/>)
                 )}
             </View>;
         }
@@ -119,9 +122,12 @@ class Unit extends React.Component<Props> {
                 faction=fa;
             }
         });
-        let leaders = this.props.Leaders.filter(leader=>leader.Leading.findIndex(lead=>lead.toLocaleLowerCase()==this.props.data.Name.toLocaleLowerCase()) !== -1);
-        
-        
+
+        const leaders = this.props.Leaders.filter(leader=>leader.Leading.findIndex(lead=>lead.toLocaleLowerCase()==this.props.data.Name.toLocaleLowerCase()) !== -1);
+        const selectedLeaders = leaders.filter((leader)=>leader.CurrentlyLeading == this.props.data.Key);
+        function Name(leader:LeaderData){
+            return leader.CustomName?leader.CustomName+" ("+leader.BaseName+") ":leader.BaseName;
+        }
         return  <View style={[Style.unit, {backgroundColor:this.context.Bg, 
             borderColor:this.context.Dark}]}>
                     <View style={Style.nameView}><Text style={Style.name}>{this.props.data.CustomName !== null?this.props.data.CustomName:this.props.data.Name}</Text></View>
@@ -131,9 +137,9 @@ class Unit extends React.Component<Props> {
                     </View>
                     <View style={Style.details}>
                         <View style={Style.weapons}>
-                            {Variables.displayFirst=="melee"&&this.renderWeapons(this.props.data.MeleeWeapons, "Melee Weapons")}
-                            {this.renderWeapons(this.props.data.RangedWeapons, "Ranged Weapons")}
-                            {Variables.displayFirst=="ranged"&&this.renderWeapons(this.props.data.MeleeWeapons, "Melee Weapons")}
+                            {Variables.displayFirst=="melee"&&this.renderWeapons(this.props.data.MeleeWeapons, "Melee Weapons", selectedLeaders, selectedLeaders.map(leader=>leader.MeleeWeapons))}
+                            {this.renderWeapons(this.props.data.RangedWeapons, "Ranged Weapons", selectedLeaders, selectedLeaders.map(leader=>leader.RangedWeapons))}
+                            {Variables.displayFirst=="ranged"&&this.renderWeapons(this.props.data.MeleeWeapons, "Melee Weapons", selectedLeaders, selectedLeaders.map(leader=>leader.MeleeWeapons))}
                             {otherEquip}
                         </View>
                         <View style={Style.other}>
@@ -143,7 +149,7 @@ class Unit extends React.Component<Props> {
                             ]</Descriptor>
                             <View style={{flexDirection: 'row', flexWrap: 'wrap', width:"100%"}}>
                                 {this.props.data.Profiles.map((ruleDescriptor)=>
-                                (Variables.displayLeaderInfo||ruleDescriptor.Name!=="Leader")&&<View style={Style.rule} key={this.ruleKey++}>
+                                ((Variables.displayLeaderInfo||ruleDescriptor.Name!=="Leader")&&(ruleDescriptor.Name!=="Transport")&&ruleDescriptor.Name!=="Invulnerable Save")&&<View style={Style.rule} key={this.ruleKey++}>
                                     <Text style={[Style.ruleTitle, {backgroundColor:this.context.LightAccent}]}>{ruleDescriptor.Name}</Text>
                                     <ComplexText style={Style.more} fontSize={Variables.fontSize.small}>{ruleDescriptor.Description}</ComplexText>
                                 </View>
@@ -165,14 +171,14 @@ class Unit extends React.Component<Props> {
                                         onValueChange={(value)=>{
                                             leader.CurrentlyLeading=value?this.props.data.Key:-1; 
                                             this.props.onUpdateLeader(leader)}}/>
-                                    <Text>{leader.Name}</Text>
+                                    <Text>{Name(leader)}</Text>
                                 </View>
                             )}
                         </View>
                         <View style={{flexDirection: 'row', flexWrap: 'wrap', width:"100%"}}>
                             {leaders.map((leader, index1) =>
                                 leader.Effects.map((effect, index2)=>
-                                    leader.CurrentlyLeading==this.props.data.Key&&<View style={Style.rule} key={index1+index2+leader.Name}>
+                                    leader.CurrentlyLeading==this.props.data.Key&&<View style={Style.rule} key={index1+index2+Name(leader)}>
                                         <Text style={[Style.ruleTitle, {backgroundColor:this.context.LightAccent}]}>{effect.Name}</Text>
                                         <ComplexText style={Style.more} fontSize={Variables.fontSize.small}>{effect.Description}</ComplexText>
                                     </View>    
@@ -195,5 +201,5 @@ class Unit extends React.Component<Props> {
                 </View>;
     }
 }
-//<View style={Style.icon}>{factionIcon}</View>
+
 export default Unit;

@@ -41,7 +41,9 @@ class Options extends Component<Props> {
         svLayout:null,
         displayFirst:Variables.displayFirst,
         username:Variables.username,
-        displayLeaderInfo:Variables.displayLeaderInfo
+        displayLeaderInfo:Variables.displayLeaderInfo,
+        mergeLeaderWeapons:Variables.mergeLeaderWeapons,
+        displayTransportRule:Variables.displayTransportRule,
     };
     constructor(props, context:(typeof KameContext)){
         super(props, context);
@@ -232,22 +234,34 @@ class Options extends Component<Props> {
         this.props.onColourChange(this.state.currentlyEditing, value);
     }
 
+    updateDisplayTransportInfo(value:boolean, that:Options) {
+        that.setState({displayLeaderInfo:value})
+        Variables.displayLeaderInfo = value;
+        that.props.onNameDisplayChange(that.state.username+";;;"+that.state.displayFirst+";;;"+(this.state.displayLeaderInfo?"true":"false")+";;;"+(this.state.mergeLeaderWeapons?"true":"false")+";;;"+(value?"true":"false"));
+    }
+
+    updateMergeLeaderWeapons(value:boolean, that:Options) {
+        that.setState({mergeLeaderWeapons:value})
+        Variables.mergeLeaderWeapons = value;
+        that.props.onNameDisplayChange(that.state.username+";;;"+that.state.displayFirst+";;;"+(this.state.displayLeaderInfo?"true":"false")+";;;"+(value?"true":"false")+";;;"+(this.state.displayTransportRule?"true":"false"));
+    }
+
     updateDisplayLeaderInfo(value:boolean, that:Options) {
         that.setState({displayLeaderInfo:value})
         Variables.displayLeaderInfo = value;
-        that.props.onNameDisplayChange(that.state.username+";;;"+that.state.displayFirst+";;;"+(value?"true":"false"));
+        that.props.onNameDisplayChange(that.state.username+";;;"+that.state.displayFirst+";;;"+(value?"true":"false")+";;;"+(this.state.mergeLeaderWeapons?"true":"false")+";;;"+(this.state.displayTransportRule?"true":"false"));
     }
 
     updateDisplayFirst(display:string){
         this.setState({displayFirst:display})
         Variables.displayFirst = display;
-        this.props.onNameDisplayChange(this.state.username+";;;"+display+";;;"+(this.state.displayLeaderInfo?"true":"false"));
+        this.props.onNameDisplayChange(this.state.username+";;;"+display+";;;"+(this.state.displayLeaderInfo?"true":"false")+";;;"+(this.state.mergeLeaderWeapons?"true":"false")+";;;"+(this.state.displayTransportRule?"true":"false"));
     }
 
     updateUsername(username:string) {
         this.setState({username:username});
         Variables.username = username;
-        this.props.onNameDisplayChange(username+";;;"+this.state.displayFirst+";;;"+(this.state.displayLeaderInfo?"true":"false"));
+        this.props.onNameDisplayChange(username+";;;"+this.state.displayFirst+";;;"+(this.state.displayLeaderInfo?"true":"false")+";;;"+(this.state.mergeLeaderWeapons?"true":"false")+";;;"+(this.state.displayTransportRule?"true":"false"));
     }
 
     render(){
@@ -262,22 +276,32 @@ class Options extends Component<Props> {
                 <View style={sectionStyle}>
                     
                     <View style={{flexDirection:"row", paddingBottom:10}}>
-                        <View style={{width:"29%", marginRight:10}}>
-                            <Text style={textStyle}>Username :</Text>
+                        <View style={{width:"18%", marginRight:10}}>
+                            <Text style={textStyle}>Username</Text>
                             <AutoExpandingTextInput multiline editable value={this.state.username} onSubmit={text=>this.updateUsername(text)} />
                         </View>
-                        <View style={{width:"39%", marginRight:10}}>
-                            <Text style={textStyle}>Display First :</Text>
-                            <RadioButtonGroup selected={this.state.displayFirst} onSelected={(e)=>this.updateDisplayFirst(e)} radioBackground={this.state.accent} containerStyle={{flexDirection:"row", justifyContent:"center"}} containerOptionStyle={{margin:5, marginLeft:20, marginRight:20}}>
+                        <View style={{width:"24%", marginRight:10}}>
+                            <Text style={textStyle}>Display First</Text>
+                            <RadioButtonGroup selected={this.state.displayFirst} onSelected={(e)=>this.updateDisplayFirst(e)} radioBackground={this.state.accent} containerStyle={{flexDirection:"row", justifyContent:"center"}} containerOptionStyle={{margin:5, marginLeft:5, marginRight:5}}>
                                 <RadioButtonItem value="melee" label={<Text>Melee</Text>}/>
                                 <RadioButtonItem value="ranged" label={<Text>Ranged</Text>}/>
                             </RadioButtonGroup>
                         </View>
-                        <View style={{width:"29%", height:"100%"}}>
-                            <Text style={textStyle}>Leader Info :</Text>
-                            <View style={{flexDirection:"row", justifyContent:"center", alignItems:"center", paddingRight:10, paddingBottom:4, height:40}}>
-                                <Checkbox value={this.state.displayLeaderInfo} onValueChange={value=>this.updateDisplayLeaderInfo(value, this)} style={{marginRight:4}}/>
-                                <Text>Force Display</Text>
+                        <View style={{width:"55%", height:"100%", }}>
+                            <Text style={textStyle}>Other Display Info</Text>
+                            <View style={{flexDirection:"row"}}>
+                                <View style={{flexDirection:"row", justifyContent:"center", alignItems:"center", paddingRight:10, paddingBottom:4, height:40}}>
+                                    <Checkbox value={this.state.displayLeaderInfo} onValueChange={value=>this.updateDisplayLeaderInfo(value, this)} style={{marginRight:4}}/>
+                                    <Text>Leader Rule</Text>
+                                </View>
+                                <View style={{flexDirection:"row", justifyContent:"center", alignItems:"center", paddingRight:10, paddingBottom:4, height:40}}>
+                                    <Checkbox value={this.state.mergeLeaderWeapons} onValueChange={value=>this.updateMergeLeaderWeapons(value, this)} style={{marginRight:4}}/>
+                                    <Text>Merge Weapons</Text>
+                                </View>
+                                <View style={{flexDirection:"row", justifyContent:"center", alignItems:"center", paddingRight:10, paddingBottom:4, height:40}}>
+                                    <Checkbox value={this.state.displayTransportRule} onValueChange={value=>this.updateDisplayTransportInfo(value, this)} style={{marginRight:4}}/>
+                                    <Text>Transport Rule</Text>
+                                </View>
                             </View>
                         </View>
                     </View>

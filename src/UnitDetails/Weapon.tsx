@@ -12,7 +12,12 @@ interface Props {
     isOdd:IsOdd,
     forceName?:string,
     profileQtt?:number,
-    Style?
+    Style?,
+    prefix?:string
+}
+
+function getWeaponTraits(weapon:WeaponData){
+    return weapon._Traits
 }
 
 class InternalWeapon extends React.Component<Props> {
@@ -43,7 +48,7 @@ class InternalWeapon extends React.Component<Props> {
         return <View style={this.props.isOdd.Get()?[Style.info, Style.odd, {backgroundColor:this.context.LightAccent}]:Style.info}>
             {qtt}
             {addProfileQtt}
-            <Descriptor style={this.props.forceName?[Style.name, Style.profile]:Style.name}>{(this.props.forceName?"➤ ":"")+name + " "}{weaponTraits}</Descriptor>
+            <Descriptor style={this.props.forceName?[Style.name, Style.profile]:Style.name}>{(this.props.forceName?"➤ ":"")+(this.props.prefix?"("+this.props.prefix+") ":"")+name + " "}{weaponTraits}</Descriptor>
             
             <View style={Style.stats}>
                 {this.props.data.Range()=="Melee"?<View style={Style.statData}><Image style={[Style.melee, {tintColor:this.context.Dark}]} source={require("../../assets/images/melee.png")}/></View>:<Text style={Style.statData}>{this.props.data.Range()}</Text>}
@@ -65,17 +70,27 @@ class InternalProfileWeapon extends React.Component<Props> {
             data = this.props.data;
         }
         return data.Profiles.map((profile, index) => 
-            <InternalWeapon data={profile} showQuantity={false} forceName={data.Name + " - " + profile.Name} profileQtt={index==0?data.Profiles.length:0} key={key++} isOdd={this.props.isOdd}/>
+            <InternalWeapon data={profile} showQuantity={false} forceName={data.Name + " - " + profile.Name} profileQtt={index==0?data.Profiles.length:0} key={key++} isOdd={this.props.isOdd} prefix={this.props.prefix}/>
         );
     }
 }
 
 class Weapon extends React.Component<Props> {
     render(){
-        if (this.props.data instanceof ProfileWeaponData) {
-            return <InternalProfileWeapon data={this.props.data} showQuantity={this.props.showQuantity} Style={this.props.Style} isOdd={this.props.isOdd}/>
+        let weapon = this.props.data;
+        if (!weapon.Traits){
+            // @ts-ignore
+            if (this.props.data.Profiles) {
+                // @ts-ignore
+                weapon = new ProfileWeaponData(this.props.data.Profiles.map(profile=>new WeaponData(profile.Data, profile.Count, profile.Name)), this.props.data.Count, this.props.data.Name);
+            } else {
+                weapon = new WeaponData(this.props.data.Data, this.props.data.Count, this.props.data.Name);
+            }
+        }
+        if (weapon instanceof ProfileWeaponData) {
+            return <InternalProfileWeapon data={weapon} showQuantity={this.props.showQuantity} Style={this.props.Style} isOdd={this.props.isOdd} prefix={this.props.prefix} />
         } else {
-            return <InternalWeapon data={this.props.data} showQuantity={this.props.showQuantity} Style={this.props.Style} isOdd={this.props.isOdd} />
+            return <InternalWeapon data={weapon} showQuantity={this.props.showQuantity} Style={this.props.Style} isOdd={this.props.isOdd} prefix={this.props.prefix} />
         }
     }
 }

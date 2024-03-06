@@ -99,7 +99,7 @@ class WeaponData {
     protected _S: string;
     protected _AP: string;
     protected _D: string;
-    protected _Traits: Array<string>;
+    _Traits: Array<string>;
 
     public Data:string;
     public Count: number;
@@ -171,14 +171,21 @@ class ProfileWeaponData extends WeaponData {
 
 class LeaderData{
     private static UniqueBase = 0;
-    Name:string;
+
     Leading:Array<string>;
     Effects:Array<DescriptorData>;
     CurrentlyLeading:number;
     UniqueId:number;
+    BaseName:string;
+    CustomName:string;
+    MeleeWeapons:Array<WeaponData>;
+    RangedWeapons:Array<WeaponData>;
 
-    constructor(name:string, leading:Array<string>){
-        this.Name = name;
+    constructor(unit:UnitData, leading:Array<string>){
+        this.BaseName = unit.Name;
+        this.CustomName = unit.CustomName;
+        this.MeleeWeapons = unit.MeleeWeapons;
+        this.RangedWeapons = unit.RangedWeapons;
         this.Leading = leading;
         this.Effects = new Array<DescriptorData>();
         this.CurrentlyLeading=-1;
@@ -254,7 +261,7 @@ class UnitData {
         const that = this;
         this.Profiles.forEach(function(profile){
             if (profile.Name == "Leader") {
-                that.Leader = new LeaderData(that.CustomName?that.CustomName+" ("+that.Name+") ":that.Name, profile.Description.match(/(?<=[-■]).*/ig).map(item=>item.trim()));
+                that.Leader = new LeaderData(that, profile.Description.match(/(?<=[-■]).*/ig).map(item=>item.trim()));
             }
         });
         if (this.Leader === null) {

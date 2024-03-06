@@ -19,6 +19,7 @@ export class Descriptor extends Component<TextProps>  {
 }
 interface ComplexProps extends TextProps {
     fontSize?;
+    boldFirstWord?:string;
 }
 export class ComplexText extends Component<ComplexProps>{
     static contextType = KameContext; 
@@ -31,9 +32,12 @@ export class ComplexText extends Component<ComplexProps>{
         const regex = /([a-z]* time)|(stratagem)|(invulnerable save)|(damage)|(attacks?)|(r?e?-?rolle?d?)|(wound roll)|([a-z]* phase)|(hit roll)|(advance roll)|(battle-shock)|(charge roll)|(saving throws?)|(D[0-9])|([0-9]+CP)|([0-9]+\+?"?)/i;
         const normalStyle = {};
         const redStyle ={};
-        let text = <Text style={{fontSize:this.props.fontSize}}>{this.props.children.toString().split(regex).map(element => 
-            regex.test(element)?<Text style={{color:this.context.Main, textDecorationLine:"underline", fontSize:this.props.fontSize}}>{element}</Text>:element
-        )}</Text>;
+        let text = <Text style={{fontSize:this.props.fontSize, textAlign:"justify"}}>
+            {this.props.boldFirstWord&&<Text style={{fontFamily:Variables.fonts.WHB}}>{this.props.boldFirstWord}</Text>}
+            {this.props.children.toString().split(regex).map(element => 
+                regex.test(element)?<Text style={{color:this.context.Main, textDecorationLine:"underline", fontSize:this.props.fontSize}}>{element}</Text>:element
+            )}
+        </Text>;
         this.state.text = text;
     }
     render(): ReactNode {

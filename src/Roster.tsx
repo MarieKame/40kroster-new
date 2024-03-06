@@ -7,6 +7,7 @@ import Variables from "../Style/Variables";
 import Button from "./Components/Button";
 import {Text, ComplexText} from "./Components/Text";
 import {KameContext} from "../Style/KameContext";
+import { STRATAGEMS, Stratagem } from "./Stratagems";
 
 function isIterable(obj) {
     // checks for null and undefined
@@ -61,13 +62,16 @@ class Roster extends React.Component<Props> {
     state = {
         Name: "",
         Costs:"",
+        Faction:"",
+        Detachment:"",
         Units: new Array<UnitData>(),
         Leaders: new Array<LeaderData>(),
         Index:0,
         Menu:false,
         Rules: new Array<DescriptorData>(),
         MenuSection:RosterMenuCategories.UNIT_LIST,
-        Reminders:new Array<Reminder>()
+        Reminders:new Array<Reminder>(),
+        DetachmentStratagems: new Array<Stratagem>
     }
 
     FormatCost(cost) : CostData {
@@ -374,6 +378,8 @@ class Roster extends React.Component<Props> {
         let that = this;
         let key = 0;
         const doLeaders = this.props.forceLeaders==null;
+        this.state.Faction = roster.forces.force._catalogueName.indexOf("-")!==-1?roster.forces.force._catalogueName.match(/(?<=- ).*/gi)[0]:roster.forces.force._catalogueName;
+
         if (!doLeaders) {
             this.state.Leaders=this.props.forceLeaders;
         }
@@ -453,6 +459,15 @@ class Roster extends React.Component<Props> {
                 if (doLeaders && newUnit.GetLeaderData()){
                     this.state.Leaders.push(newUnit.GetLeaderData());
                 }
+            } else if (element._name == "Detachment Choice"){
+                this.state.Detachment = element.selections.selection._name.match(/.*(?= Detachment)/gi)[0];
+                let reminder = new Reminder();
+                reminder.UnitName = " - Detachment";
+                reminder.Phase = null;
+                reminder.Data = new DescriptorData(element.selections.selection.rules.rule._name, element.selections.selection.rules.rule.description);
+                this.state.Reminders.push(reminder);
+                this.state.DetachmentStratagems = STRATAGEMS;
+                this.state.DetachmentStratagems.filter(stratagem=>stratagem.Faction == this.state.Faction && stratagem.Detachment == this.state.Detachment);
             }
         };
         this.state.Reminders = this.state.Reminders.filter((reminder1, index, reminders) => 
@@ -467,8 +482,11 @@ class Roster extends React.Component<Props> {
                             : reminder1.Data.Name.localeCompare(reminder2.Data.Name);
         });
         this.state.Units.sort(UnitData.compareUnits);
+        function Name(leader:LeaderData){
+            return leader.CustomName?leader.CustomName+" ("+leader.BaseName+") ":leader.BaseName;
+        }
         if (doLeaders) {
-            this.state.Leaders.sort((leader1, leader2)=>this.state.Units.findIndex(unit=>leader1.Name.indexOf(unit.Name)!==-1)-this.state.Units.findIndex(unit=>leader2.Name.indexOf(unit.Name)!==-1))
+            this.state.Leaders.sort((leader1, leader2)=>this.state.Units.findIndex(unit=>Name(leader1).indexOf(unit.Name)!==-1)-this.state.Units.findIndex(unit=>Name(leader2).indexOf(unit.Name)!==-1))
             this.props.onUpdateLeaders(this.state.Leaders);
         }
     }
@@ -498,7 +516,7 @@ class Roster extends React.Component<Props> {
     }
 
     DisplayUnit(index:number){
-        this.setState({Index:index, Menu:false});
+        this.setState({Index:index});
     }
 
     UpdateLeader(leader:LeaderData, that:Roster) {

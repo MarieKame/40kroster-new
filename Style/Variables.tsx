@@ -29,6 +29,8 @@ const Variables = {
     unitCategories:['Epic Hero', 'Character', 'Battleline', 'Infantry', 'Vehicle', 'Monster'],
     displayFirst:"melee",
     displayLeaderInfo:false,
+    mergeLeaderWeapons:true,
+    displayTransportRule:false,
     username:"General",
     factions:[
         ['Adepta Sororitas', 'Acts of Faith'], 
