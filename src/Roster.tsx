@@ -59,6 +59,7 @@ class Roster extends React.Component<Props> {
     static Instance:Roster;
     static contextType = KameContext; 
     declare context: React.ContextType<typeof KameContext>;
+    private static tempProfiles: Array<DescriptorData>;
     state = {
         Name: "",
         Costs:"",
@@ -111,29 +112,33 @@ class Roster extends React.Component<Props> {
         return categoriesData;
     }
 
+    CheckAddReminder(data:DescriptorData, unitName:string){
+        if (/(per battle)|(at the end of)|(each time)/gi.test(data.Description) && !/leading/gi.test(data.Description)){
+            let reminder = new Reminder();
+            reminder.UnitName=unitName;
+            const results = /(((Command)|(Movement)|(Shooting)|(Charge)|(Fighting)|(Any)) (phase))/gi.exec(data.Description)
+            if (results)
+                reminder.Phase = results[2][0].toLocaleUpperCase() + results[2].slice(1);
+            else
+                reminder.Phase=null;
+            reminder.Data = data;
+            this.state.Reminders.push(reminder);
+        }
+    }
+
     ExtractProfiles(profiles, unitName): Array<DescriptorData> {
         let profilesData = new Array<DescriptorData>();
         if (!isIterable(profiles.profile)){
-            console.log(profiles.profile);
             const data=new DescriptorData(profiles.profile._name, this.getCharacteristic(profiles.profile.characteristics.characteristic));
             profilesData.push(data);
+            this.CheckAddReminder(data, unitName);
             return profilesData;
         } 
         for(let element of profiles.profile){
             if (element._name !== unitName && element.characteristics) {
                 const data=new DescriptorData(element._name, this.getCharacteristic(element.characteristics.characteristic));
                 profilesData.push(data);
-                if (/(per battle)|(at the end of)|(each time)/gi.test(data.Description) && !/leading/gi.test(data.Description)){
-                    let reminder = new Reminder();
-                    reminder.UnitName=unitName;
-                    const results = /(((Command)|(Movement)|(Shooting)|(Charge)|(Fighting)|(Any)) (phase))/gi.exec(data.Description)
-                    if (results)
-                        reminder.Phase = results[2][0].toLocaleUpperCase() + results[2].slice(1);
-                    else
-                        reminder.Phase=null;
-                    reminder.Data = data;
-                    this.state.Reminders.push(reminder);
-                }
+                this.CheckAddReminder(data, unitName);
             }
         }
         return profilesData;
@@ -195,7 +200,7 @@ class Roster extends React.Component<Props> {
                 }
                 profilesWeapons.push(new WeaponData(element.Stat, count, profileName, name))
             }
-            return new ProfileWeaponData(profilesWeapons, count, name);
+            return new ProfileWeaponData(profilesWeapons.sort((wpnDta1, wpnDta2)=> wpnDta1.Traits.length != wpnDta2.Traits.length ?wpnDta1.Traits.length - wpnDta2.Traits.length:wpnDta1.Name.length - wpnDta2.Name.length), count, name);
         } else {
             return new WeaponData(stats.Stats[0].Stat, count, name);
         }
@@ -256,10 +261,16 @@ class Roster extends React.Component<Props> {
                             that.TreatSelection({treatedSelections : model.treatedSelections}, Number(elementInIn._number), elementInIn._name, elementInIn.profiles)
                         }
                     }
-                }
+                } 
             }
         } else {
-            that.TreatSelection({treatedSelections : model.treatedSelections}, Number(selection._number), selection._name, selection.profiles);
+            if(selection.selections) {
+                for(let element of selection.selections.selection){
+                    that.TreatSelection({treatedSelections : model.treatedSelections}, Number(element._number), element._name, element.profiles);
+                }
+            } else {
+                that.TreatSelection({treatedSelections : model.treatedSelections}, Number(selection._number), selection._name, selection.profiles);
+            }
         }
     }
 
@@ -298,7 +309,7 @@ class Roster extends React.Component<Props> {
         }
         let stats = "";
         for(let element of profiles.profile){
-            if (element._name === name) {
+            if (element._name === name || element._name === name.substring(0, name.length-1)) {
                 stats= this.getCharacteristic(element.characteristics.characteristic);
             }
         }
@@ -338,11 +349,19 @@ class Roster extends React.Component<Props> {
             
         } else {
             for(let element of selections.selection){
+                let modelData;
                 if (element.profile){
-                    models.push(new ModelData(element._name, new StatsData(that.ExtractStats(element, element._name), invul)));
+                    modelData = new ModelData(element._name, new StatsData(that.ExtractStats(element, element._name), invul));
                 } else if (element.profiles) {
-                    models.push(new ModelData(element._name, new StatsData(that.ExtractStats(element.profiles, element._name), invul)));
-                } 
+                    modelData = new ModelData(element._name, new StatsData(that.ExtractStats(element.profiles, element._name), invul));
+                }
+                if(modelData) {
+                    if (modelData.Stats.isRealModel()){
+                        models.push(modelData);
+                    } else {
+                        Roster.tempProfiles.push(new DescriptorData(modelData.Name, modelData.Stats.Data));
+                    }
+                }
             }
             if (profiles && models.length == 0) {
                 let uniqueModel;
@@ -390,12 +409,17 @@ class Roster extends React.Component<Props> {
             this.state.Leaders=this.props.forceLeaders;
         }
         if (roster.forces.force.rules) {
-            for(let element of roster.forces.force.rules.rule) {
-                this.state.Rules.push(new DescriptorData(element._name, element.description));
-            } 
+            if (!isIterable(roster.forces.force.rules.rule)) {
+                this.state.Rules.push(new DescriptorData(roster.forces.force.rules.rule._name, roster.forces.force.rules.rule.description));
+            } else {
+                for(let element of roster.forces.force.rules.rule) {
+                    this.state.Rules.push(new DescriptorData(element._name, element.description));
+                } 
+            }
         }
         for(let element of roster.forces.force.selections.selection) {
             if (element._type === "model" || element._type === "unit") {
+                Roster.tempProfiles = new Array<DescriptorData>();
                 let newUnit = new UnitData();
                 newUnit.Key = key++;
                 newUnit.CustomName = element._customName??null;
@@ -425,10 +449,24 @@ class Roster extends React.Component<Props> {
                     }
                     let invul = that.FindInvulnerableDescriptor(newUnit.Profiles);
                     newUnit.Models = that.ExtractModels(element.selections, invul, element.profiles, newUnit.Name);
+                    let otherModel;
+                    try{
+                        otherModel = new ModelData(element._name, new StatsData( that.ExtractStats(element.profiles, element._name), invul))
+                    } catch(e){}
                     if (newUnit.HasNoModel()) {
-                        newUnit.Models = new ModelData(element._name, new StatsData( that.ExtractStats(element.profiles, element._name), invul));
+                        newUnit.Models = otherModel;
+                    } else if (otherModel && otherModel.Stats.isRealModel()){
+                        if(isIterable(newUnit.Models)) {
+                            // @ts-ignore
+                            newUnit.Models.push(otherModel);
+                        } else {
+                            newUnit.Models = [newUnit.Models, otherModel];
+                        }
                     }
                 }
+                Roster.tempProfiles.forEach(extraProfile => {
+                    newUnit.Profiles.push(extraProfile);
+                });
                 newUnit.MeleeWeapons = new Array<WeaponData>();
                 newUnit.RangedWeapons = new Array<WeaponData>();
                 newUnit.OtherEquipment = new Array<WeaponData>();
@@ -505,13 +543,13 @@ class Roster extends React.Component<Props> {
         }
     }
 
-    constructor(props) {
+    constructor(props:Props) {
         super(props);
+        Roster.Instance = this;
         this.state.Units = new Array<UnitData>();
         const parser = new fastXMLParser.XMLParser({ignoreAttributes:false, attributeNamePrefix :"_", textNodeName:"textValue"});
         this.ExploreRoster(parser.parse(props.XML).roster);
         this.props.onLoad(this.state.Costs);
-        Roster.Instance = this;
     }
 
     Previous(){
@@ -548,7 +586,16 @@ class Roster extends React.Component<Props> {
         that.setState({Leaders:leaders});
     }
 
+    private GetDisplayIndex():number{
+        let index = this.state.Index;
+        this.state.UnitsToSkip.reverse().forEach(toSkip=>{
+            if (toSkip < index) index--;
+        });
+        return index + 1;
+    }
+
     render(){
+        Roster.Instance = this;
         let key= 0;
         if (Platform.OS=="web"){
             return <View style={{width:Variables.width, alignSelf:"center", padding:10}}>{this.state.Units.map(unitData => (
@@ -569,7 +616,7 @@ class Roster extends React.Component<Props> {
                         </View>
                         <Button key="for" onPress={(e)=> this.Next()}>➤</Button>
                     </View>
-                    <Text style={{textAlign:"center"}}>{(this.state.Index+1) + " / " + (this.state.Units.length  - this.state.UnitsToSkip.length) + (this.state.UnitsToSkip.length>0?" ( "+this.state.Units.length+" )":"")}</Text>
+                    <Text style={{textAlign:"center"}}>{(this.GetDisplayIndex()) + " / " + (this.state.Units.length  - this.state.UnitsToSkip.length) + (this.state.UnitsToSkip.length>0?" ( "+this.state.Units.length+" )":"")}</Text>
                 </View>
             </View>;
         }

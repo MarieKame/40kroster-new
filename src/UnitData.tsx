@@ -11,13 +11,14 @@ class DescriptorData {
 }
 
 class StatsData {
-    protected _M: Number;
-    protected _T: Number;
-    protected _SV: Number;
-    protected _IV: Number|null;
-    protected _W: Number;
-    protected _LD: Number;
-    protected _OC: Number;
+    Data:string;
+    protected _M: number;
+    protected _T: number;
+    protected _SV: number;
+    protected _IV: number|null;
+    protected _W: number;
+    protected _LD: number;
+    protected _OC: number;
     
     public M():string {
         return this._M + '"';
@@ -41,6 +42,10 @@ class StatsData {
         return this._OC.toString();
     }
 
+    public isRealModel(){
+        return !isNaN(this._OC);
+    }
+
     public same(stats:StatsData):boolean{
         return this._M == stats._M &&
         this._T == stats._T &&
@@ -52,6 +57,7 @@ class StatsData {
     }
 
     constructor(data:string, invulnerableDescription:string|undefined) {
+        this.Data = data;
         let split = data.split(',');
         this._M = parseInt(split[0]);
         this._T = parseInt(split[1]);

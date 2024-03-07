@@ -109,9 +109,9 @@ class Unit extends React.Component<Props> {
             <View style={Style.weaponList}> 
                 <Text style={[Style.title, {backgroundColor:this.context.Accent}]}>Other Equipment</Text>
                 {this.props.data.OtherEquipment.map((wpn)=>
-                    <View style={[Style.specialEquipment]} key={otherEquipKey++}>
-                        <Text style={[Style.subtitle, {backgroundColor:this.context.LightAccent}]}>{wpn.Name}</Text>
-                        <ComplexText style={Style.more} fontSize={Variables.fontSize.small}>{wpn.Data}</ComplexText>
+                    <View style={[Style.specialEquipment]} key={wpn.Name}>
+                        <Text key="name" style={[Style.subtitle, {backgroundColor:this.context.LightAccent}]}>{wpn.Name}</Text>
+                        <ComplexText key="data" style={Style.more} fontSize={Variables.fontSize.small}>{wpn.Data}</ComplexText>
                     </View>
                 )}
             </View>;
@@ -130,40 +130,43 @@ class Unit extends React.Component<Props> {
         }
         return  <View style={[Style.unit, {backgroundColor:this.context.Bg, 
             borderColor:this.context.Dark}]}>
-                    <View style={Style.nameView}><Text style={Style.name}>{((this.props.data.CustomName !== null && this.props.data.CustomName !== "")?this.props.data.CustomName:this.props.data.Name) + ((this.props.data.Count>1)?" (x" + this.props.data.Count + ")":"")}</Text></View>
-                    <View style={Style.allStats}>
+                    <View key="name" style={Style.nameView}>
+                        <Text style={Style.name}>{((this.props.data.CustomName !== null && this.props.data.CustomName !== "")?this.props.data.CustomName:this.props.data.Name) + ((this.props.data.Count>1)?" (x" + this.props.data.Count + ")":"")}</Text>
+                    </View>
+                    <View key="stats" style={Style.allStats}>
                         {this.renderAllStats(stats)}
                         {IV}
                     </View>
-                    <View style={Style.details}>
-                        <View style={Style.weapons}>
+                    <View key="details" style={Style.details}>
+                        <View key="weapons" style={Style.weapons}>
                             {Variables.displayFirst=="melee"&&this.renderWeapons(this.props.data.MeleeWeapons, "Melee Weapons", selectedLeaders, selectedLeaders.map(leader=>leader.MeleeWeapons))}
                             {this.renderWeapons(this.props.data.RangedWeapons, "Ranged Weapons", selectedLeaders, selectedLeaders.map(leader=>leader.RangedWeapons))}
                             {Variables.displayFirst=="ranged"&&this.renderWeapons(this.props.data.MeleeWeapons, "Melee Weapons", selectedLeaders, selectedLeaders.map(leader=>leader.MeleeWeapons))}
                             {otherEquip}
                         </View>
-                        <View style={Style.other}>
-                            <Text style={[Style.title, {backgroundColor:this.context.Accent}]}>Special Rules</Text>
-                            <Descriptor style={[Style.more, Style.bold, {color:this.context.Main}]}>[
+                        <View key="other" style={Style.other}>
+                            <Text key="title" style={[Style.title, {backgroundColor:this.context.Accent}]}>Special Rules</Text>
+                            <Descriptor key="rules" style={[Style.more, Style.bold, {color:this.context.Main}]}>[
                                 {this.props.data.Rules.map((rule)=>rule.Name).join(', ')}
                             ]</Descriptor>
-                            <View style={{flexDirection: 'row', flexWrap: 'wrap', width:"100%"}}>
+                            <View key="profiles" style={{flexDirection: 'row', flexWrap: 'wrap', width:"100%"}}>
                                 {this.props.data.Profiles.map((ruleDescriptor)=>
                                 ((Variables.displayLeaderInfo||ruleDescriptor.Name!=="Leader")&&(ruleDescriptor.Name!=="Transport")&&ruleDescriptor.Name!=="Invulnerable Save")&&<View style={Style.rule} key={this.ruleKey++}>
-                                    <Text style={[Style.ruleTitle, {backgroundColor:this.context.LightAccent}]}>{ruleDescriptor.Name}</Text>
-                                    <ComplexText style={Style.more} fontSize={Variables.fontSize.small}>{ruleDescriptor.Description}</ComplexText>
+                                    <Text key="name" style={[Style.ruleTitle, {backgroundColor:this.context.LightAccent}]}>{ruleDescriptor.Name}</Text>
+                                    <ComplexText key="description" style={Style.more} fontSize={Variables.fontSize.small}>{ruleDescriptor.Description}</ComplexText>
                                 </View>
                                 )}
                             </View>
                         </View>
                     </View>
                     {leaders.length !== 0 &&
-                    <View>
-                        <Text style={[Style.title, {backgroundColor:this.context.Accent, marginBottom:4}]}>Leaders</Text>
-                        <View style={{flexDirection:"row", flexWrap:"wrap"}}>
+                    <View key="leaders">
+                        <Text key="title" style={[Style.title, {backgroundColor:this.context.Accent, marginBottom:4}]}>Leaders</Text>
+                        <View key="list" style={{flexDirection:"row", flexWrap:"wrap"}}>
                             {leaders.map((leader, index)=>
                                 <View key={index} style={{flexDirection:"row", justifyContent:"center", alignItems:"center", paddingRight:10, paddingBottom:4}}>
                                     <Checkbox 
+                                        key="cxbx"
                                         disabled={leader.CurrentlyLeading!==-1 && leader.CurrentlyLeading!==this.props.data.Key} 
                                         color={this.context.Main} 
                                         style={{marginRight:4}} 
@@ -171,32 +174,32 @@ class Unit extends React.Component<Props> {
                                         onValueChange={(value)=>{
                                             leader.CurrentlyLeading=value?this.props.data.Key:-1; 
                                             this.props.onUpdateLeader(leader)}}/>
-                                    <Text>{Name(leader)}</Text>
+                                    <Text key="name">{Name(leader)}</Text>
                                 </View>
                             )}
                         </View>
-                        <View style={{flexDirection: 'row', flexWrap: 'wrap', width:"100%"}}>
+                        <View key="data" style={{flexDirection: 'row', flexWrap: 'wrap', width:"100%"}}>
                             {leaders.map((leader, index1) =>
                                 leader.Effects.map((effect, index2)=>
                                     leader.CurrentlyLeading==this.props.data.Key&&<View style={Style.rule} key={index1+index2+Name(leader)}>
-                                        <Text style={[Style.ruleTitle, {backgroundColor:this.context.LightAccent}]}>{effect.Name}</Text>
-                                        <ComplexText style={Style.more} fontSize={Variables.fontSize.small}>{effect.Description}</ComplexText>
+                                        <Text key="name" style={[Style.ruleTitle, {backgroundColor:this.context.LightAccent}]}>{effect.Name}</Text>
+                                        <ComplexText key="desc" style={Style.more} fontSize={Variables.fontSize.small}>{effect.Description}</ComplexText>
                                     </View>    
                                 ) 
                             )}
                         </View>
                     </View>
                     }
-                    <View style={Style.keywordsView}>
-                        <View style={Style.keywords}>
-                            <Text style={Style.keywordsTitle}>Keywords : </Text>
-                            <Descriptor style={Style.keyword}>{" "+this.props.data.Keywords.join(', ')+" "}</Descriptor>
+                    <View key="keywords" style={Style.keywordsView}>
+                        <View key="actual" style={Style.keywords}>
+                            <Text key="name" style={Style.keywordsTitle}>Keywords : </Text>
+                            <Descriptor key="desc" style={Style.keyword}>{" "+this.props.data.Keywords.join(', ')+" "}</Descriptor>
                         </View>
-                        <View style={[Style.factions, {backgroundColor:this.context.LightAccent,borderTopColor:this.context.Dark, borderBottomColor:this.context.Dark}]}>
-                            <Text style={Style.keywordsTitle}>Faction Keywords : </Text>
-                            <Descriptor style={Style.keyword}>{" "+this.props.data.Factions.join(', ')+" "}</Descriptor>
+                        <View key="faction" style={[Style.factions, {backgroundColor:this.context.LightAccent,borderTopColor:this.context.Dark, borderBottomColor:this.context.Dark}]}>
+                            <Text key="name" style={Style.keywordsTitle}>Faction Keywords : </Text>
+                            <Descriptor key="desc" style={Style.keyword}>{" "+this.props.data.Factions.join(', ')+" "}</Descriptor>
                         </View>
-                        <View style={Style.icon}><Background style={{position:"absolute", left:-15, top:-7}} /><FactionSvg faction={faction} /></View>
+                        <View key="logo" style={Style.icon}><Background key="1" style={{position:"absolute", left:-15, top:-7}} /><FactionSvg key="2" faction={faction} /></View>
                     </View>
                 </View>;
     }

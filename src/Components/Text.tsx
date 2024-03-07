@@ -30,12 +30,11 @@ export class ComplexText extends Component<ComplexProps>{
     constructor(props:TextProps, context:(typeof KameContext)){
         super(props, context);
         const regex = /([a-z]* time)|(stratagem)|(invulnerable save)|(damage)|(attacks?)|(r?e?-?rolle?d?)|(wound roll)|([a-z]* phase)|(hit roll)|(advance roll)|(battle-shock)|(charge roll)|(saving throws?)|(D[0-9])|([0-9]+CP)|([0-9]+\+?"?)/i;
-        const normalStyle = {};
-        const redStyle ={};
+        let index=1;
         let text = <Text style={{fontSize:this.props.fontSize, textAlign:"justify"}}>
-            {this.props.boldFirstWord&&<Text style={{fontFamily:Variables.fonts.WHB}}>{this.props.boldFirstWord}</Text>}
+            {this.props.boldFirstWord&&<Text key="bold" style={{fontFamily:Variables.fonts.WHB}}>{this.props.boldFirstWord}</Text>}
             {this.props.children.toString().split(regex).map(element => 
-                regex.test(element)?<Text style={{color:this.context.Main, textDecorationLine:"underline", fontSize:this.props.fontSize}}>{element}</Text>:element
+                regex.test(element)?<Text key={index++}style={{color:this.context.Main, textDecorationLine:"underline", fontSize:this.props.fontSize}}>{element}</Text>:element
             )}
         </Text>;
         this.state.text = text;

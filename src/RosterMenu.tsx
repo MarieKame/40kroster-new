@@ -93,14 +93,14 @@ class RosterMenu extends Component<Props> {
         />
     }
 
-    ShowCategory(category:string, index:number):ReactNode {
+    ShowCategory(category:string, index:string):ReactNode {
 
         if (Roster.Instance.state.Units.filter((unit)=> unit.GetUnitCategory() == category).length == 0) return "";
         return <View style={{paddingBottom:14}} key={index}>
             <Text style={{width:"100%", textAlign:"center", fontFamily:Variables.fonts.spaceMarine, paddingBottom:4}}>— {category} —</Text>
             <View style={{flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', width:"100%"}}>
                 {Roster.Instance.state.Units.map((unit, index) => 
-                    (unit.GetUnitCategory() == category && Roster.Instance.state.UnitsToSkip.indexOf(index)==-1)&&<View style={{width:"50%"}}><Button onPress={(e)=>{Roster.Instance.DisplayUnit(index); this.props.navigation.goBack();}} weight={(index==Roster.Instance.state.Index)?"heavy":"normal"}>{unit.CustomName?unit.CustomName:unit.Name}</Button></View>
+                    (unit.GetUnitCategory() == category && Roster.Instance.state.UnitsToSkip.indexOf(index)==-1)&&<View key={unit.Name+index+Roster.Instance.state.Name} style={{width:"50%"}}><Button onPress={(e)=>{Roster.Instance.DisplayUnit(index); this.props.navigation.goBack();}} weight={(index==Roster.Instance.state.Index)?"heavy":"normal"}>{unit.CustomName?unit.CustomName:unit.Name}{unit.Count>1?" (x"+unit.Count+")":""}</Button></View>
                 )}
             </View>
         </View>;
@@ -132,7 +132,7 @@ class RosterMenu extends Component<Props> {
             case RosterMenuCategories.UNIT_LIST:
                 menuContents=
                    <ScrollView>
-                        {Variables.unitCategories.map((category, index) => this.ShowCategory(category, index))}
+                        {Variables.unitCategories.map((category, index) => this.ShowCategory(category, index+category))}
                     </ScrollView>;
                     break;
             case RosterMenuCategories.RULES:

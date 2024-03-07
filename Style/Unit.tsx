@@ -146,7 +146,7 @@ const Style = StyleSheet.create({
         right:-10,
         paddingLeft:28,
         paddingRight:10,
-        width:"43%",
+        width:"42%",
         height:40*Variables.zoom,
         borderTopWidth:1,
         borderBottomWidth:1,
