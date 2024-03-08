@@ -1,5 +1,5 @@
 import React from "react";
-import {StatsData, UnitData, LeaderData, WeaponData} from "./UnitData";
+import {StatsData, UnitData, LeaderData, WeaponData, ModelData} from "./UnitData";
 import Weapon from './UnitDetails/Weapon';
 import {View} from 'react-native';
 import {Text, Descriptor, ComplexText} from './Components/Text';
@@ -36,7 +36,7 @@ class Unit extends React.Component<Props> {
     renderStats(stats:StatsData, index:number = -1, key:number=-1) {
         let name;
         if (index != -1) {
-            name=this.props.data.getModelName(index);
+            name=this.props.data.GetModelName(index);
         } else if (this.props.data.CustomName) {
             name=this.props.data.Name;
         }
@@ -51,12 +51,12 @@ class Unit extends React.Component<Props> {
             </View> ;
     }
 
-    renderAllStats(stats:StatsData|Array<StatsData>) {
+    renderAllStats(models:ModelData|Array<ModelData>) {
         let key=0;
-        if (stats instanceof StatsData) {
-            return <View>{this.renderStats(stats)}</View>;
+        if (models instanceof ModelData) {
+            return <View>{this.renderStats(models.Stats)}{(!this.props.data.UniqueInvul()&&models.Stats.IV())&&this.renderStatBox("", models.Stats.IV(), true)}</View>;
         } else {
-            return <View>{stats.map((stats, index) => this.renderStats(stats, index, key++))}</View>;
+            return <View>{models.map((model, index) => <View key={index}>{this.renderStats(model.Stats, index, key++)}{(!this.props.data.UniqueInvul()&&model.Stats.IV())&&this.renderStatBox("", model.Stats.IV(), true)}</View>)}</View>;
         }
     }
 
@@ -89,22 +89,9 @@ class Unit extends React.Component<Props> {
     ruleKey = 0;
     render(){
         let stats = this.props.data.GetStats();
-        let ivValue;
-        if (stats instanceof StatsData) {
-            ivValue = stats.IV();
-        } else {
-            stats.forEach(function(stat){
-                ivValue = stat.IV()??ivValue;
-            });
-        }
-        let IV; 
-        if (ivValue) {
-            IV = this.renderStatBox("", ivValue, true);
-        }
 
         let otherEquip;
         if (this.props.data.OtherEquipment.length > 0) {
-            let otherEquipKey=0;
             otherEquip= 
             <View style={Style.weaponList}> 
                 <Text style={[Style.title, {backgroundColor:this.context.Accent}]}>Other Equipment</Text>
@@ -134,8 +121,8 @@ class Unit extends React.Component<Props> {
                         <Text style={Style.name}>{((this.props.data.CustomName !== null && this.props.data.CustomName !== "")?this.props.data.CustomName:this.props.data.Name) + ((this.props.data.Count>1)?" (x" + this.props.data.Count + ")":"")}</Text>
                     </View>
                     <View key="stats" style={Style.allStats}>
-                        {this.renderAllStats(stats)}
-                        {IV}
+                        {this.renderAllStats(this.props.data.Models)}
+                        {this.props.data.UniqueInvul()&&this.renderStatBox("", this.props.data.GetUniqueInvul(), true)}
                     </View>
                     <View key="details" style={Style.details}>
                         <View key="weapons" style={Style.weapons}>
@@ -151,7 +138,7 @@ class Unit extends React.Component<Props> {
                             ]</Descriptor>
                             <View key="profiles" style={{flexDirection: 'row', flexWrap: 'wrap', width:"100%"}}>
                                 {this.props.data.Profiles.map((ruleDescriptor)=>
-                                ((Variables.displayLeaderInfo||ruleDescriptor.Name!=="Leader")&&(ruleDescriptor.Name!=="Transport")&&ruleDescriptor.Name!=="Invulnerable Save")&&<View style={Style.rule} key={this.ruleKey++}>
+                                ((Variables.displayLeaderInfo||ruleDescriptor.Name!=="Leader")&&(ruleDescriptor.Name!=="Transport")&&!/^((Models in this units? have)|(This model has)) a((n)|( [2-6]\+)) invulnerable save( of [2-6]\+)?\.?$/gi.test(ruleDescriptor.Description))&&<View style={Style.rule} key={this.ruleKey++}>
                                     <Text key="name" style={[Style.ruleTitle, {backgroundColor:this.context.LightAccent}]}>{ruleDescriptor.Name}</Text>
                                     <ComplexText key="description" style={Style.more} fontSize={Variables.fontSize.small}>{ruleDescriptor.Description}</ComplexText>
                                 </View>

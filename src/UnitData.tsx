@@ -1,4 +1,6 @@
+import { Exception } from 'sass';
 import Variables from '../Style/Variables';
+import { transpileModule } from 'typescript';
 
 class DescriptorData {
     Name: string;
@@ -141,6 +143,10 @@ class WeaponData {
         return this._D !== undefined;
     }
 
+    public IsMultiRange():boolean{
+        return false;
+    }
+
     constructor(data:string, count:number, name:string, avoidTrait:string|null = null) {
         this.Data = data;
         let split = data.split(',');
@@ -158,6 +164,24 @@ class WeaponData {
         }
         this.Count = count;
         this.Name = name;
+    }
+}
+
+class MultiRangeWeaponData extends WeaponData {
+    public MeleeProfiles:Array<WeaponData>;
+    public RangedProfiles:Array<WeaponData>;
+
+    public IsMelee():boolean {
+        return false;
+    }
+    public IsMultiRange(): boolean {
+        return true;
+    }
+
+    constructor(profiles: Array<WeaponData>, count:number, name:string){
+        super("0,0,0,0,0,1", count, name);
+        this.MeleeProfiles = profiles.filter(profile=>profile.IsMelee());
+        this.RangedProfiles = profiles.filter(profile=>!profile.IsMelee());
     }
 }
 
@@ -184,6 +208,7 @@ class LeaderData{
     UniqueId:number;
     BaseName:string;
     CustomName:string;
+    MultiRangeWeapons:Array<MultiRangeWeaponData>;
     MeleeWeapons:Array<WeaponData>;
     RangedWeapons:Array<WeaponData>;
 
@@ -200,12 +225,20 @@ class LeaderData{
 }
 
 class UnitData {
+
+    static CompareUnits(unit1:UnitData, unit2:UnitData) {
+        const weight1 = unit1.getWeight();
+        const weight2 = unit2.getWeight();
+        return (weight2 !== weight1)?weight2-weight1:unit1.Name.localeCompare(unit2.Name);
+    }
+
     Name : string;
     CustomName : string;
     Keywords: Array<string>;
     Factions: Array<string>;
     Rules: Array<DescriptorData>;
     Profiles: Array<DescriptorData>;
+    MultiRangeWeapons:Array<MultiRangeWeaponData>;
     MeleeWeapons:Array<WeaponData>;
     RangedWeapons:Array<WeaponData>;
     OtherEquipment:Array<WeaponData>;
@@ -231,6 +264,23 @@ class UnitData {
             return modelList.slice(-1)[0].Stats;
     }
 
+    private getWeight():number{
+        let weight = this.Costs.Val;
+        let index = 10000000000000;
+        const cat = this.GetUnitCategory();
+        Variables.unitCategories.forEach((category)=>{
+            if (category == cat) {
+                weight+= index;
+            }
+            index /= 100;
+        });
+        return weight;
+    }
+
+    private flat():string{
+        return this.Name+this.CustomName+this.Profiles.toString()+this.Rules.toString()+this.MeleeWeapons.toString()+this.RangedWeapons.toString()+this.OtherEquipment.toString();
+    }
+
     GetStats():StatsData|Array<StatsData>{
         if (this.Models instanceof ModelData) {
             return this.Models.Stats;
@@ -244,7 +294,7 @@ class UnitData {
         }
     }
 
-    getModelName(index:number) {
+    GetModelName(index:number) {
         return this.Models[index].Name;
     }
  
@@ -292,35 +342,51 @@ class UnitData {
         return this.Leader;
     }
 
-    private getWeight():number{
-        let weight = this.Costs.Val;
-        let index = 10000000000000;
-        const cat = this.GetUnitCategory();
-        Variables.unitCategories.forEach((category)=>{
-            if (category == cat) {
-                weight+= index;
-            }
-            index /= 100;
-        });
-        return weight;
-    }
-
-    HasNoModel() {
+    HasNoModel():boolean {
         return this.Models == null || (this.Models instanceof Array && this.Models.length == 0);
-    }
-
-    private flat():string{
-        return this.Name+this.CustomName+this.Profiles.toString()+this.Rules.toString()+this.MeleeWeapons.toString()+this.RangedWeapons.toString()+this.OtherEquipment.toString();
     }
 
     Equals(other:UnitData):boolean{
         return this.flat() == other.flat();
     }
 
-    static compareUnits(unit1:UnitData, unit2:UnitData) {
-        const weight1 = unit1.getWeight();
-        const weight2 = unit2.getWeight();
-        return (weight2 !== weight1)?weight2-weight1:unit1.Name.localeCompare(unit2.Name);
+    private unique:boolean|null=null;
+    private uniqueIV:string|null=null;
+
+    UniqueInvul():boolean{
+        if(this.unique !== null) {
+            return this.unique;
+        }
+        if (this.Models instanceof ModelData) {
+            this.unique = this.Models.Stats.IV() !== null;
+            this.uniqueIV = this.Models.Stats.IV();
+            return this.unique;
+        } else {
+            let unique=false;
+            let lastNonNullVal=null;
+            this.Models.forEach(model=>{
+                if(model.Stats.IV() !== null){
+                    if (lastNonNullVal!==null &&lastNonNullVal !== model.Stats.IV()) {
+                        unique=false;
+                        this.unique=false
+                    } else {
+                        unique=true;
+                        lastNonNullVal=model.Stats.IV();
+                    }
+                }
+            });
+            if (unique) {
+                this.uniqueIV = lastNonNullVal;
+            }
+            this.unique = unique;
+            return this.unique;
+        }
+    }
+    GetUniqueInvul():string{
+        if (!this.UniqueInvul()) {
+            throw "Has to be unique";
+        }
+        return this.uniqueIV;
     }
 }
 
@@ -328,6 +394,7 @@ export {UnitData,
 CostData,
 WeaponData,
 ProfileWeaponData,
+MultiRangeWeaponData,
 ModelData,
 StatsData,
 DescriptorData,

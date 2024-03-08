@@ -7,11 +7,11 @@ import Roster from "./Roster";
 import Button from "./Components/Button";
 import Text, { ComplexText } from "./Components/Text";
 import { Background } from "../Style/svgs";
-import { Stratagem } from "./Stratagems";
+import { CORE_STRATAGEMS, Stratagem } from "./Stratagems";
 import MasonryList from '@react-native-seoul/masonry-list';
 
 enum RosterMenuCategories {
-    UNIT_LIST, RULES, REMINDERS, STRATAGEMS
+    UNIT_LIST, RULES, REMINDERS, STRATAGEMS, CORE
 }
 
 interface Props {
@@ -33,24 +33,25 @@ class RosterMenu extends Component<Props> {
         </View>;
     }
 
-    ShowStratagems() {
+    ShowStratagems(stratagems:Array<Stratagem>) {
         function getPhases(stratagem:Stratagem){
             return stratagem.Phases.concat([stratagem.CP]);
         }
-        return <MasonryList style={{margin:6, flexGrow:0}} numColumns={2} data={Roster.Instance.state.DetachmentStratagems} renderItem={(stratagem)=>
+        return <MasonryList style={{margin:6, flexGrow:0}} numColumns={2} data={stratagems} renderItem={(stratagem)=>
             <View key={stratagem.i} style={{width:"100%", paddingLeft:40, paddingRight:16, paddingBottom:20, paddingTop:6}}>
                 <Text key="name" style={{width:"100%", borderBottomWidth:2, borderColor:this.context.Main, fontFamily:Variables.fonts.spaceMarine, padding:5, marginBottom:4}}>
                     {// @ts-ignore
                     stratagem.item.Name}
                 </Text>
-                <Text key="flavor" style={{minHeight:30, fontFamily:Variables.fonts.WHI, padding:5, marginBottom:4, paddingLeft:20, fontSize:Variables.fontSize.small}}>— 
+                {// @ts-ignore
+                stratagem.item.Flavor&&<Text key="flavor" style={{minHeight:30, fontFamily:Variables.fonts.WHI, padding:5, marginBottom:4, paddingLeft:20, fontSize:Variables.fontSize.small}}>— 
                     {// @ts-ignore
                     stratagem.item.Flavor}
-                </Text>
+                </Text>}
                 {// @ts-ignore
                         this.ShowStratagemSection("When", stratagem.item.When)}
                 {// @ts-ignore
-                        this.ShowStratagemSection("Target", stratagem.item.Target)}
+                        stratagem.item.Target&&this.ShowStratagemSection("Target", stratagem.item.Target)}
                 {// @ts-ignore
                         this.ShowStratagemSection("Effect", stratagem.item.Effect)}
                 {// @ts-ignore
@@ -148,7 +149,10 @@ class RosterMenu extends Component<Props> {
                      </ScrollView>;
                     break;
             case RosterMenuCategories.STRATAGEMS:
-                menuContents= this.ShowStratagems();
+                menuContents= this.ShowStratagems(Roster.Instance.state.DetachmentStratagems);
+                    break;
+            case RosterMenuCategories.CORE:
+                menuContents= this.ShowStratagems(CORE_STRATAGEMS);
                     break;
 
         }
@@ -161,8 +165,9 @@ class RosterMenu extends Component<Props> {
                         <Button key="rules" tab={true} onPress={(e)=>this.setState({MenuSection:RosterMenuCategories.RULES})} weight={this.state.MenuSection==RosterMenuCategories.RULES?"heavy":"normal"}>Rules</Button>
                         <Button key="remi" tab={true} onPress={(e)=>this.setState({MenuSection:RosterMenuCategories.REMINDERS})} weight={this.state.MenuSection==RosterMenuCategories.REMINDERS?"heavy":"normal"}>Reminders</Button>
                         {Roster.Instance.state.DetachmentStratagems.length>0&&<Button key="strat" tab={true} onPress={(e)=>this.setState({MenuSection:RosterMenuCategories.STRATAGEMS})} weight={this.state.MenuSection==RosterMenuCategories.STRATAGEMS?"heavy":"normal"}>Stratagems</Button>}
+                        <Button key="strat" tab={true} onPress={(e)=>this.setState({MenuSection:RosterMenuCategories.CORE})} weight={this.state.MenuSection==RosterMenuCategories.CORE?"heavy":"normal"}>Core</Button>
                     </View>
-                    <View style={{backgroundColor:this.context.Bg, top:-4, paddingTop:10, bottom:10, height:Variables.height - 52}}>
+                    <View key={this.state.MenuSection} style={{backgroundColor:this.context.Bg, top:-4, paddingTop:10, bottom:10, height:Variables.height - 52}}>
                         {menuContents}
                     </View>
         </View>;
