@@ -342,6 +342,19 @@ class UnitData {
         return this.Leader;
     }
 
+    GetModelsForStats():Array<ModelData>|ModelData{
+        if (this.Models instanceof ModelData)
+            return this.Models;
+        else {
+            let statsSent = new Array<StatsData>();
+            const filtered = this.Models.filter(model=>{const send=statsSent.findIndex(stats=>model.Stats.same(stats)) == -1;statsSent.push(model.Stats); return send;});
+            if (filtered.length==1) 
+                return filtered[0];
+            else
+                return filtered;
+        }
+    }
+
     HasNoModel():boolean {
         return this.Models == null || (this.Models instanceof Array && this.Models.length == 0);
     }

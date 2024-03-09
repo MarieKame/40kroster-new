@@ -121,7 +121,7 @@ class Unit extends React.Component<Props> {
                         <Text style={Style.name}>{((this.props.data.CustomName !== null && this.props.data.CustomName !== "")?this.props.data.CustomName:this.props.data.Name) + ((this.props.data.Count>1)?" (x" + this.props.data.Count + ")":"")}</Text>
                     </View>
                     <View key="stats" style={Style.allStats}>
-                        {this.renderAllStats(this.props.data.Models)}
+                        {this.renderAllStats(this.props.data.GetModelsForStats())}
                         {this.props.data.UniqueInvul()&&this.renderStatBox("", this.props.data.GetUniqueInvul(), true)}
                     </View>
                     <View key="details" style={Style.details}>
