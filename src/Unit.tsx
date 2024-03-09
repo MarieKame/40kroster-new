@@ -169,7 +169,7 @@ class Unit extends React.Component<Props> {
                             {leaders.map((leader, index1) =>
                                 leader.Effects.map((effect, index2)=>
                                     leader.CurrentlyLeading==this.props.data.Key&&<View style={Style.rule} key={index1+index2+Name(leader)}>
-                                        <Text key="name" style={[Style.ruleTitle, {backgroundColor:this.context.LightAccent}]}>{effect.Name}</Text>
+                                        <Text key="name" style={[Style.ruleTitle, {backgroundColor:this.context.LightAccent}]}>{effect.Name + " (" + leader.BaseName + ")"}</Text>
                                         <ComplexText key="desc" style={Style.more} fontSize={Variables.fontSize.small}>{effect.Description}</ComplexText>
                                     </View>    
                                 ) 

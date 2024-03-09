@@ -165,7 +165,7 @@ class RosterMenu extends Component<Props> {
                         <Button key="rules" tab={true} onPress={(e)=>this.setState({MenuSection:RosterMenuCategories.RULES})} weight={this.state.MenuSection==RosterMenuCategories.RULES?"heavy":"normal"}>Rules</Button>
                         <Button key="remi" tab={true} onPress={(e)=>this.setState({MenuSection:RosterMenuCategories.REMINDERS})} weight={this.state.MenuSection==RosterMenuCategories.REMINDERS?"heavy":"normal"}>Reminders</Button>
                         {Roster.Instance.state.DetachmentStratagems.length>0&&<Button key="strat" tab={true} onPress={(e)=>this.setState({MenuSection:RosterMenuCategories.STRATAGEMS})} weight={this.state.MenuSection==RosterMenuCategories.STRATAGEMS?"heavy":"normal"}>Stratagems</Button>}
-                        <Button key="strat" tab={true} onPress={(e)=>this.setState({MenuSection:RosterMenuCategories.CORE})} weight={this.state.MenuSection==RosterMenuCategories.CORE?"heavy":"normal"}>Core</Button>
+                        <Button key="core" tab={true} onPress={(e)=>this.setState({MenuSection:RosterMenuCategories.CORE})} weight={this.state.MenuSection==RosterMenuCategories.CORE?"heavy":"normal"}>Core</Button>
                     </View>
                     <View key={this.state.MenuSection} style={{backgroundColor:this.context.Bg, top:-4, paddingTop:10, bottom:10, height:Variables.height - 52}}>
                         {menuContents}

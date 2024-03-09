@@ -55,8 +55,9 @@ export default class RosterExtraction {
     }
 
     AddNewRule(data:DescriptorData) {
-        if (!this.data.Rules.find(rule=>rule.Name == data.Name)){
-            this.data.Rules.push(data);
+        const name = /[a-z! ]*(?! )/gi.exec(data.Name).toString();
+        if (!this.data.Rules.find(rule=>rule.Name == name)){
+            this.data.Rules.push(new DescriptorData(name, data.Description));
         }
     }
 
@@ -402,15 +403,7 @@ export default class RosterExtraction {
         if (!doLeaders) {
             this.data.Leaders=forceLeaders;
         }
-        if (roster.forces.force.rules) {
-            if (!isIterable(roster.forces.force.rules.rule)) {
-                this.data.Rules.push(new DescriptorData(roster.forces.force.rules.rule._name, roster.forces.force.rules.rule.description));
-            } else {
-                for(let element of roster.forces.force.rules.rule) {
-                    this.data.Rules.push(new DescriptorData(element._name, element.description));
-                } 
-            }
-        }
+        
         for(let element of roster.forces.force.selections.selection) {
             if (element._type === "model" || element._type === "unit") {
                 this.tempProfiles = new Array<DescriptorData>();
@@ -509,6 +502,16 @@ export default class RosterExtraction {
                 if (newUnit.Rules.length == 0){
                     newUnit.Rules = this.getDefaultRules(newUnit.Factions);
                 }
+                newUnit.Rules.forEach(rule=>{
+                    if (rule.Name !== "Leader") {
+                        const regex = new RegExp(rule.Name, "gi");
+                        const index = newUnit.Profiles.findIndex(profile=>regex.test(profile.Name));
+                        if(index !== -1) {
+                            rule.Name += " " + newUnit.Profiles[index].Description;
+                            newUnit.Profiles.splice(index, 1);
+                        }
+                    }
+                })
                 this.data.Units.push(newUnit);
                 if (doLeaders && newUnit.GetLeaderData()){
                     this.data.Leaders.push(newUnit.GetLeaderData());
@@ -544,6 +547,7 @@ export default class RosterExtraction {
                 }
             });
         });
+        this.data.Rules.sort((rule1, rule2)=> rule1.Name.localeCompare(rule2.Name));
         function Name(leader:LeaderData){
             return leader.CustomName?leader.CustomName+" ("+leader.BaseName+") ":leader.BaseName;
         }
