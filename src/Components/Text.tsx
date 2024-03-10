@@ -21,6 +21,27 @@ interface ComplexProps extends TextProps {
     fontSize?;
     boldFirstWord?:string;
 }
+const WORDS = [
+    "[a-z]* time", 
+    "[a-z]* per battle",
+    "stratagem", 
+    "invulnerable save", 
+    "damage", 
+    "attack", 
+    "roll", 
+    "wound roll", 
+    "advance roll",
+    "charge roll",
+    "battle-shock",
+    "hit roll",
+    "saving throw",
+    "[0-9?]D[0-9]",
+    "[0-9]+CP",
+    "[0-9]+\\+?\"?",
+    "[a-z]* phase",
+    "act of faith"
+];
+//const regex = /()|()|()|()|(s?)|(r?e?-?e?d?)|()|()|()|()|()|()|(s?)|()|()|()/i;
 export class ComplexText extends Component<ComplexProps>{
     static contextType = KameContext; 
     declare context: React.ContextType<typeof KameContext>;
@@ -29,7 +50,7 @@ export class ComplexText extends Component<ComplexProps>{
     }
     constructor(props:TextProps, context:(typeof KameContext)){
         super(props, context);
-        const regex = /([a-z]* time)|(stratagem)|(invulnerable save)|(damage)|(attacks?)|(r?e?-?rolle?d?)|(wound roll)|([a-z]* phase)|(hit roll)|(advance roll)|(battle-shock)|(charge roll)|(saving throws?)|(D[0-9])|([0-9]+CP)|([0-9]+\+?"?)/i;
+        const regex = new RegExp(WORDS.map(word=>"(r?e?-?"+word+"s?i?n?g?e?d?)").join("|"), "i");
         let index=1;
         let text = <Text style={{fontSize:this.props.fontSize, textAlign:"justify"}}>
             {this.props.boldFirstWord&&<Text key="bold" style={{fontFamily:Variables.fonts.WHB}}>{this.props.boldFirstWord}</Text>}
