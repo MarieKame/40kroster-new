@@ -266,13 +266,13 @@ class UnitData {
 
     private getWeight():number{
         let weight = this.Costs.Val;
-        let index = 10000000000000;
+        let index = 1000 ** Variables.unitCategories.length;
         const cat = this.GetUnitCategory();
         Variables.unitCategories.forEach((category)=>{
             if (category == cat) {
                 weight+= index;
             }
-            index /= 100;
+            index /= 1000;
         });
         return weight;
     }

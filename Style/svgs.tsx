@@ -16,7 +16,7 @@ export interface ISvgProps extends SvgProps {
     height?:string;
   }
 }
-//svgComp.tsx
+
 const SvgComp= (props: ISvgProps) => (
   <Svg
     xmlns="http://www.w3.org/2000/svg"
@@ -63,5 +63,5 @@ export class FactionSvg extends React.Component<ISvgProps> {
     }
 }
 
-
+// SVGs from https://drive.google.com/drive/folders/1rGgj9xUmgDZ2VDrAZVYGtWmk2eonrU0D
 // generate SVGs there : https://react-svgr.com/playground/?dimensions=false&exportType=named&namedExport=AdeptaSororitas&native=true&typescript=true

@@ -10,6 +10,8 @@ export interface ButtonProps extends TextProps {
     image?:boolean,
     forceColour?:string
     tab?:boolean
+    small?:boolean
+    disabled?:boolean
 }
 
 export class Button extends Component<ButtonProps>  {   
@@ -57,7 +59,7 @@ export class Button extends Component<ButtonProps>  {
         let forceTextColour;
         style.push(Style.All);
         if (this.props.tab){
-            style.push(Style.Tab)
+            style.push(Style.Tab);
         } else {
             style.push(Style.Button);
         }
@@ -88,6 +90,18 @@ export class Button extends Component<ButtonProps>  {
                     style.push(Style.Normal);
                     break;
             }
+        }
+        if(this.props.small){
+            style.push({
+                minHeight:12,
+                minWidth:20})
+        }
+        if(this.props.disabled){
+            style.push({
+                backgroundColor:this.context.Accent,
+                borderColor:this.context.LightAccent,
+            });
+            forceTextColour = {color:this.context.LightAccent}
         }
         if (this.props.image)
             return <Pressable style={[style, this.props.style]} onPress={this.props.onPress}>{this.props.children}</Pressable>

@@ -1,5 +1,5 @@
 import React from "react";
-import {StatsData, UnitData, LeaderData, WeaponData, ModelData} from "./UnitData";
+import {StatsData, UnitData, LeaderData, WeaponData, ModelData, DescriptorData} from "./UnitData";
 import Weapon from './UnitDetails/Weapon';
 import {View} from 'react-native';
 import {Text, Descriptor, ComplexText} from './Components/Text';
@@ -10,11 +10,15 @@ import Variables from "../Style/Variables";
 import { FactionSvg, Background } from "../Style/svgs";
 import {KameContext} from "../Style/KameContext";
 import Checkbox from 'expo-checkbox';
+import Button from "./Components/Button";
 
 interface Props {
     data:UnitData,
     Leaders:Array<LeaderData>,
-    onUpdateLeader:CallableFunction
+    Notes:Array<DescriptorData>,
+    onUpdateLeader:CallableFunction,
+    onAddNotePressed:CallableFunction,
+    onNoteRemoved:CallableFunction
 }
 
 class Unit extends React.Component<Props> {
@@ -115,6 +119,7 @@ class Unit extends React.Component<Props> {
         function Name(leader:LeaderData){
             return leader.CustomName?leader.CustomName+" ("+leader.BaseName+") ":leader.BaseName;
         }
+        const notes=this.props.Notes;
         return  <View style={[Style.unit, {backgroundColor:this.context.Bg, 
             borderColor:this.context.Dark}]}>
                     <View key="name" style={Style.nameView}>
@@ -177,6 +182,26 @@ class Unit extends React.Component<Props> {
                         </View>
                     </View>
                     }
+                    <View key="notes">
+                        <View key="header" style={{flexDirection:"row"}}>
+                            <Text key="title" style={[Style.title, {backgroundColor:this.context.Accent, marginBottom:4, flexGrow:1, height:16, alignSelf:"center"}]}>Notes</Text>
+                            <Button small key="add" onPress={e=>this.props.onAddNotePressed()} textStyle={{height:16}} style={{height:16}}>Add Note</Button>
+                        </View>
+
+                        {notes.length>0&&
+                            <View key="notes" style={{flexDirection:"row", flexWrap:"wrap"}}>
+                            {notes.map((note, index)=>
+                                <View key={note.Name + index} style={{width:"50%"}}>
+                                    <View key="header" style={{flexDirection:"row"}}>
+                                        <Text key="name" style={[Style.ruleTitle, {backgroundColor:this.context.LightAccent, height:16, flexGrow:1, alignSelf:"center"}]}>{note.Name}</Text>
+                                        <Button small key="delete" onPress={(e) => this.props.onNoteRemoved(index)} textStyle={{fontSize:12, height:18}} style={{width:30, height:18}} weight="light">🗑</Button>
+                                    </View>
+                                    <ComplexText key="desc" style={Style.more} fontSize={Variables.fontSize.small}>{note.Description}</ComplexText>
+                                </View>
+                            )}
+                            </View>
+                        }
+                    </View>
                     <View key="keywords" style={Style.keywordsView}>
                         <View key="actual" style={Style.keywords}>
                             <Text key="name" style={Style.keywordsTitle}>Keywords : </Text>

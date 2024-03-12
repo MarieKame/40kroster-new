@@ -287,7 +287,7 @@ class Options extends Component<Props> {
                                 <RadioButtonItem value="ranged" label={<Text>Ranged</Text>}/>
                             </RadioButtonGroup>
                         </View>
-                        <View style={{width:"55%", height:"100%", }}>
+                        <View style={{width:"55%", height:"100%"}}>
                             <Text style={textStyle}>Other Display Info</Text>
                             <View style={{flexDirection:"row"}}>
                                 <View style={{flexDirection:"row", justifyContent:"center", alignItems:"center", paddingRight:10, paddingBottom:4, height:40}}>

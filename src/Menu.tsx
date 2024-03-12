@@ -20,7 +20,7 @@ import Variables from "../Style/Variables";
 import Options from './Options';
 import { KameContext } from "../Style/KameContext";
 import { Colour } from "./Options";
-import { LeaderData } from "./UnitData";
+import { DescriptorData, LeaderData } from "./UnitData";
 import Popup, { PopupOption } from "./Components/Popup";
 import RosterMenu from "./RosterMenu";
 
@@ -29,6 +29,7 @@ const COLOURS_KEY = "stored_colours_40k_app";
 const UNIT_CATEGORIES_KEY = "stored_unit_categories_40k_app";
 const NAME_DISPLAY_KEY = "stored_name_display_40k_app";
 const LEADERS_KEY = "stored_leaders_40k_app";
+const NOTES_KEY = "stored_notes_40k_app";
 
 const getData = async (key:string) => {
     try {
@@ -47,6 +48,16 @@ class LeaderDataEntry {
     RosterName:string;
 
     constructor(data:Array<LeaderData>, rosterName:string) {
+        this.Data = data;
+        this.RosterName = rosterName;
+    }
+}
+
+class NoteEntry{
+    Data:Array<Array<DescriptorData>>;
+    RosterName:string;
+
+    constructor(data:Array<Array<DescriptorData>>, rosterName:string) {
         this.Data = data;
         this.RosterName = rosterName;
     }
@@ -71,6 +82,7 @@ class Menu extends React.Component{
         colourBg:"rgba(255,255,255,0.9)",
         colourGrey:"rgb(245,245,245)",
         LeadersData:new Array<LeaderDataEntry>(),
+        NotesData:new Array<NoteEntry>(),
         popupQuestion:null,
         popupOptions:null,
         popupDefault:null,
@@ -241,6 +253,12 @@ class Menu extends React.Component{
                 that.setState({LeadersData:parsed});
             }
         });
+        getData(NOTES_KEY).then((notesJson)=>{
+            if (notesJson) {
+                const parsed = JSON.parse(notesJson);
+                that.setState({NotesData:parsed});
+            }
+        });
     }
 
     Validate(xml):string|null {
@@ -310,6 +328,26 @@ class Menu extends React.Component{
         AsyncStorage.setItem(LEADERS_KEY, JSON.stringify(leadersData));
     }
 
+    FindCurrentNotesData(that:Menu):Array<Array<DescriptorData>> {
+        const index = that.FindNotesIndex(that.state.Rosters[that.state.CurrentRoster].Name, that);
+        return index===-1?new Array<Array<DescriptorData>>():that.state.NotesData[index].Data;
+    }
+
+    FindNotesIndex(name:string, that:Menu):number {
+        return that.state.NotesData.findIndex(noteData=>noteData.RosterName==name);
+    }
+
+    SaveNotes(notes:Array<Array<DescriptorData>>, name:string, that:Menu){
+        const index = this.FindNotesIndex(name, that);
+        let notesData = this.state.NotesData;
+        if (index !== -1) {
+            notesData.splice(index, 1);
+        }
+        notesData.push(new NoteEntry(notes, name));
+        this.setState({NotesData:notesData});
+        AsyncStorage.setItem(NOTES_KEY, JSON.stringify(notesData));
+    }
+
     CallPopup(question:string, options:Array<PopupOption>,def:string){
         this.setState({
             popupQuestion:question,
@@ -344,7 +382,14 @@ class Menu extends React.Component{
                                 {(props)=> <MenuDisplay {...props} that={this}/>}
                             </Stack.Screen>
                             <Stack.Screen name="Roster" options={{animation:"slide_from_right", animationTypeForReplace:"pop"}}>
-                                {(props)=> <Roster {...props} XML={that.state.Rosters[this.state.CurrentRoster].XML} forceLeaders={that.FindCurrentLeaderData(that)} onLoad={(e)=>this.RosterLoaded(e)} onUpdateLeaders={(newLeaders)=>this.SaveLeadersData(newLeaders, this.state.Rosters[this.state.CurrentRoster].Name, that)} />}
+                                {(props)=> <Roster {...props} 
+                                    XML={that.state.Rosters[this.state.CurrentRoster].XML} 
+                                    forceLeaders={that.FindCurrentLeaderData(that)} 
+                                    onLoad={(e)=>this.RosterLoaded(e)} 
+                                    onUpdateLeaders={(newLeaders)=>this.SaveLeadersData(newLeaders, this.state.Rosters[this.state.CurrentRoster].Name, that)}
+                                    onUpdateNotes={notes=>this.SaveNotes(notes, this.state.Rosters[this.state.CurrentRoster].Name, that)}
+                                    Notes={that.FindCurrentNotesData(that)} 
+                                    />}
                             </Stack.Screen>
                             <Stack.Screen name="RosterMenu" options={{animation:"fade"}}>
                                 {(props)=> <RosterMenu {...props}/>}
