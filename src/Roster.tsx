@@ -25,7 +25,7 @@ interface Props {
 }
 
 enum NoteState{
-    CLOSED, CUSTOM, WPN, SCAR
+    CLOSED, CUSTOM, WPN, SCAR, TRAIT
 }
 
 class Roster extends React.Component<Props> {
@@ -167,6 +167,21 @@ class Roster extends React.Component<Props> {
         return descriptions;
     }
 
+    getCurrentTraitCategory():Array<DescriptorData>|null{
+        const unit = this.state.Units[this.state.Index];
+        if (unit.Keywords.find(keyword=> /(epic hero)/gi.test(keyword)))
+            return null;
+        if (unit.Keywords.find(keyword=> /(vehicle)|(monster)/gi.test(keyword)))
+            return Variables.PariahNexusTraits.Vehicule;
+        if (unit.Keywords.find(keyword=> /(character)/gi.test(keyword)))
+            return Variables.PariahNexusTraits.Character;
+        if (unit.Keywords.find(keyword=> /(infantry)/gi.test(keyword)))
+            return Variables.PariahNexusTraits.Infantry;
+        if (unit.Keywords.find(keyword=> /(mounted)/gi.test(keyword)))
+            return Variables.PariahNexusTraits.Mounted;
+        return null
+    }
+
     RenderAddNoteContent(noteState:NoteState){
         switch(noteState) {
             case NoteState.CUSTOM:
@@ -241,6 +256,19 @@ class Roster extends React.Component<Props> {
                         <Button key="ds" style={{width:"48%"}} onPress={e=>this.SaveNote(Variables.battleScars[5])}>( 6 ) Deep Scars</Button>
                     </View>
                 </View>;
+            case NoteState.TRAIT:
+                const cat= this.getCurrentTraitCategory();
+                return <View style={{width:"100%", justifyContent:"center", alignItems:"center"}}>
+                    <Text key="title" style={{padding:10, fontSize:Variables.fontSize.big, fontFamily:Variables.fonts.WHI}}>Select your Battle Trait</Text>
+                    <View style={{flexDirection:"row", flexWrap:"wrap", paddingTop:10}}>
+                        <Button key="dmg" style={{width:"48%"}} onPress={e=>this.SaveNote(cat[0])}>( 1 ) {cat[0].Name}</Button>
+                        <Button key="btw" style={{width:"48%"}} onPress={e=>this.SaveNote(cat[1])}>( 2 ) {cat[1].Name}</Button>
+                        <Button key="ft" style={{width:"48%"}} onPress={e=>this.SaveNote(cat[2])}>( 3 ) {cat[2].Name}</Button>
+                        <Button key="dis" style={{width:"48%"}} onPress={e=>this.SaveNote(cat[3])}>( 4 ) {cat[3].Name}</Button>
+                        <Button key="mos" style={{width:"48%"}} onPress={e=>this.SaveNote(cat[4])}>( 5 ) {cat[4].Name}</Button>
+                        <Button key="ds" style={{width:"48%"}} onPress={e=>this.SaveNote(cat[5])}>( 6 ) {cat[5].Name}</Button>
+                    </View>
+                </View>;
         }
     }
 
@@ -298,8 +326,9 @@ class Roster extends React.Component<Props> {
                     <View style={{backgroundColor:this.context.Bg, position:"absolute", padding:10, borderColor:this.context.Accent, borderWidth:1, borderRadius:Variables.boxBorderRadius, width:"90%", height:"90%"}}>
                         <View key="tabs" style={{flexDirection:"row"}}>
                             <Button tab key="custom" weight={this.state.NoteState==NoteState.CUSTOM?"heavy":"normal"} onPress={e=>this.setState({NoteState:NoteState.CUSTOM})}>Custom</Button>
-                            <Button tab key="wpnMod" weight={this.state.NoteState==NoteState.WPN?"heavy":"normal"} onPress={e=>this.setState({NoteState:NoteState.WPN})}>Weapons Mod</Button>
-                            <Button tab key="battleScar" weight={this.state.NoteState==NoteState.SCAR?"heavy":"normal"} onPress={e=>this.setState({NoteState:NoteState.SCAR})}>Battle Scar</Button>
+                            {this.getCurrentTraitCategory()!==null&&<Button tab key="battleTrait" weight={this.state.NoteState==NoteState.TRAIT?"heavy":"normal"} onPress={e=>this.setState({NoteState:NoteState.TRAIT})}>Battle Trait</Button>}
+                            {!this.state.Units[this.state.Index].Keywords.find(keyword=> /(epic hero)/gi.test(keyword))&&<Button tab key="wpnMod" weight={this.state.NoteState==NoteState.WPN?"heavy":"normal"} onPress={e=>this.setState({NoteState:NoteState.WPN})}>Weapons Mod</Button>}
+                            {!this.state.Units[this.state.Index].Keywords.find(keyword=> /(epic hero)/gi.test(keyword))&&<Button tab key="battleScar" weight={this.state.NoteState==NoteState.SCAR?"heavy":"normal"} onPress={e=>this.setState({NoteState:NoteState.SCAR})}>Battle Scar</Button>}
                         </View>
                         <View key="content" style={{backgroundColor:this.context.Accent, top:-4, paddingTop:10, bottom:10, height:"74%", left:4, width:"99%"}}>
                             {this.RenderAddNoteContent(this.state.NoteState)}
