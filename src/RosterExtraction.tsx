@@ -507,7 +507,7 @@ export default class RosterExtraction {
                         const regex = new RegExp(rule.Name, "gi");
                         const index = newUnit.Profiles.findIndex(profile=>regex.test(profile.Name));
                         if(index !== -1) {
-                            rule.Name += " " + newUnit.Profiles[index].Description;
+                            rule.Name += " " + /.4./gi.exec(newUnit.Profiles[index].Description).toString().trim();
                             newUnit.Profiles.splice(index, 1);
                         }
                     }

@@ -40,7 +40,10 @@ const WORDS = [
     "[0-9]+\\+",
     "[0-9]+\"",
     "[a-z]* phase",
-    "act of faith"
+    "act of faith",
+    "[a-z]* step",
+    "\\[.*\\]",
+    "\\+[0-9]"
 ];
 export class ComplexText extends Component<ComplexProps>{
     static contextType = KameContext; 
@@ -52,12 +55,12 @@ export class ComplexText extends Component<ComplexProps>{
         super(props, context);
         const allWords = [].concat.apply([], [
             WORDS,
-            Variables.unitCategories.map(cat=>cat+" "), 
+            Variables.unitCategories.map(cat=>cat+"(?: )"), 
             Variables.factions.map(faction=>faction[0]), 
             Variables.factions.map(faction=>faction[1]),
             Variables.WeaponMods.map(mod=>mod.Name)
         ]);
-        const regex = new RegExp(allWords.map(word=>"(r?e?-?"+word+"s?i?n?g?e?d?)").join("|"), "i");
+        const regex = new RegExp(allWords.map(word=>"(r?e?-?"+word+"s?i?n?g?e?d?)").join("|"), "ig");
         let index=1;
         let text = <Text style={{fontSize:this.props.fontSize, textAlign:"justify"}}>
             {this.props.boldFirstWord&&<Text key="bold" style={{fontFamily:Variables.fonts.WHB}}>{this.props.boldFirstWord}</Text>}

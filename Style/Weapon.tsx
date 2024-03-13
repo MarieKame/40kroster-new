@@ -9,14 +9,14 @@ const Style = StyleSheet.create({
     moreThanOne:{
         position:"absolute",
         zIndex:10,
-        width:22 * Variables.zoom,
+        width:28 * Variables.zoom,
         textAlign:"center",
         borderLeftWidth:1,
         borderTopLeftRadius:Variables.boxBorderRadius,
         borderBottomLeftRadius:Variables.boxBorderRadius
     },
     quantity1:{
-        width:22 * Variables.zoom,
+        width:28 * Variables.zoom,
         textAlign:"center"
     },
     quantity2:{

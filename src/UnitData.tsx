@@ -278,7 +278,13 @@ class UnitData {
     }
 
     private flat():string{
-        return this.Name+this.CustomName+this.Profiles.toString()+this.Rules.toString()+this.MeleeWeapons.toString()+this.RangedWeapons.toString()+this.OtherEquipment.toString();
+        return this.Name + 
+            this.CustomName + 
+            this.Profiles.map(x=>x.Name).toString() + 
+            this.Rules.map(x=>x.Name).toString() + 
+            this.MeleeWeapons.map(x=>x.Name).toString() + 
+            this.RangedWeapons.map(x=>x.Name).toString() + 
+            this.OtherEquipment.map(x=>x.Name).toString();
     }
 
     GetStats():StatsData|Array<StatsData>{
