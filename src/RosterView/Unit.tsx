@@ -1,16 +1,16 @@
 import React from "react";
 import {StatsData, UnitData, LeaderData, WeaponData, ModelData, DescriptorData} from "./UnitData";
-import Weapon from './UnitDetails/Weapon';
+import Weapon from './Weapon';
 import {View} from 'react-native';
-import {Text, Descriptor, ComplexText} from './Components/Text';
-import Style from '../Style/Unit';
-import WeaponStyle from '../Style/Weapon';
-import IsOdd from "./Components/IsOdd";
-import Variables from "../Style/Variables";
-import { FactionSvg, Background } from "../Style/svgs";
-import {KameContext} from "../Style/KameContext";
+import {Text, Descriptor, ComplexText} from '../Components/Text';
+import Style from '../../Style/Unit';
+import WeaponStyle from '../../Style/Weapon';
+import IsOdd from "../Components/IsOdd";
+import Variables from "../../Style/Variables";
+import { FactionSvg, Background } from "../../Style/svgs";
+import {KameContext} from "../../Style/KameContext";
 import Checkbox from 'expo-checkbox';
-import Button from "./Components/Button";
+import Button from "../Components/Button";
 
 interface Props {
     data:UnitData,

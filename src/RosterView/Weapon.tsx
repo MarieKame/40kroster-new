@@ -1,7 +1,7 @@
 import React from "react";
 import {View, Image} from 'react-native';
 import Text, { Descriptor } from '../Components/Text';
-import {ProfileWeaponData, WeaponData} from "../UnitData";
+import {ProfileWeaponData, WeaponData} from "./UnitData";
 import Style from '../../Style/Weapon';
 import IsOdd from "../Components/IsOdd";
 import { KameContext } from "../../Style/KameContext";

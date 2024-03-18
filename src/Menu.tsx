@@ -14,15 +14,15 @@ const Stack = createNativeStackNavigator();
 import Text from './Components/Text';
 
 import RosterMenuEntry from './RosterMenuEntry';
-import Roster from './Roster';
+import Roster from './RosterView/Roster';
 import Button from "./Components/Button";
 import Variables from "../Style/Variables";
 import Options from './Options';
 import { KameContext } from "../Style/KameContext";
 import { Colour } from "./Options";
-import { DescriptorData, LeaderData } from "./UnitData";
+import { DescriptorData, LeaderData } from "./RosterView/UnitData";
 import Popup, { PopupOption } from "./Components/Popup";
-import RosterMenu from "./RosterMenu";
+import RosterMenu from "./RosterView/RosterMenu";
 
 const STORAGE_KEY = "stored_rosters_40k_app";
 const COLOURS_KEY = "stored_colours_40k_app";
@@ -352,8 +352,16 @@ class Menu extends React.Component{
         this.setState({
             popupQuestion:question,
             popupOptions:options,
-            popupDefault:def,
+            popupDefault:def
         });
+    }
+
+    onPopupClose(that:Menu){
+        that.setState({
+            popupQuestion:"",
+            popupOptions:[],
+            popupDefault:""
+        })
     }
 
     render() {
@@ -399,7 +407,7 @@ class Menu extends React.Component{
                             </Stack.Screen>
                         </Stack.Navigator>
                     </NavigationContainer>
-                    <Popup question={this.state.popupQuestion} options={this.state.popupOptions} default={this.state.popupDefault} key={this.state.popupQuestion} />
+                    <Popup question={this.state.popupQuestion} options={this.state.popupOptions} default={this.state.popupDefault} onClose={e=>this.onPopupClose(this)} key={this.state.popupQuestion} />
                 </KameContext.Provider>;
     };
 };

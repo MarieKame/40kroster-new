@@ -13,7 +13,8 @@ export interface PopupOption{
 interface Props{
     question?:string,
     options?:Array<PopupOption>,
-    default?:string
+    default?:string,
+    onClose:CallableFunction
 }
 
 export default class Popup extends React.Component<Props> {
@@ -22,7 +23,7 @@ export default class Popup extends React.Component<Props> {
 
     constructor(props:Props, context){
         super(props, context);
-        this.state.display = props.question !== null;
+        this.state.display = props.question !== null && props.question!=="";
     }
 
     state = {
@@ -32,7 +33,8 @@ export default class Popup extends React.Component<Props> {
     ChooseOption(callback?:CallableFunction) {
         if (callback)
             callback();
-        this.setState({display:false});
+        this.setState({display:false, question:"", options:[]});
+        this.props.onClose();
     }
     
     render(){
