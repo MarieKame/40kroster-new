@@ -421,8 +421,15 @@ class MenuDisplay extends Component<MenuDisplayProps> {
 
     deleteRoster(index) {
         let newRosterList = Menu.Instance.state.Rosters;
+        const rosterName = Menu.Instance.state.Rosters[index].Name;
+
         newRosterList.splice(index, 1);
         Menu.Instance.updateRosterList(newRosterList);
+        
+        const leaderDataIndex = Menu.Instance.FindLeaderDataIndex(rosterName, Menu.Instance);
+        if (leaderDataIndex !== -1) {
+            Menu.Instance.SaveLeadersData(null, rosterName, Menu.Instance);
+        }
     }
 
     displayMenuItem(rosters: Array<RosterMenuEntry>) {

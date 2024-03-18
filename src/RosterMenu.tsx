@@ -9,6 +9,7 @@ import Text, { ComplexText } from "./Components/Text";
 import { Background } from "../Style/svgs";
 import { CORE_STRATAGEMS, Stratagem } from "./Stratagems";
 import MasonryList from '@react-native-seoul/masonry-list';
+import { Gesture, GestureHandlerRootView, GestureType, NativeViewGestureHandler, PanGestureHandler } from "react-native-gesture-handler";
 
 enum RosterMenuCategories {
     UNIT_LIST, RULES, REMINDERS, STRATAGEMS, CORE
@@ -23,7 +24,8 @@ class RosterMenu extends Component<Props> {
     declare context: React.ContextType<typeof KameContext>;
 
     state = {
-        MenuSection:RosterMenuCategories.UNIT_LIST
+        MenuSection:RosterMenuCategories.UNIT_LIST,
+        gesture:false
     }
 
     ShowStratagemSection(name:string, text:string) {
@@ -157,7 +159,10 @@ class RosterMenu extends Component<Props> {
 
         }
                 
-        return <View style={{width:Variables.width, alignSelf:"center", padding:10, height:"100%"}}>
+        return <GestureHandlerRootView><PanGestureHandler minPointers={2} onEnded={e=>
+            // @ts-ignore
+        {if(e.nativeEvent.translationY > 100){this.props.navigation.goBack()}}}><View style={{width:Variables.width, alignSelf:"center", padding:10, height:"100%"}}>
+            
                     <View style={{flexDirection: 'row', left:-4}}>
                         <Button key="main" style={{position:"absolute", right:44, top:-4}} onPress={(e)=>this.props.navigation.reset({index:0, routes:[{name:"Home"}]})}>Main Menu</Button>
                         <Button key="x" style={{position:"absolute", right:-4, top:-4}} onPress={(e)=>this.props.navigation.goBack()}>X</Button>
@@ -170,7 +175,7 @@ class RosterMenu extends Component<Props> {
                     <View key={this.state.MenuSection} style={{backgroundColor:this.context.Bg, top:-4, paddingTop:10, bottom:10, height:Variables.height - 52}}>
                         {menuContents}
                     </View>
-        </View>;
+        </View></PanGestureHandler></GestureHandlerRootView>;
     }
 
 }

@@ -120,8 +120,7 @@ class Unit extends React.Component<Props> {
             return leader.CustomName?leader.CustomName+" ("+leader.BaseName+") ":leader.BaseName;
         }
         const notes=this.props.Notes;
-        return  <View style={[Style.unit, {backgroundColor:this.context.Bg, 
-            borderColor:this.context.Dark}]}>
+        return  <View style={[Style.unit, {backgroundColor:this.context.Bg, borderColor:this.context.Dark}]} key={this.props.data.Name+this.props.data.Count}>
                     <View key="name" style={Style.nameView}>
                         <Text style={Style.name}>{((this.props.data.CustomName !== null && this.props.data.CustomName !== "")?this.props.data.CustomName:this.props.data.Name) + ((this.props.data.Count>1)?" (x" + this.props.data.Count + ")":"")}</Text>
                     </View>

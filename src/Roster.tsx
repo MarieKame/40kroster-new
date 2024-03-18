@@ -11,7 +11,8 @@ import RosterExtraction, { Reminder } from "./RosterExtraction";
 import { Stratagem } from "./Stratagems";
 import AutoExpandingTextInput from "./Components/AutoExpandingTextInput";
 import Checkbox from "expo-checkbox";
-import RadioButtonGroup, { RadioButtonItem } from "expo-radio-button";
+import Swipeable from 'react-native-gesture-handler/Swipeable';
+import { GestureHandlerRootView, PanGestureHandler } from "react-native-gesture-handler";
 
 
 interface Props {
@@ -105,7 +106,19 @@ class Roster extends React.Component<Props> {
         const index = leaders.findIndex(leader2=>leader2.UniqueId==leader.UniqueId);
         leaders[index] = leader;
         that.props.onUpdateLeaders(leaders);
-        that.setState({Leaders:leaders});
+        let skip = new Array<number>();
+        let units = this.state.Units;
+
+        units.forEach((unit1, index)=>{
+            unit1.Count=1;
+            units.slice(index+1).forEach((unit2, index2)=>{
+                if (unit1.Equals(unit2, this.state.Leaders)) {
+                    skip.push(index2 + index + 1);
+                    unit1.Count++;
+                }
+            });
+        });
+        that.setState({Leaders:leaders, UnitsToSkip:skip, Units:units});
     }
 
     AddNote(that:Roster) {
@@ -140,7 +153,6 @@ class Roster extends React.Component<Props> {
 
     updateRadioWeapon(wpn:string){
         this.setState({RadioWeapon:wpn});
-        console.log(wpn)
     }
 
     getNbSelected(){
@@ -299,7 +311,10 @@ class Roster extends React.Component<Props> {
                     />
             ))}</View>;
         } else {
-            return <View>
+            return <GestureHandlerRootView><PanGestureHandler minPointers={2} onEnded={e=>
+                // @ts-ignore
+            {if(e.nativeEvent.translationX > 100){this.Previous()} else if (e.nativeEvent.translationX<-100){this.Next()}else if (e.nativeEvent.translationY>100){this.props.navigation.navigate('RosterMenu')}}}>
+                <View>
                 <ScrollView>
                     <View style={{width:Variables.width, alignSelf:"center", padding:10, height:"100%"}}>
                         <Unit data={this.state.Units[this.state.Index]} 
@@ -337,7 +352,7 @@ class Roster extends React.Component<Props> {
                     </View>
                 </View>
                 }
-            </View>;
+            </View></PanGestureHandler></GestureHandlerRootView>;
         }
     }
     

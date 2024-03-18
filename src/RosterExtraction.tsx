@@ -1,3 +1,4 @@
+import { NewLifecycle } from "react";
 import Variables from "../Style/Variables";
 import { STRATAGEMS, Stratagem } from "./Stratagems";
 import { CostData, DescriptorData, LeaderData, ModelData, MultiRangeWeaponData, ProfileWeaponData, StatsData, UnitData, WeaponData } from "./UnitData";
@@ -48,6 +49,12 @@ export default class RosterExtraction {
         Rules: new Array<DescriptorData>(),
         Reminders:new Array<Reminder>(),
         DetachmentStratagems: new Array<Stratagem>
+    }
+
+    private TestNameIsSame(currentName, unitName) :boolean{
+        const found = /(.*)( .*)$/gi.exec(unitName);
+        const regex = found?new RegExp("^"+found[1], "gi"):null;
+        return currentName === unitName || currentName === unitName.substring(0, unitName.length-1) || regex&&regex.test(currentName) ;
     }
 
     FormatCost(cost) : CostData {
@@ -109,8 +116,10 @@ export default class RosterExtraction {
             this.CheckAddReminder(data, unitName);
             return profilesData;
         } 
+        
+       
         for(let element of profiles.profile){
-            if (element._name !== unitName && element.characteristics) {
+            if (element._name !== unitName && element.characteristics && !this.TestNameIsSame(element._name, unitName)) {
                 const data=new DescriptorData(element._name, this.getCharacteristic(element.characteristics.characteristic));
                 profilesData.push(data);
                 this.CheckAddReminder(data, unitName);
@@ -266,23 +275,30 @@ export default class RosterExtraction {
     ExtractMultiModelUnitSelections(selections) {
         let treatedSelections = new Array<WeaponData>();
         let that = this;
-        if (!isIterable(selections.selection)){
+        function doElement(element){
+            if (element.selection && element.selection._type == "upgrade") {
+                let count = Number(element.selection._number??1);
+                let name = element.selection._name;
+                that.TreatSelection({treatedSelections : treatedSelections}, count, name, element.selection.profiles);
+            } else {
+                let sel= element.selections;
+                if (!sel) {
+                    sel = element;
+                }
+                if (sel && sel.selection) {
+                    that.ExtractModelSelections({treatedSelections:treatedSelections},sel.selection, that);
+                }
+            }
+        }
+        if (selections.selection.selections && isIterable(selections.selection.selections.selection)){
+            for(let element of selections.selection.selections.selection){
+                doElement(element)
+            }
+        } else if (!isIterable(selections.selection)){
             that.ExtractModelSelections({treatedSelections:treatedSelections},selections.selection.selections.selection, that);
         } else {
             for(let element of selections.selection){
-                if (element.selection && element.selection._type == "upgrade") {
-                    let count = Number(element.selection._number??1);
-                    let name = element.selection._name;
-                    that.TreatSelection({treatedSelections : treatedSelections}, count, name, element.selection.profiles);
-                } else {
-                    let sel= element.selections;
-                    if (!sel) {
-                        sel = element;
-                    }
-                    if (sel && sel.selection) {
-                        that.ExtractModelSelections({treatedSelections:treatedSelections},sel.selection, that);
-                    }
-                }
+                doElement(element)
             }
         }
         return treatedSelections;
@@ -298,7 +314,7 @@ export default class RosterExtraction {
         }
         let stats = "";
         for(let element of profiles.profile){
-            if (element._name === name || element._name === name.substring(0, name.length-1)) {
+            if (this.TestNameIsSame(element._name, name)) {
                 stats= this.getCharacteristic(element.characteristics.characteristic);
             }
         }
@@ -325,44 +341,54 @@ export default class RosterExtraction {
     ExtractModels(selections, invuls:Array<DescriptorData>, profiles?, name?) : Array<ModelData>|ModelData{
         let that = this;
         let models = new Array<ModelData>();
-        if (!isIterable(selections.selection)){
-            let profile;
-            if (selections.selection.profiles) {
-                profile = selections.selection.profiles.profile;
-            } else if (selections.selection.selections) {
-                profile = selections.selection.selections.selection.profiles.profile;
+
+        function doElement(element, pass:{models}, that:RosterExtraction){
+            let modelData:ModelData;
+            const regex = new RegExp(element._name, 'gi');
+            let invul = invuls.find(invul=>invul.Name.match(regex)||invul.Name=="Invulnerable Save");
+            if (element.profile){
+                modelData = new ModelData(element._name, new StatsData(that.ExtractStats(element, element._name), invul?invul.Description:null));
+            } else if (element.profiles) {
+                let forceInvul;
+                if (isIterable(element.profiles.profile)) {
+                    for(let elementIn of element.profiles.profile){
+                        if(elementIn._name.match(/Invul/gi)){
+                            forceInvul = elementIn.characteristics.characteristic.textValue;
+                            that.tempProfiles.push(new DescriptorData(elementIn._name, elementIn.characteristics.characteristic.textValue));
+                        }
+                    }
+                }
+                modelData = new ModelData(element._name, new StatsData(that.ExtractStats(element.profiles, element._name), forceInvul?forceInvul:(invul?invul.Description:null)));
+                
             }
-            if (profile && ((profile._type && profile._type == "model") || (profile._typeName && profile._typeName == "Unit"))) {
-                return new ModelData(profile._name, new StatsData(that.ExtractStats(profile, profile._name), invuls.length>0?invuls[0].Description:null))
+            if(modelData) {
+                if (!modelData.Stats.isRealModel()){
+                    that.tempProfiles.push(new DescriptorData(modelData.Name, modelData.Stats.Data));
+                } else if (pass.models.findIndex(model=>model.Name==modelData.Name) ==-1) {
+                    pass.models.push(modelData);
+                }
+            }
+        }
+        if (!isIterable(selections.selection)){
+            if (selections.selection.selections && isIterable(selections.selection.selections.selection)) {
+                for(let element of selections.selection.selections.selection){
+                    doElement(element, {models}, this);
+                }
+            } else {
+                let profile;
+                if (selections.selection.profiles) {
+                    profile = selections.selection.profiles.profile;
+                } else if (selections.selection.selections) {
+                    profile = selections.selection.selections.selection.profiles.profile;
+                }
+                if (profile && ((profile._type && profile._type == "model") || (profile._typeName && profile._typeName == "Unit"))) {
+                    return new ModelData(profile._name, new StatsData(that.ExtractStats(profile, profile._name), invuls.length>0?invuls[0].Description:null))
+                }
             }
             
         } else {
             for(let element of selections.selection){
-                let modelData:ModelData;
-                const regex = new RegExp(element._name, 'gi');
-                let invul = invuls.find(invul=>invul.Name.match(regex)||invul.Name=="Invulnerable Save");
-                if (element.profile){
-                    modelData = new ModelData(element._name, new StatsData(that.ExtractStats(element, element._name), invul?invul.Description:null));
-                } else if (element.profiles) {
-                    let forceInvul;
-                    if (isIterable(element.profiles.profile)) {
-                        for(let elementIn of element.profiles.profile){
-                            if(elementIn._name.match(/Invul/gi)){
-                                forceInvul = elementIn.characteristics.characteristic.textValue;
-                                this.tempProfiles.push(new DescriptorData(elementIn._name, elementIn.characteristics.characteristic.textValue));
-                            }
-                        }
-                    }
-                    modelData = new ModelData(element._name, new StatsData(that.ExtractStats(element.profiles, element._name), forceInvul?forceInvul:(invul?invul.Description:null)));
-                    
-                }
-                if(modelData) {
-                    if (!modelData.Stats.isRealModel()){
-                        this.tempProfiles.push(new DescriptorData(modelData.Name, modelData.Stats.Data));
-                    } else if (models.findIndex(model=>model.Name==modelData.Name) ==-1) {
-                        models.push(modelData);
-                    }
-                }
+                doElement(element, {models}, this);
             }
             if (profiles && models.length == 0) {
                 let uniqueModel;
@@ -393,7 +419,7 @@ export default class RosterExtraction {
         return rules;
     }
 
-    constructor(roster, forceLeaders, onUpdateLeaders){
+    constructor(roster, forceLeaders:LeaderData[]|null, onUpdateLeaders:CallableFunction){
         this.data.Name = roster._name;
         this.data.Costs = this.FormatCost(roster.costs.cost).toString();
         let key = 0;
@@ -517,14 +543,17 @@ export default class RosterExtraction {
                     this.data.Leaders.push(newUnit.GetLeaderData());
                 }
             } else if (element._name == "Detachment Choice"){
-                this.data.Detachment = element.selections.selection._name.match(/.*(?= Detachment)/gi)[0];
-                let reminder = new Reminder();
-                reminder.UnitName = " - Detachment";
-                reminder.Phase = null;
-                reminder.Data = new DescriptorData(element.selections.selection.rules.rule._name, element.selections.selection.rules.rule.description);
-                this.data.Reminders.push(reminder);
+                this.data.Detachment = /(.*)( Detachment)?/gi.exec(element.selections.selection._name)[1];
                 this.data.DetachmentStratagems = STRATAGEMS;
                 this.data.DetachmentStratagems.filter(stratagem=>stratagem.Faction == this.data.Faction && stratagem.Detachment == this.data.Detachment);
+
+                if (element.selections.selection.rules) {
+                    let reminder = new Reminder();
+                    reminder.UnitName = " - Detachment";
+                    reminder.Phase = null;
+                    reminder.Data = new DescriptorData(element.selections.selection.rules.rule._name, element.selections.selection.rules.rule.description);
+                    this.data.Reminders.push(reminder);
+                }
             }
         };
         this.data.Reminders = this.data.Reminders.filter((reminder1, index, reminders) => 
@@ -538,16 +567,6 @@ export default class RosterExtraction {
                             ? reminder1.UnitName.localeCompare(reminder2.UnitName)
                             : reminder1.Data.Name.localeCompare(reminder2.Data.Name);
         });
-        this.data.Units.sort(UnitData.CompareUnits);
-        this.data.Units.forEach((unit1, index)=>{
-            this.data.Units.slice(index+1).forEach((unit2, index2)=>{
-                if (unit1.Equals(unit2)) {
-                    this.data.UnitsToSkip.push(index2 + index + 1);
-                    unit1.Count++;
-                }
-            });
-        });
-        this.data.Rules.sort((rule1, rule2)=> rule1.Name.localeCompare(rule2.Name));
         function Name(leader:LeaderData){
             return leader.CustomName?leader.CustomName+" ("+leader.BaseName+") ":leader.BaseName;
         }
@@ -555,5 +574,16 @@ export default class RosterExtraction {
             this.data.Leaders.sort((leader1, leader2)=>this.data.Units.findIndex(unit=>Name(leader1).indexOf(unit.Name)!==-1)-this.data.Units.findIndex(unit=>Name(leader2).indexOf(unit.Name)!==-1))
             onUpdateLeaders(this.data.Leaders);
         }
+        this.data.Units.sort(UnitData.CompareUnits);
+        this.data.Units.forEach((unit1, index)=>{
+            this.data.Units.slice(index+1).forEach((unit2, index2)=>{
+                if (unit1.Equals(unit2, this.data.Leaders)) {
+                    this.data.UnitsToSkip.push(index2 + index + 1);
+                    unit1.Count++;
+                }
+            });
+        });
+        this.data.Rules.sort((rule1, rule2)=> rule1.Name.localeCompare(rule2.Name));
+        
     }
 }

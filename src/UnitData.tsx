@@ -332,14 +332,14 @@ class UnitData {
             return null;
         }
         this.Profiles.forEach(function(profile){
-            if (profile.Description.match(/(leading)|(bearer[’'`]s unit)/ig)) {
+            if (profile.Description.match(/(leading)|(bearer[’'`]s unit)|(this model[’'`]s unit)/ig)) {
                 if (that.Leader) {
                     that.Leader.Effects.push(profile)
                 }
             }
         });
         this.OtherEquipment.forEach(function(profile){
-            if (profile.Data.match(/(leading)|(bearer[’'`]s unit)/ig)) {
+            if (profile.Data.match(/(leading)|(bearer[’'`]s unit)|(this model[’'`]s unit)/ig)) {
                 if (that.Leader) {
                     that.Leader.Effects.push(new DescriptorData(profile.Name, profile.Data))
                 }
@@ -365,8 +365,8 @@ class UnitData {
         return this.Models == null || (this.Models instanceof Array && this.Models.length == 0);
     }
 
-    Equals(other:UnitData):boolean{
-        return this.flat() == other.flat();
+    Equals(other:UnitData, leaderData:LeaderData[]):boolean{
+        return this.flat() == other.flat() && leaderData.findIndex(data=>data.CurrentlyLeading === this.Key || data.CurrentlyLeading === other.Key)===-1;
     }
 
     private unique:boolean|null=null;
@@ -389,7 +389,7 @@ class UnitData {
                         unique=false;
                         this.unique=false
                     } else {
-                        unique=true;
+                        unique= this.Profiles.findIndex(profile=> /.*Invulnerable Save.*/gi.test(profile.Name) && new RegExp(".*"+model.Name+".*", "gi").test(profile.Description))=== -1;
                         lastNonNullVal=model.Stats.IV();
                     }
                 }

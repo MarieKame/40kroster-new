@@ -39,7 +39,7 @@ const Variables = {
         ['Adeptus Mechanicus', 'Doctrina Imperatives'], 
         ['Aeldari', 'Strands of Fate'], 
         ['Astra Militarum', 'Voice of Command'], 
-        ['Chaos Daemons', 'The Shadow of Chaos'], 
+        ['Legiones Daemonica', 'The Shadow of Chaos'], 
         ['Drukhari', 'Power From Pain'], 
         ['Genestealer Cults', 'Cult Ambush'], 
         ['Necrons', 'Reanimation Protocols'], 
