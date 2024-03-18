@@ -23,6 +23,7 @@ import { Colour } from "./Options";
 import { DescriptorData, LeaderData } from "./RosterView/UnitData";
 import Popup, { PopupOption } from "./Components/Popup";
 import RosterMenu from "./RosterView/RosterMenu";
+import BuilderMenu from "./RosterBuilder/BuilderMenu";
 
 const STORAGE_KEY = "stored_rosters_40k_app";
 const COLOURS_KEY = "stored_colours_40k_app";
@@ -405,6 +406,9 @@ class Menu extends React.Component{
                             <Stack.Screen name="Options" options={{animation:"slide_from_right"}}>
                                 {(props)=> <Options {...props} onColourChange={(colour:Colour, value:string)=>this.applyColourChangeGlobally(colour, value, this)} onCategoriesChange={this.saveUnitCategoriesChange} onReset={(colours)=>this.resetColours(colours, this)} onNameDisplayChange={(nd)=>this.saveNameDisplayChange(nd)}/>}
                             </Stack.Screen>
+                            <Stack.Screen name="RosterBuilder" options={{animation:"fade"}}>
+                                {(props)=> <BuilderMenu {...props} />}
+                            </Stack.Screen>
                         </Stack.Navigator>
                     </NavigationContainer>
                     <Popup question={this.state.popupQuestion} options={this.state.popupOptions} default={this.state.popupDefault} onClose={e=>this.onPopupClose(this)} key={this.state.popupQuestion} />
@@ -459,7 +463,19 @@ class MenuDisplay extends Component<MenuDisplayProps> {
         return <View style={{padding:10, width:Variables.width}}>
             <View style={{flexDirection:"row", width:"100%", backgroundColor:this.context.Bg, borderRadius:4}}>
                 <Text style={{fontFamily:Variables.fonts.spaceMarine, verticalAlign:"middle", flex:1, textAlign:"center", textDecorationLine:"underline"}}>{Variables.username}'s Roster List</Text>
-                <Button onPress={(e)=>this.props.that.docPicker(Menu.Instance)} textStyle={{fontSize:20}}>+</Button>
+                <Button onPress={(e)=>
+                {
+                    Menu.Instance.CallPopup(
+                        "How do you want to add a new roster?", [
+                            {option:"Import from BattleScribe", callback:()=>{
+                                this.props.that.docPicker(Menu.Instance)
+                            }},
+                            {option:"Generate", callback:()=>{
+                                this.props.navigation.navigate("RosterBuilder");
+                            }},
+                        ],
+                        "Cancel")
+                }} textStyle={{fontSize:20}}>+</Button>
                 <Button onPress={(e)=>this.props.navigation.navigate('Options')} image={true}><Image style={{width:20, height:20, tintColor:this.context.Dark, marginLeft:3}} source={require("../assets/images/gear.png")}/></Button>
             </View>
             <View>{this.displayMenuItem(this.props.that.state.Rosters)}</View>
