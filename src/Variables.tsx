@@ -98,7 +98,10 @@ const Variables = {
             {Name:"Crushing Charge", Description:"Each time this unit ends a Charge move, select one enemy within Engagement Range of it, then roll one D6 for each model in this unit that is within Engagement Range of that enemy unit: for each 4+, that enemy unit suffers 1 mortal wound."},
             {Name:"Blur of Speed", Description:"Models in this unit have the Stealth ability."}
         ]
-    }
+    },
+    FactionFiles:[
+        {Name:"Adepta Sororitas", URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Imperium%20-%20Adepta%20Sororitas.cat"}
+    ]
     
 }
 

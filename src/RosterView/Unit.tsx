@@ -6,7 +6,7 @@ import {Text, Descriptor, ComplexText} from '../Components/Text';
 import Style from '../../Style/Unit';
 import WeaponStyle from '../../Style/Weapon';
 import IsOdd from "../Components/IsOdd";
-import Variables from "../../Style/Variables";
+import Variables from "../Variables";
 import { FactionSvg, Background } from "../../Style/svgs";
 import {KameContext} from "../../Style/KameContext";
 import Checkbox from 'expo-checkbox';

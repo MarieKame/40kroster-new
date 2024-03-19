@@ -1,7 +1,7 @@
 import {Pressable, StyleSheet, TextProps, TextStyle} from 'react-native';
 import Text from './Text';
 import {Component, Context, ReactNode, useContext} from 'react';
-import Variables from '../../Style/Variables';
+import Variables from '../Variables';
 import {KameContext} from '../../Style/KameContext';
 
 export interface ButtonProps extends TextProps {

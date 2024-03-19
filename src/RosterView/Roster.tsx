@@ -3,7 +3,7 @@ import Unit from "./Unit";
 import {UnitData,  DescriptorData, LeaderData} from "./UnitData";
 import {View, ScrollView, Platform, FlatList, Pressable} from 'react-native';
 import fastXMLParser from 'fast-xml-parser';
-import Variables from "../../Style/Variables";
+import Variables from "../Variables";
 import Button from "../Components/Button";
 import {Text} from "../Components/Text";
 import {KameContext} from "../../Style/KameContext";
@@ -11,7 +11,6 @@ import RosterExtraction, { Reminder } from "./RosterExtraction";
 import { Stratagem } from "./Stratagems";
 import AutoExpandingTextInput from "../Components/AutoExpandingTextInput";
 import Checkbox from "expo-checkbox";
-import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { GestureHandlerRootView, PanGestureHandler } from "react-native-gesture-handler";
 
 

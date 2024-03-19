@@ -4,7 +4,7 @@ import { ScrollView, View } from "react-native";
 import Text from "./Components/Text";
 import Slider from "@react-native-community/slider";
 import Button from "./Components/Button";
-import Variables from "../Style/Variables";
+import Variables from "./Variables";
 import AutoExpandingTextInput from "./Components/AutoExpandingTextInput";
 import { HsvColor } from "react-native-color-picker/dist/typeHelpers";
 import {KameContext} from "../Style/KameContext";

@@ -16,7 +16,7 @@ import Text from './Components/Text';
 import RosterMenuEntry from './RosterMenuEntry';
 import Roster from './RosterView/Roster';
 import Button from "./Components/Button";
-import Variables from "../Style/Variables";
+import Variables from "./Variables";
 import Options from './Options';
 import { KameContext } from "../Style/KameContext";
 import { Colour } from "./Options";

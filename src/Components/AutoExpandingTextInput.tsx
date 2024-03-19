@@ -1,6 +1,6 @@
 import { Component, Context } from "react";
 import { TextInput, TextInputProps } from "react-native";
-import Variables from "../../Style/Variables";
+import Variables from "../Variables";
 import { KameContext } from "../../Style/KameContext";
 
 interface AEProps extends TextInputProps {

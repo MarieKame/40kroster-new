@@ -1,5 +1,5 @@
 import { Exception } from 'sass';
-import Variables from '../../Style/Variables';
+import Variables from '../Variables';
 import { transpileModule } from 'typescript';
 
 class DescriptorData {

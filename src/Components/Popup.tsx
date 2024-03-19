@@ -1,6 +1,6 @@
 import React from "react";
 import { View } from "react-native";
-import Variables from "../../Style/Variables";
+import Variables from "../Variables";
 import { KameContext } from "../../Style/KameContext";
 import Text from "./Text";
 import Button from "./Button";

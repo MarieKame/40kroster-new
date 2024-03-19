@@ -1,5 +1,5 @@
 import { NewLifecycle } from "react";
-import Variables from "../../Style/Variables";
+import Variables from "../Variables";
 import { STRATAGEMS, Stratagem } from "./Stratagems";
 import { CostData, DescriptorData, LeaderData, ModelData, MultiRangeWeaponData, ProfileWeaponData, StatsData, UnitData, WeaponData } from "./UnitData";
 

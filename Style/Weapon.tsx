@@ -1,5 +1,5 @@
 import { StyleSheet } from "react-native";
-import Variables from "./Variables";
+import Variables from "../src/Variables";
 
 const Style = StyleSheet.create({
     info:{
