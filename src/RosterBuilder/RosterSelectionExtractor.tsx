@@ -1,5 +1,5 @@
 import fastXMLParser from 'fast-xml-parser';
-import RosterSelectionData, { Constraint, SelectionData, SelectionEntry, UnitSelectionData } from './RosterSelectionData';
+import RosterSelectionData, { Constraint, SelectionData, SelectionEntry, TargetSelectionData } from './RosterSelectionData';
 import Each from '../Components/Each';
 
 export default class RosterSelectionExtractor {
@@ -66,6 +66,28 @@ export default class RosterSelectionExtractor {
         }
         
         try{
+
+            function TreatEntry(entry):TargetSelectionData{
+                let unitData = new TargetSelectionData();
+                unitData.Name = entry._name;
+                unitData.Type = entry._type;
+                unitData.Target = entry._targetId;
+                unitData.ID = entry._id;
+                checkForConstaints(entry, unitData);
+                if(entry.modifiers){
+                    Each(entry.modifiers.modifier, modifier=>{
+                        if(modifier.conditions) {
+                            Each(modifier.conditions.condition, condition=>{
+                                if(modifier._value == 0){
+                                    unitData.CheckMerge.push([unitData.Target, condition._childId]);
+                                    console.log([unitData.Target, condition._childId]);
+                                }
+                            });
+                        }
+                    });
+                }
+                return unitData;
+            }
             function* generateLinkOperation(entry, rse:RosterSelectionExtractor){
                 
                 if (entry._name=="Detachment Choice"){
@@ -73,12 +95,7 @@ export default class RosterSelectionExtractor {
                     detachment.Name = entry._name;
                     rse.data.DetachmentChoice = detachment;
                 } else if (entry._name !== "Show/Hide Options") {
-                    let unitData = new UnitSelectionData();
-                    unitData.Name = entry._name;
-                    unitData.Type = entry._type;
-                    unitData.Target = entry._targetId;
-                    checkForConstaints(entry, unitData);
-                    rse.data.Units.push(unitData);
+                    rse.data.Units.push(TreatEntry(entry));
                 }
             }
             Each(this.catalogue.entryLinks.entryLink, (entry)=> {
@@ -89,11 +106,17 @@ export default class RosterSelectionExtractor {
                 //TODO: maybe useless?
                 //this.Progress(this);
             });
-
-            function GetSelectionFromEntry(entry, rse:RosterSelectionExtractor, parent?:SelectionEntry):SelectionEntry{
+            
+            function TreatSelectionEntry(entry, rse:RosterSelectionExtractor, group:boolean, parent?:SelectionEntry){
                 let selection = new SelectionEntry();
-                selection.Cost = entry.costs?entry.costs.cost._value:0;
-                selection.Type = entry._type;
+                let costId;
+                if(entry.costs){
+                    selection.Cost = entry.costs.cost._value;
+                    costId = entry.costs.cost._typeId;
+                } else {
+                    selection.Cost=0;
+                }
+                selection.Type = group?"group":entry._type;
                 selection.Name = entry._name;
                 selection.ID = entry._id;
                 if (entry._defaultSelectionEntryId) {
@@ -103,10 +126,16 @@ export default class RosterSelectionExtractor {
                     parent.ChildrenIDs.push(selection.ID);
                 }
                 if(entry.selectionEntries) {
-                    Each(entry.selectionEntries.selectionEntry, (e)=>TreatSelectionEntry(e, rse, selection));
+                    Each(entry.selectionEntries.selectionEntry, (e)=>TreatSelectionEntry(e, rse, false, selection));
+                }
+                if(entry.sharedSelectionEntries) {
+                    Each(entry.sharedSelectionEntries.selectionEntry, (e)=>TreatSelectionEntry(e, rse, false, selection));
                 }
                 if(entry.selectionEntryGroups) {
-                    Each(entry.selectionEntryGroups.selectionEntryGroup, (e)=>TreatSelectionGroupEntry(e, rse, selection));
+                    Each(entry.selectionEntryGroups.selectionEntryGroup, (e)=>TreatSelectionEntry(e, rse, true, selection));
+                }
+                if(entry.sharedSelectionEntryGroups) {
+                    Each(entry.sharedSelectionEntryGroups.selectionEntryGroup, (e)=>TreatSelectionEntry(e, rse, true, selection));
                 }
                 if (entry.categoryLinks){
                     Each(entry.categoryLinks.categoryLink, cat=>{
@@ -115,26 +144,35 @@ export default class RosterSelectionExtractor {
                 }
                 if (entry.entryLinks){
                     Each(entry.entryLinks.entryLink, link=>{
-                        let subEntry = new SelectionEntry();
-                        subEntry.ID=link._targetId;
-                        subEntry.Name=link._name;
-                        subEntry.Type=link._type;
-                        checkForConstaints(link, subEntry);
-                        selection.SubEntries.push(subEntry);
+                        selection.SubEntries.push(TreatEntry(link));
                     });
                 }
                 checkForConstaints(entry, selection);
-                return selection;
-            }
-            function TreatSelectionEntry(entry, rse:RosterSelectionExtractor, parent?:SelectionEntry){
-                rse.data.Selections.push(GetSelectionFromEntry(entry, rse, parent));
+                if(entry.modifiers){
+                    Each(entry.modifiers.modifier, modifier=>{
+                        if(modifier.conditions) {
+                            Each(modifier.conditions.condition, condition=>{
+                                if(modifier._field === costId) {
+                                    selection.CostModifiers.push({Comparator:condition._type, Comparison:condition._value, Value:modifier._value});
+                                }
+                            });
+                        }
+                    });
+                }
+                rse.data.Selections.push(selection);
             }
             function* generateSharedSelectionEntriesOperations(entry, rse:RosterSelectionExtractor){
-                TreatSelectionEntry(entry, rse);
+                TreatSelectionEntry(entry, rse, false);
             }
             Each(this.catalogue.sharedSelectionEntries.selectionEntry, entry=>{
                 this.operations.push(generateSharedSelectionEntriesOperations(entry, this));
-                //this.Progress(this);
+            });
+
+            function* generateSharedSelectionGroupEntriesOperations(entry, rse:RosterSelectionExtractor){
+                TreatSelectionEntry(entry, rse, true);
+            }
+            Each(this.catalogue.sharedSelectionEntryGroups.selectionEntryGroup, (selectionEntryGroup)=>{
+                this.operations.push(generateSharedSelectionGroupEntriesOperations(selectionEntryGroup, this));
             });
 
             Each(this.catalogue.sharedProfiles.profile, (profile)=>{
@@ -143,16 +181,6 @@ export default class RosterSelectionExtractor {
 
             Each(this.catalogue.sharedRules.rule, (rule)=>{
                 //this.Progress(this);
-            });
-
-            function TreatSelectionGroupEntry(entry, rse:RosterSelectionExtractor, parent?:SelectionEntry){
-                rse.data.SelectionGroups.push(GetSelectionFromEntry(entry, rse, parent));
-            }
-            function* generateSharedSelectionGroupEntryOperations(entry, rse:RosterSelectionExtractor){
-                TreatSelectionGroupEntry(entry, rse);
-            }
-            Each(this.catalogue.sharedSelectionEntryGroups.selectionEntryGroup, (selectionEntryGroup)=>{
-                this.operations.push(generateSharedSelectionGroupEntryOperations(selectionEntryGroup, this));
             });
 
             function* sort(rse:RosterSelectionExtractor){

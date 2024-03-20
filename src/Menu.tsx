@@ -386,7 +386,7 @@ class Menu extends React.Component{
 
         return  <KameContext.Provider value={{Main:this.state.colourMain, Dark: this.state.colourDark, Bg:this.state.colourBg, Accent:this.state.colourAccent, LightAccent:this.state.colourLightAccent, Grey:this.state.colourGrey, Popup:this.CallPopup}}> 
                     <NavigationContainer theme={{...DefaultTheme, colors:{...DefaultTheme.colors, background:"transparent"}}} >
-                        <Stack.Navigator initialRouteName="Home" screenOptions={{headerShown: false}}>
+                        <Stack.Navigator initialRouteName="RosterBuilder" screenOptions={{headerShown: false}}>
                             <Stack.Screen name="Home" options={{animation:"slide_from_left"}}>
                                 {(props)=> <MenuDisplay {...props} that={this}/>}
                             </Stack.Screen>

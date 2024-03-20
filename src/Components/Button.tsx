@@ -18,6 +18,9 @@ export class Button extends Component<ButtonProps>  {
     static contextType = KameContext; 
     declare context: React.ContextType<typeof KameContext>;
     
+    onPress(e, that:Button){
+        if(!that.props.disabled && that.props.onPress)that.props.onPress(e);
+    }
     render():ReactNode{
         const Style = StyleSheet.create({
             All:{
@@ -94,7 +97,10 @@ export class Button extends Component<ButtonProps>  {
         if(this.props.small){
             style.push({
                 minHeight:12,
-                minWidth:20})
+                minWidth:20,
+                margin:0,
+                padding:0,
+            })
         }
         if(this.props.disabled){
             style.push({
@@ -104,9 +110,9 @@ export class Button extends Component<ButtonProps>  {
             forceTextColour = {color:this.context.LightAccent}
         }
         if (this.props.image)
-            return <Pressable style={[style, this.props.style]} onPress={this.props.onPress}>{this.props.children}</Pressable>
+            return <Pressable style={[style, this.props.style]} onPress={e=>this.onPress(e, this)}>{this.props.children}</Pressable>
         return (
-            <Pressable style={[style, this.props.style]} onPress={this.props.onPress}>
+            <Pressable style={[style, this.props.style]} onPress={e=>this.onPress(e, this)}>
                 <Text style={[{textAlign:"center"}, forceTextColour, this.props.textStyle]}>
                     {this.props.children}
                 </Text>

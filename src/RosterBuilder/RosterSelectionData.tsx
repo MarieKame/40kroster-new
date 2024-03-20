@@ -1,4 +1,5 @@
 import Variables from "../Variables";
+import {Selection} from './UnitSelection';
 
 export class SelectionData{
     Name:string;
@@ -13,23 +14,37 @@ export class SelectionData{
 export class DetachmentSelectionData extends SelectionData {
 }
 
-export class UnitSelectionData extends SelectionData {
+export class TargetSelectionData extends SelectionData {
     Target:string;
+    public CheckMerge:Array<Array<string>>;
+
+    constructor(){
+        super();
+        this.CheckMerge = new Array<Array<string>>();
+    }
+}
+
+export class Modifier {
+    Comparator:string;
+    Comparison:number;
+    Value:number;
 }
 
 export class SelectionEntry extends SelectionData {
     Categories:Array<string>;
     Cost:number;
     ChildrenIDs:Array<string>;
-    SubEntries:Array<SelectionData>;
     DefaultSelectionID?:string;
+    SubEntries:Array<TargetSelectionData>;
+    CostModifiers:Array<Modifier>;
 
     constructor(){
         super();
         this.Constraints = new Array<Constraint>();
         this.Categories = new Array<string>();
         this.ChildrenIDs = new Array<string>();
-        this.SubEntries = new Array<SelectionData>();
+        this.SubEntries = new Array<TargetSelectionData>();
+        this.CostModifiers = new Array<Modifier>();
     }
 
     GetVariablesCategory():string{
@@ -67,35 +82,37 @@ export class Constraint extends SelectionData {
 }
 
 export default class RosterSelectionData {
-    Units:Array<UnitSelectionData>;
+    Units:Array<TargetSelectionData>;
     DetachmentChoice:SelectionEntry;
     Selections:Array<SelectionEntry>;
-    SelectionGroups:Array<SelectionEntry>;
 
-    GetTarget(unit:UnitSelectionData):SelectionEntry{
-        return this.Selections.find(sel=>sel.ID == unit.Target);
+    GetTarget(unit:TargetSelectionData):SelectionEntry{
+        let found = this.Selections.find(sel=>sel.ID == unit.Target);
+        found.Constraints = [...found.Constraints, ...unit.Constraints]
+        return found;
     }
 
     GetChildren(entry:SelectionEntry):Array<SelectionEntry>{
-        return [...this.Selections.filter(selection=>entry.ChildrenIDs.find(id=>id===selection.ID)), ...this.SelectionGroups.filter(selection=>entry.ChildrenIDs.find(id=>id===selection.ID))];
+        return this.Selections.filter(selection=>entry.ChildrenIDs.find(id=>id===selection.ID));
     }
 
-    GetSelection(entry:SelectionData):Array<SelectionEntry>{
-        console.log("GetSelection");
-        console.log(entry);
-        if (entry.Type==="selectionEntry")
-            return this.Selections.filter(selection=>selection.ID===entry.ID);
-        if (entry.Type==="selectionEntryGroup")
-            return this.SelectionGroups.filter(selection=>selection.ID===entry.ID);
+    GetSubEntry(target:TargetSelectionData):SelectionEntry{
+        return this.Selections.find(selection=>target.Target===selection.ID);
     }
 
-    GetSelectionFromId(id:String) {
+    GetCombinedChildrenAndSubEntries(entry:SelectionEntry):Array<SelectionEntry|TargetSelectionData> {
+        return [
+            ...this.GetChildren(entry), 
+            ...entry.SubEntries
+        ];
+    }
+
+    GetSelectionFromId(id:String):SelectionEntry {
         return this.Selections.find(sel=>sel.ID == id);
     }
 
     constructor(){
-        this.Units = new Array<UnitSelectionData>();
+        this.Units = new Array<TargetSelectionData>();
         this.Selections = new Array<SelectionEntry>();
-        this.SelectionGroups = new Array<SelectionEntry>();
     }
 }

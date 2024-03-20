@@ -1,4 +1,4 @@
-import { Component } from "react";
+import { Component, ReactNode } from "react";
 import { Animated, LayoutAnimation, ListRenderItemInfo, Pressable, View } from "react-native";
 import Variables from "../Variables";
 import { FlatList, GestureHandlerRootView, ScrollView } from "react-native-gesture-handler";
@@ -7,8 +7,9 @@ import Button from "../Components/Button";
 import { KameContext } from "../../Style/KameContext";
 import * as FileSystem from 'expo-file-system';
 import RosterSelectionExtractor from "./RosterSelectionExtractor";
-import RosterSelectionData, { Constraint, SelectionEntry, UnitSelectionData } from "./RosterSelectionData";
-import UnitSelection from "./UnitSelection";
+import RosterSelectionData, { Constraint, SelectionEntry, TargetSelectionData } from "./RosterSelectionData";
+import UnitSelection, {Selection} from "./UnitSelection";
+import Each from "../Components/Each";
 
 enum BuildPhase{
     FACTION, LOADING, LOADING_ERROR, ADD, EQUIP
@@ -30,7 +31,8 @@ export default class BuilderMenu extends Component<props> {
         units:new Array<UnitSelection>(),
         detachmentSelection:new UnitSelection(null, null),
         addColumnWidth:Variables.width/2,
-        currentUnit:-2
+        currentUnit:-2,
+        update:0
     }
 
     ErrorLoadingRosterFile(that:BuilderMenu){
@@ -77,8 +79,8 @@ export default class BuilderMenu extends Component<props> {
         })
     }
 
-    AddUnitToRoster(unit:UnitSelectionData, that:BuilderMenu){
-        let units = that.state.units;
+    AddUnitToRoster(unit:TargetSelectionData, that:BuilderMenu){
+        let units = [...that.state.units];
         units.push(new UnitSelection(that.state.rosterSelectionData.GetTarget(unit), that.state.rosterSelectionData));
         that.setState({units:units.sort((unit1, unit2)=>{
             return unit1.Framework.GetVariablesCategoryIndex() - unit2.Framework.GetVariablesCategoryIndex();
@@ -94,36 +96,58 @@ export default class BuilderMenu extends Component<props> {
     /////////////////////////////////////////////////////////
     /*                     DISPLAY                         */
     /////////////////////////////////////////////////////////
-    DisplayConstraints(constraints:Array<Constraint>){
-        let valid=false;
-        if (!valid) return <Text style={{color:this.context.Main}}> - INVALID - </Text>
+    DisplayValidity(selection:Selection, recursive:boolean=false):ReactNode{
+        if (!(recursive?selection.ValidRecursive():selection.Valid())) return <Text style={{color:recursive?this.context.Main:this.context.LightAccent}}> INVALID </Text>
         return null;
     }
 
-    DisplayNameWithConstraints(framework:SelectionEntry, depth:number, additionalConstraints:Array<Constraint>=[]){
-        const constraints = [...framework.Constraints, ...additionalConstraints];
-        return <View style={{flexDirection:"row", backgroundColor:depth==1?this.context.Accent:(depth==2?this.context.LightAccent:null), flexGrow:1, width:"100%"}}>
-            <Text>{framework.Name}</Text>
-            {constraints.length>0&&this.DisplayConstraints(constraints)}
-        </View>
+    DisplayUpgrade(selection:Selection, options:Array<SelectionEntry|TargetSelectionData>, count:number):ReactNode{
+        if(selection.Count===0) return null;
+        return <View>
+            <Button small={true} disabled={options.length==count} style={{height:20}} textStyle={{color:this.context.Dark}}>{selection.Name}{this.DisplayValidity(selection)}</Button>
+            <Text>{selection.DisplayStats()}</Text>
+        </View>;
     }
 
-    ViewSelectionRecursive(name:string, reference:{selection:UnitSelection}, framework?:SelectionEntry, depth:number=1,){
+    DisplayGroup(selection:Selection, colour:string, textColour:string):ReactNode{
+        return <Text style={{backgroundColor:colour, color:textColour}} key={selection.Name + selection.Count}>{selection.Name}{selection.GetSelectionCount()!==1&&selection.DisplayCount()}{this.DisplayValidity(selection)}</Text>
+    }
+
+    DisplayModel(selection:Selection, colour:string, textColour:string):ReactNode{
+        return <View style={{flexDirection:"row", backgroundColor:colour, height:20, alignItems:"center"}} key={selection.Name + selection.Count}>
+            <Text style={{flexGrow:1, color:textColour}}>{selection.Name}{selection.DisplayCount()}{this.DisplayValidity(selection)}</Text>
+            {selection.Changeable()&&<Button small disabled={!selection.CanRemove()} onPress={e=>selection.Remove(this)} style={{height:20, width:40}} textStyle={{fontSize:Variables.fontSize.small}}>-</Button>}
+            {selection.Changeable()&&<Button small disabled={!selection.CanAdd()} onPress={e=>selection.Add(this)} style={{height:20, width:40}} textStyle={{fontSize:Variables.fontSize.small}}>+</Button>}
+        </View>;
+    }
+
+    ViewSelectionRecursive(selection:Selection, framework?:SelectionEntry|TargetSelectionData, index:number=1, depth:number=1){
         if (!framework) return null;
-        const children = this.state.rosterSelectionData.GetChildren(framework);
-        return <View key={name} style={{marginLeft:6, flexGrow:1, width:"100%", paddingTop:4}}>
-            {children.map((child, index)=>
-                <View key={name+index} style={{width:"100%", flexGrow:1}}>
-                    {this.DisplayNameWithConstraints(child, depth)}
-                    {this.ViewSelectionRecursive(name+index, {selection:reference.selection}, child, depth+1)}
-                </View>
-            )}
-            {framework.SubEntries.map((subEntry, subIndex)=>this.state.rosterSelectionData.GetSelection(subEntry).map(s=>
-                <View key={name+subEntry.ID} style={{marginLeft:6, flexGrow:1, width:"100%", paddingTop:4}}>
-                    {this.DisplayNameWithConstraints(s, depth, subEntry.Constraints)}
-                    {this.ViewSelectionRecursive(name+subEntry.ID+subIndex, {selection:reference.selection}, s, depth+1)}
-                </View>
-            ))}
+        if (framework instanceof TargetSelectionData) framework= this.state.rosterSelectionData.GetTarget(framework);
+        let currentIndex = index;
+
+        let children = this.state.rosterSelectionData.GetCombinedChildrenAndSubEntries(framework);
+        let value=[];
+        let skip = false;
+        const colour = depth==1?this.context.Accent:(depth==2?this.context.LightAccent:null);
+        Each(selection.SelectionValue, sel=>{
+            const valid = sel.Valid();
+            if(sel.Type=="model"){
+                value.push(this.DisplayModel(sel, valid?colour:this.context.Main, !valid?this.context.LightAccent:this.context.Dark));
+                skip = sel.Count == 0;
+            } else if(sel.Type=="group"){
+                value.push(this.DisplayGroup(sel, valid?colour:this.context.Main, !valid?this.context.LightAccent:this.context.Dark));
+            } else if(sel.Type=="upgrade"){
+                value.push(this.DisplayUpgrade(sel, children, selection.GetSelectionCount()));
+            } else {
+                console.error("ERROR, missing selection display for type : ");
+                console.error(sel.Type);
+            }
+            if(!skip) value.push(this.ViewSelectionRecursive(sel, this.state.rosterSelectionData.GetSelectionFromId(sel.ID), currentIndex++, depth+1));
+        });
+
+        return <View key={this.state.currentUnit + selection.Name + currentIndex + this.state.update} style={{flexGrow:1, width:"100%", paddingLeft:6}}>
+            {value}
         </View>;
     }
     
@@ -133,7 +157,11 @@ export default class BuilderMenu extends Component<props> {
         const that = this;
         return <View style={{height:"100%", backgroundColor:this.context.Bg, marginLeft:10}}>
             <ScrollView>
-                {this.ViewSelectionRecursive(unit.Data.Name, {selection:unit}, unit.Framework)}
+                <View key="title" style={{height:38}}>
+                    <Text key="name" style={{alignSelf:"center"}}>{unit.Data.Name}</Text>
+                    <Text key="pts" style={{alignSelf:"center"}}>{unit.Data.GetCost() + " pts"}</Text>
+                </View>
+                {this.ViewSelectionRecursive(unit.Data, unit.Framework)}
             </ScrollView>
             <Button style={{position:"absolute", top:0, right:0}} onPress={e=>{
                 if(this.state.phase === BuildPhase.EQUIP) {
@@ -167,9 +195,7 @@ export default class BuilderMenu extends Component<props> {
             return this.rosterCategory;
         }
         if(this.state.units.length == 0) return null;
-        console.log("here");
-        console.log(render.item.Data);
-        return <View>
+        return <View key={render.item.Data.Name+this.state.update}>
             {newCategory(render.item.Framework)&&
                 <View style={{alignItems:"center", justifyContent:"center", backgroundColor:this.context.Accent, width:"100%"}}>
                     <Text>{getCategory()}</Text>
@@ -184,7 +210,7 @@ export default class BuilderMenu extends Component<props> {
                     that.setState({phase:BuildPhase.EQUIP, currentUnit:render.index-1}); 
                     }}>
                 <View style={{flexDirection:"row", backgroundColor:render.index==this.state.currentUnit+1?this.context.LightAccent:this.context.Bg, borderBottomColor:this.context.LightAccent, borderWidth:1}}>
-                    <Text style={{alignSelf:"center", flexGrow:1, marginLeft:4}}>{render.item.Data.Name}{render.item.Framework.Cost>0&&" ("+render.item.Data.GetCost()+")"}</Text>
+                    <Text style={{alignSelf:"center", flexGrow:1, marginLeft:4}}>{render.item.Data.Name}{render.item.Framework.Cost>0&&" ("+render.item.Data.GetCost()+")"}{this.DisplayValidity(render.item.Data, true)}</Text>
                     {render.item.Framework.Cost>0&&<Button onPress={e=>this.DeleteUnit(render.index-1, this)} textStyle={{fontSize:14}} style={{width:44}} weight="light">🗑</Button>}
                 </View>
             </Pressable>
@@ -196,7 +222,7 @@ export default class BuilderMenu extends Component<props> {
     }
 
     selectionCategory;
-    renderUnitSelection(render:ListRenderItemInfo<UnitSelectionData>, that:BuilderMenu){
+    renderUnitSelection(render:ListRenderItemInfo<TargetSelectionData>, that:BuilderMenu){
         function newCategory(entry:SelectionEntry):boolean{
             if (entry) {
                 const cat = entry.GetVariablesCategory();
@@ -271,7 +297,7 @@ export default class BuilderMenu extends Component<props> {
                         <View style={{width: this.state.addColumnWidth, overflow:"hidden", marginRight:10}}>
                             <FlatList style={{minWidth:Variables.width/2}} numColumns={1} data={this.state.rosterSelectionData.Units} renderItem={render=>this.renderUnitSelection(render, this)} />
                         </View>
-                        <FlatList numColumns={1} data={[this.state.detachmentSelection, ...this.state.units]} renderItem={render=>this.renderRoster(render, this)} />
+                        <FlatList key={this.state.update} numColumns={1} data={[this.state.detachmentSelection, ...this.state.units]} renderItem={render=>this.renderRoster(render, this)} />
                         <View style={{width: (Variables.width/2-this.state.addColumnWidth), overflow:"hidden"}}>
                             {this.DisplayUnitSelections()}
                         </View>
