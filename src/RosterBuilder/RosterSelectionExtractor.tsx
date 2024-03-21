@@ -1,5 +1,5 @@
 import fastXMLParser from 'fast-xml-parser';
-import RosterSelectionData, { Constraint, ModifierType, SelectionData, SelectionEntry, TargetSelectionData } from './RosterSelectionData';
+import RosterSelectionData, { Constraint, Modifier, ModifierType, ProfileData, SelectionData, SelectionEntry, TargetSelectionData } from './RosterSelectionData';
 import Each from '../Components/Each';
 
 export default class RosterSelectionExtractor {
@@ -83,12 +83,12 @@ export default class RosterSelectionExtractor {
                                     unitData.CheckMerge.push([unitData.Target, condition._childId]);
                                 }
                                 if(maxConstraint && modifier._field === maxConstraint.ID) {
-                                    unitData.Modifiers.push({Type: ModifierType.MAX, Comparator:condition._type, Comparison:condition._value, Value:modifier._value})
+                                    unitData.Modifiers.push({Type: ModifierType.MAX, Comparator:condition._type, Comparison:condition._value, Value:modifier._value, Field:""})
                                 }
                             });
                         } else {
                             if(maxConstraint && modifier._field === maxConstraint.ID) {
-                                unitData.Modifiers.push({Type: ModifierType.MAX, Comparator:null, Comparison:null, Value:modifier._value})
+                                unitData.Modifiers.push({Type: ModifierType.MAX, Comparator:null, Comparison:null, Value:modifier._value, Field:""})
                             }
                         }
                     });
@@ -154,6 +154,28 @@ export default class RosterSelectionExtractor {
                         selection.SubEntries.push(TreatEntry(link));
                     });
                 }
+                if (entry.profiles){
+                    Each(entry.profiles.profile, profile=>{
+                        selection.Profiles.push(TreatProfileEntry(profile));
+                    });
+                }
+                if(entry.infoLinks){
+                    Each(entry.infoLinks.infoLink, infoLink=>{
+                        if (infoLink._type==="profile") {
+                            let modifiers = new Array<Modifier>();
+                            if(infoLink.modifiers){
+                                Each(infoLink.modifiers.modifier, modifier=>{
+                                    if(modifier.conditions){
+                                        modifiers.push({Type:ModifierType.CHARACTERISTIC, Value:modifier._value, Field:modifier._field,  Comparator:modifier.conditions.condition._type, Comparison:modifier.conditions.condition._childId});
+                                    } else {
+                                        modifiers.push({Type:ModifierType.CHARACTERISTIC, Value:modifier._value, Field:modifier._field,  Comparator:null, Comparison:null});
+                                    }
+                                });
+                            }
+                            selection.ProfileInfoLinks.push({Target:infoLink._targetId, Modifiers:modifiers});
+                        }
+                    });
+                }
                 checkForConstaints(entry, selection);
                 const maxConstraint = selection.Constraints.find(c=>c.Type==="max");
                 if(entry.modifiers){
@@ -161,11 +183,10 @@ export default class RosterSelectionExtractor {
                         if(modifier.conditions) {
                             Each(modifier.conditions.condition, condition=>{
                                 if(modifier._field === costId) {
-                                    console.log(entry._name)
-                                    selection.Modifiers.push({Type: ModifierType.COST, Comparator:condition._type, Comparison:condition._value, Value:modifier._value});
+                                    selection.Modifiers.push({Type: ModifierType.COST, Comparator:condition._type, Comparison:condition._value, Value:modifier._value, Field:""});
                                 }
                                 if(maxConstraint && modifier._field === maxConstraint.ID) {
-                                    selection.Modifiers.push({Type: ModifierType.MAX, Comparator:condition._type, Comparison:condition._value, Value:modifier._value})
+                                    selection.Modifiers.push({Type: ModifierType.MAX, Comparator:condition._type, Comparison:condition._value, Value:modifier._value, Field:""})
                                 }
                             });
                         }
@@ -187,8 +208,20 @@ export default class RosterSelectionExtractor {
                 this.operations.push(generateSharedSelectionGroupEntriesOperations(selectionEntryGroup, this));
             });
 
+            function TreatProfileEntry(profile):ProfileData{
+                let profileData = new ProfileData();
+                profileData.Name = profile._name;
+                profileData.ID = profile._id;
+                Each(profile.characteristics.characteristic, c=>{
+                    profileData.Characteristics.push({Name:c._name, ID:c._typeId, Value:c.textValue});
+                });
+                return profileData;
+            }
+            function* generateSharedProfiles(profile, rse:RosterSelectionExtractor){
+                rse.data.Profiles.push(TreatProfileEntry(profile));
+            }
             Each(this.catalogue.sharedProfiles.profile, (profile)=>{
-                //this.Progress(this);
+                this.operations.push(generateSharedProfiles(profile, this));
             });
 
             Each(this.catalogue.sharedRules.rule, (rule)=>{

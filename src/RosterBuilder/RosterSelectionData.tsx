@@ -1,3 +1,4 @@
+import Each from "../Components/Each";
 import Variables from "../Variables";
 import {Selection} from './UnitSelection';
 
@@ -6,8 +7,10 @@ export class SelectionData{
     ID:string;
     Type:string;
     Constraints:Array<Constraint>;
+    Categories:Array<string>;
     constructor(){
         this.Constraints = new Array<Constraint>();
+        this.Categories = new Array<string>();
     }
 }
 
@@ -27,7 +30,7 @@ export class TargetSelectionData extends SelectionData {
 }
 
 export enum ModifierType{
-    COST, MAX
+    COST, MAX, CHARACTERISTIC
 }
 
 export class Modifier {
@@ -35,23 +38,47 @@ export class Modifier {
     Comparator:string;
     Comparison:number;
     Value:number;
+    Field:string;
+}
+
+export class Characteristic {
+    Name:string;
+    ID:string;
+    Value:string;
+}
+
+export class ProfileData{
+    Name:string;
+    ID:string;
+    Characteristics:Array<Characteristic>;
+
+    constructor(){
+        this.Characteristics = new Array<Characteristic>();
+    }
+}
+
+export class InfoLink{
+    Target:string;
+    Modifiers:Array<Modifier>;
 }
 
 export class SelectionEntry extends SelectionData {
-    Categories:Array<string>;
     Cost:number;
     ChildrenIDs:Array<string>;
     DefaultSelectionID?:string;
     SubEntries:Array<TargetSelectionData>;
     Modifiers:Array<Modifier>;
+    Profiles:Array<ProfileData>;
+    ProfileInfoLinks:Array<InfoLink>;
 
     constructor(){
         super();
         this.Constraints = new Array<Constraint>();
-        this.Categories = new Array<string>();
         this.ChildrenIDs = new Array<string>();
         this.SubEntries = new Array<TargetSelectionData>();
         this.Modifiers = new Array<Modifier>();
+        this.Profiles = new Array<ProfileData>();
+        this.ProfileInfoLinks = new Array<InfoLink>();
     }
 
     GetVariablesCategory():string{
@@ -92,6 +119,28 @@ export default class RosterSelectionData {
     Units:Array<TargetSelectionData>;
     DetachmentChoice:SelectionEntry;
     Selections:Array<SelectionEntry>;
+    Profiles:Array<ProfileData>;
+
+    GetProfile(info:InfoLink, ancestor:Selection):ProfileData{
+        let profileData = new ProfileData();
+        const found = this.Profiles.find(p=>p.ID === info.Target);
+        profileData.Characteristics = [...found.Characteristics];
+        profileData.ID = found.ID;
+        profileData.Name = found.Name;
+        Each(info.Modifiers.filter(m=>m.Type===ModifierType.CHARACTERISTIC), modifier=>{
+            let characteristic = profileData.Characteristics.find(c=>c.ID===modifier.Field);
+            switch(modifier.Comparator){
+                case "instanceOf":
+                    if(ancestor.ID === modifier.Comparison) characteristic.Value = modifier.Value;
+                    break;
+                default:
+                    if (modifier.Comparator !== null) console.log("Untreated modifier comparator : " + modifier.Comparator)
+                    characteristic.Value = modifier.Value
+                    break;
+            }
+        });
+        return profileData;
+    }
 
     GetTarget(unit:TargetSelectionData):SelectionEntry{
         let found = this.Selections.find(sel=>sel.ID == unit.Target);
@@ -106,6 +155,8 @@ export default class RosterSelectionData {
         val.DefaultSelectionID = found.DefaultSelectionID;
         val.SubEntries = [...found.SubEntries];
         val.Modifiers = [...found.Modifiers];
+        val.Profiles = [...found.Profiles];
+        val.ProfileInfoLinks = [...found.ProfileInfoLinks];
         return val;
     }
 
@@ -131,5 +182,6 @@ export default class RosterSelectionData {
     constructor(){
         this.Units = new Array<TargetSelectionData>();
         this.Selections = new Array<SelectionEntry>();
+        this.Profiles = new Array<ProfileData>();
     }
 }

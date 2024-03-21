@@ -7,7 +7,7 @@ import Button from "../Components/Button";
 import { KameContext } from "../../Style/KameContext";
 import * as FileSystem from 'expo-file-system';
 import RosterSelectionExtractor from "./RosterSelectionExtractor";
-import RosterSelectionData, { Constraint, SelectionEntry, TargetSelectionData } from "./RosterSelectionData";
+import RosterSelectionData, { Constraint, SelectionData, SelectionEntry, TargetSelectionData } from "./RosterSelectionData";
 import UnitSelection, {Selection} from "./UnitSelection";
 import Each from "../Components/Each";
 
@@ -19,7 +19,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 class props{
     navigation:{goBack}
 }
-const COLUMN_WIDTH = Variables.width * 0.55;
+const COLUMN_WIDTH = Variables.width * 0.50;
 export default class BuilderMenu extends Component<props> {
     static contextType = KameContext; 
     declare context: React.ContextType<typeof KameContext>;
@@ -30,7 +30,7 @@ export default class BuilderMenu extends Component<props> {
         progress:"",
         rosterSelectionData:new RosterSelectionData(),
         units:new Array<UnitSelection>(),
-        detachmentSelection:new UnitSelection(null, null),
+        detachmentSelection:new UnitSelection(),
         addColumnWidth:COLUMN_WIDTH,
         currentUnit:-2,
         update:0
@@ -66,7 +66,9 @@ export default class BuilderMenu extends Component<props> {
                 if (contents) {
                     new RosterSelectionExtractor(contents, (progress:string, cont, rse:RosterSelectionData, data?:RosterSelectionData)=>{
                         if (data){
-                            that.setState({phase:BuildPhase.ADD, rosterSelectionData:data, progress:progress, detachmentSelection:new UnitSelection(data.DetachmentChoice, data)})
+                            let detachment = new UnitSelection();
+                            detachment.Init(data.DetachmentChoice, data);
+                            that.setState({phase:BuildPhase.ADD, rosterSelectionData:data, progress:progress, detachmentSelection:detachment})
                         } else {
                             that.setState({progress:progress}, ()=>this.cont(rse, cont));
                         }
@@ -82,10 +84,29 @@ export default class BuilderMenu extends Component<props> {
 
     AddUnitToRoster(unit:TargetSelectionData, that:BuilderMenu){
         let units = [...that.state.units];
-        units.push(new UnitSelection(that.state.rosterSelectionData.GetTarget(unit), that.state.rosterSelectionData));
+        let sel = new UnitSelection()
+        sel.Init(that.state.rosterSelectionData.GetTarget(unit), that.state.rosterSelectionData);
+        units.push(sel);
         that.setState({units:units.sort((unit1, unit2)=>{
             return unit1.Framework.GetVariablesCategoryIndex() - unit2.Framework.GetVariablesCategoryIndex();
         })});
+    }
+
+    CanAddMore(unit:Selection|SelectionData|TargetSelectionData):boolean{
+        if(unit instanceof TargetSelectionData) unit=this.state.rosterSelectionData.GetTarget(unit);
+        const count = this.state.units.filter(u=>u.Data.ID===unit.ID).length;
+        let max= 3;
+        if(unit.Categories.find(c=>c==="Epic Hero"))
+            max= 1;
+        else if(unit.Categories.find(c=>c==="Battleline"))
+            max= 6;
+        return count < max;
+    }
+
+    DuplicateUnit(index:number, that:BuilderMenu) {
+        let units = that.state.units;
+        units.push(UnitSelection.Duplicate(units[index]))
+        that.setState({units:units});
     }
 
     DeleteUnit(index:number, that:BuilderMenu) {
@@ -210,9 +231,10 @@ export default class BuilderMenu extends Component<props> {
                     } 
                     that.setState({phase:BuildPhase.EQUIP, currentUnit:render.index-1}); 
                     }}>
-                <View style={{flexDirection:"row", backgroundColor:render.index==this.state.currentUnit+1?this.context.LightAccent:this.context.Bg, borderBottomColor:this.context.LightAccent, borderWidth:1}}>
+                <View style={{flexDirection:"row", backgroundColor:render.index==this.state.currentUnit+1?this.context.LightAccent:this.context.Bg, borderBottomColor:this.context.LightAccent, borderWidth:1, height:40}}>
                     <Text style={{alignSelf:"center", flexGrow:1, marginLeft:4}}>{render.item.Data.Name}{render.item.Framework.Cost>0&&" ("+render.item.Data.GetCost()+")"}{this.DisplayValidity(render.item.Data, true)}</Text>
-                    {render.item.Framework.Cost>0&&<Button onPress={e=>this.DeleteUnit(render.index-1, this)} textStyle={{fontSize:14}} style={{width:44}} weight="light">🗑</Button>}
+                    {(render.item.Framework.Cost>0&&this.state.phase!==BuildPhase.EQUIP&&this.CanAddMore(render.item.Data))&&<Button onPress={e=>this.DuplicateUnit(render.index-1, this)} textStyle={{fontSize:10}} style={{width:44}} weight="light">x2</Button>}
+                    {(render.item.Framework.Cost>0&&this.state.phase!==BuildPhase.EQUIP)&&<Button onPress={e=>this.DeleteUnit(render.index-1, this)} textStyle={{fontSize:12}} style={{width:44}} weight="light">🗑</Button>}
                 </View>
             </Pressable>
         </View>;
@@ -245,9 +267,9 @@ export default class BuilderMenu extends Component<props> {
                     <Text>{getCategory()}</Text>
                 </View>
             }
-            <View style={{flexDirection:"row", backgroundColor:this.context.Bg, borderBottomColor:this.context.LightAccent, borderWidth:1}}>
+            <View style={{flexDirection:"row", backgroundColor:this.context.Bg, borderBottomColor:this.context.LightAccent, borderWidth:1, height:40}}>
                 <Text style={{alignSelf:"center", flexGrow:1, marginLeft:4}}>{render.item.Name} ({target.Cost})</Text>
-                <Button onPress={e=>that.AddUnitToRoster(render.item, that)}>+</Button>
+                {this.CanAddMore(render.item)&&<Button onPress={e=>that.AddUnitToRoster(render.item, that)}>+</Button>}
             </View>
         </View>;
 

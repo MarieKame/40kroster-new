@@ -1,6 +1,6 @@
 import Each from "../Components/Each";
 import BuilderMenu from "./BuilderMenu";
-import RosterSelectionData, { Constraint, SelectionEntry, TargetSelectionData, Modifier, ModifierType } from "./RosterSelectionData";
+import RosterSelectionData, { Constraint, SelectionEntry, TargetSelectionData, Modifier, ModifierType, ProfileData } from "./RosterSelectionData";
 
 function Compare(modifier:Modifier, value:number):boolean{
     console.log(modifier);
@@ -9,7 +9,7 @@ function Compare(modifier:Modifier, value:number):boolean{
     return true;
 }
 
-class PrivateSelection {
+abstract class PrivateSelection {
     private modifiers:Array<Modifier>;
     private cost:number;
     private min:number;
@@ -18,14 +18,11 @@ class PrivateSelection {
     SelectionValue:Array<Selection>;
     Count:number;
     Parent?:Selection;
-    Ancestor:PrivateSelection;
     Constraints:Array<Constraint>;
     Type:string;
     ID:string;
 
     constructor(count:number, data:SelectionEntry, parent:Selection, ancestor?:PrivateSelection){
-        if(!ancestor) this.Ancestor=this;
-        else this.Ancestor=ancestor;
         this.Constraints = data.Constraints;
         this.modifiers = data.Modifiers;
         this.ID = data.ID;
@@ -101,32 +98,61 @@ class PrivateSelection {
     }
     protected _getMax():number{
         const found = this.modifiers.find(m=>m.Type===ModifierType.MAX); // TODO: maybe there can be multiple?
-        return found?(Compare(found, this.Ancestor.GetSelectionCount())?found.Value:this.max):this.max;
+        return found?(Compare(found, this.GetAncestor().GetSelectionCount())?found.Value:this.max):this.max;
     }
     protected _getMaxPossible():number{
         const found = this.modifiers.find(m=>m.Type===ModifierType.MAX);
         return found?found.Value:this.max;
+    }
+    protected abstract GetAncestor():Selection;
+}
+
+class Entry{
+    SelectionID:string;
+    Count:number;
+    Children:Array<Entry>;
+
+    constructor(id:string, count:number){
+        this.SelectionID = id;
+        this.Count = count;
+        this.Children = new Array<Entry>();
     }
 }
 
 export class Selection extends PrivateSelection {
     Name:string;
     Stats:Array<string>;
+    Profiles:Array<ProfileData>;
+    Ancestor:Selection;
+    Categories:Array<string>;
     private secretSelection:Array<Selection>;
 
     private data:SelectionEntry;
     private rse:RosterSelectionData;
 
     private static merging:Array<{ID:string, Selection:Selection}> = new Array<{ID:string, Selection:Selection}>();
-    private static Duplicate(selection:Selection):Selection{
+    static Duplicate(selection:Selection):Selection{
         return new Selection(1, selection.data, selection.rse, selection.Parent, selection.Ancestor);
     }
+    static DeepDuplicate(selection:Selection):Selection{
+        let sel = new Selection(1, selection.data, selection.rse, selection.Parent, selection.Ancestor);
+        sel.applySelectionIdTree(selection.getSelectionIdTree());
+        return sel;
+    }
 
-    constructor(count:number, data:SelectionEntry, rse:RosterSelectionData, parent:Selection, ancestor?:PrivateSelection){
+    protected GetAncestor(): Selection {
+        return this.Ancestor;
+    }
+
+    constructor(count:number, data:SelectionEntry, rse:RosterSelectionData, parent:Selection, ancestor?:Selection){
         super(count, data, parent, ancestor);
+        if(!ancestor) this.Ancestor=this;
+        else this.Ancestor=ancestor;
         this.rse = rse;
         this.data = data;
         this.Name = data.Name;
+        this.Profiles = [...data.Profiles];
+        this.Categories = data.Categories;
         if(/(w\/)|(with)/gi.test(this.Name)){
             this.Name = /(?<=(w\/)|(with) ).*/gi.exec(this.Name)[0];
         }
@@ -135,6 +161,51 @@ export class Selection extends PrivateSelection {
             this.getDefaultSelection(data, rse, {SelectionValue:this.SelectionValue});
         } else {
             this.getDefaultSelection(data, rse, {SelectionValue:this.secretSelection});
+        }
+        Each(this.data.ProfileInfoLinks, infoLink=>{
+            this.Profiles.push(rse.GetProfile(infoLink, this.Ancestor));
+        });
+    }
+
+    private getSelectionIdTree():Entry {
+        let entry = new Entry(this.ID, this.Count);
+        Each(this.SelectionValue, sv=>{
+            entry.Children.push(sv.getSelectionIdTree());
+        });
+        return entry;
+    }
+
+    private applySelectionIdTree(entry:Entry) {
+        try{
+            if(this.NoOptions() || this.Type==="group" || this.Type==="unit") {
+                this.Count = entry.Count;
+                console.log(this.Name);
+            } else {
+                while(this.GetValidTypeCount() > entry.Count){
+                    const found = this.Parent.SelectionValue.findIndex(sv=>sv.ID===entry.SelectionID);
+                    this.Parent.SelectionValue.splice(found, 1);
+                }
+                while(this.GetValidTypeCount() < entry.Count){
+                    const found = this.Parent.SelectionValue.find(sv=>sv.ID===entry.SelectionID);
+                    if(found.Count===0) {
+                        found.Count=1;
+                    } else {
+                        this.Parent.SelectionValue.push(Selection.Duplicate(found));
+                    }
+                }
+            }
+            Each(entry.Children, c=>{
+                let found = this.SelectionValue.find(sv=>sv.ID===c.SelectionID);
+                /*if(!found) {
+                    found = new Selection(1, this.rse.GetSelectionFromId(c.SelectionID), this.rse, this, this.Ancestor);
+                    this.SelectionValue.push(found);
+                }*/
+                found.applySelectionIdTree(c);
+            })
+        } catch(e){
+            console.error("Selection Tree Error");
+            console.error(entry.SelectionID);
+            console.error(this.SelectionValue.map(sv=>sv.ID));
         }
     }
 
@@ -146,7 +217,7 @@ export class Selection extends PrivateSelection {
     }
 
     DisplayStats():string{
-        return "";
+        return this.Profiles.map(p=>p.Characteristics.map(c=>c.Value).join(", ")).join("\n");
     }
 
     CanRemove():boolean{
@@ -228,9 +299,7 @@ export class Selection extends PrivateSelection {
                 data = newData;
             }
             let count = 1;
-            if(data.Name==="Paragon Warsuit") console.log("WARSUIT")
-            if((that.Type==="group"||that.Type==="unit")){
-                if(data.Name==="Paragon Warsuit") console.log("Group/unit")
+            if(that.Type==="group"||that.Type==="unit"){
                 const cFound = data.Constraints.find(c=>c.Type==="min");
                 count=cFound?Number(cFound.Value):1;
                 if(!that.Valid()) {
@@ -239,7 +308,6 @@ export class Selection extends PrivateSelection {
                     }
                 }
             } else {
-                if(data.Name==="Paragon Warsuit") console.log("other")
                 count = Math.min(Number(that._getMin()?that._getMax():that.GetMinimumCount(data)), that.GetMaximumCount(data));
             }
             count = (defaultId?(isDefault?count:0):count);
@@ -284,7 +352,7 @@ export class Selection extends PrivateSelection {
         this.debugRec("");
     }
     private debugRec(space:string) {
-        console.debug(space + this.Name + " - " + this.Count + " - " + this.ID);
+        console.debug(space + this.Name + " - " + this.Count + " - " + this.Profiles.length + " - " + this.ID);
         Each(this.SelectionValue, val=>{
             val.debugRec(space+"  ");
         });
@@ -295,7 +363,14 @@ export default class UnitSelection {
     Framework:SelectionEntry;
     Data:Selection;
 
-    constructor(data:SelectionEntry, rse:RosterSelectionData){
+    static Duplicate(selection:UnitSelection):UnitSelection{
+        let sel = new UnitSelection();
+        sel.Framework = selection.Framework;
+        sel.Data = Selection.DeepDuplicate(selection.Data);
+        return sel;
+    }
+
+    Init(data:SelectionEntry, rse:RosterSelectionData){
         if (!data) return;
         this.Framework=data;
         this.Data=new Selection(1, data, rse, null);
