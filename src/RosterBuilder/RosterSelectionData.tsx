@@ -17,14 +17,21 @@ export class DetachmentSelectionData extends SelectionData {
 export class TargetSelectionData extends SelectionData {
     Target:string;
     public CheckMerge:Array<Array<string>>;
+    public Modifiers:Array<Modifier>;
 
     constructor(){
         super();
         this.CheckMerge = new Array<Array<string>>();
+        this.Modifiers = new Array<Modifier>();
     }
 }
 
+export enum ModifierType{
+    COST, MAX
+}
+
 export class Modifier {
+    Type:ModifierType;
     Comparator:string;
     Comparison:number;
     Value:number;
@@ -36,7 +43,7 @@ export class SelectionEntry extends SelectionData {
     ChildrenIDs:Array<string>;
     DefaultSelectionID?:string;
     SubEntries:Array<TargetSelectionData>;
-    CostModifiers:Array<Modifier>;
+    Modifiers:Array<Modifier>;
 
     constructor(){
         super();
@@ -44,7 +51,7 @@ export class SelectionEntry extends SelectionData {
         this.Categories = new Array<string>();
         this.ChildrenIDs = new Array<string>();
         this.SubEntries = new Array<TargetSelectionData>();
-        this.CostModifiers = new Array<Modifier>();
+        this.Modifiers = new Array<Modifier>();
     }
 
     GetVariablesCategory():string{
@@ -88,8 +95,18 @@ export default class RosterSelectionData {
 
     GetTarget(unit:TargetSelectionData):SelectionEntry{
         let found = this.Selections.find(sel=>sel.ID == unit.Target);
-        found.Constraints = [...found.Constraints, ...unit.Constraints]
-        return found;
+        let val = new SelectionEntry();
+        val.Name = found.Name;
+        val.ID = found.ID;
+        val.Type = found.Type;
+        val.Constraints = [...found.Constraints, ...unit.Constraints];
+        val.Categories = found.Categories;
+        val.Cost = found.Cost;
+        val.ChildrenIDs = [...found.ChildrenIDs];
+        val.DefaultSelectionID = found.DefaultSelectionID;
+        val.SubEntries = [...found.SubEntries];
+        val.Modifiers = [...found.Modifiers];
+        return val;
     }
 
     GetChildren(entry:SelectionEntry):Array<SelectionEntry>{

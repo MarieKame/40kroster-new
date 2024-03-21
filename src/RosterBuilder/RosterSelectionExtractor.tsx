@@ -1,5 +1,5 @@
 import fastXMLParser from 'fast-xml-parser';
-import RosterSelectionData, { Constraint, SelectionData, SelectionEntry, TargetSelectionData } from './RosterSelectionData';
+import RosterSelectionData, { Constraint, ModifierType, SelectionData, SelectionEntry, TargetSelectionData } from './RosterSelectionData';
 import Each from '../Components/Each';
 
 export default class RosterSelectionExtractor {
@@ -74,15 +74,22 @@ export default class RosterSelectionExtractor {
                 unitData.Target = entry._targetId;
                 unitData.ID = entry._id;
                 checkForConstaints(entry, unitData);
+                const maxConstraint = unitData.Constraints.find(c=>c.Type==="max");
                 if(entry.modifiers){
                     Each(entry.modifiers.modifier, modifier=>{
                         if(modifier.conditions) {
                             Each(modifier.conditions.condition, condition=>{
                                 if(modifier._value == 0){
                                     unitData.CheckMerge.push([unitData.Target, condition._childId]);
-                                    console.log([unitData.Target, condition._childId]);
+                                }
+                                if(maxConstraint && modifier._field === maxConstraint.ID) {
+                                    unitData.Modifiers.push({Type: ModifierType.MAX, Comparator:condition._type, Comparison:condition._value, Value:modifier._value})
                                 }
                             });
+                        } else {
+                            if(maxConstraint && modifier._field === maxConstraint.ID) {
+                                unitData.Modifiers.push({Type: ModifierType.MAX, Comparator:null, Comparison:null, Value:modifier._value})
+                            }
                         }
                     });
                 }
@@ -148,12 +155,17 @@ export default class RosterSelectionExtractor {
                     });
                 }
                 checkForConstaints(entry, selection);
+                const maxConstraint = selection.Constraints.find(c=>c.Type==="max");
                 if(entry.modifiers){
                     Each(entry.modifiers.modifier, modifier=>{
                         if(modifier.conditions) {
                             Each(modifier.conditions.condition, condition=>{
                                 if(modifier._field === costId) {
-                                    selection.CostModifiers.push({Comparator:condition._type, Comparison:condition._value, Value:modifier._value});
+                                    console.log(entry._name)
+                                    selection.Modifiers.push({Type: ModifierType.COST, Comparator:condition._type, Comparison:condition._value, Value:modifier._value});
+                                }
+                                if(maxConstraint && modifier._field === maxConstraint.ID) {
+                                    selection.Modifiers.push({Type: ModifierType.MAX, Comparator:condition._type, Comparison:condition._value, Value:modifier._value})
                                 }
                             });
                         }

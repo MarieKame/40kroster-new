@@ -19,6 +19,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 class props{
     navigation:{goBack}
 }
+const COLUMN_WIDTH = Variables.width * 0.55;
 export default class BuilderMenu extends Component<props> {
     static contextType = KameContext; 
     declare context: React.ContextType<typeof KameContext>;
@@ -30,7 +31,7 @@ export default class BuilderMenu extends Component<props> {
         rosterSelectionData:new RosterSelectionData(),
         units:new Array<UnitSelection>(),
         detachmentSelection:new UnitSelection(null, null),
-        addColumnWidth:Variables.width/2,
+        addColumnWidth:COLUMN_WIDTH,
         currentUnit:-2,
         update:0
     }
@@ -101,20 +102,20 @@ export default class BuilderMenu extends Component<props> {
         return null;
     }
 
-    DisplayUpgrade(selection:Selection, options:Array<SelectionEntry|TargetSelectionData>, count:number):ReactNode{
+    DisplayUpgrade(selection:Selection, options:Array<SelectionEntry|TargetSelectionData>, count:number, index:number):ReactNode{
         if(selection.Count===0) return null;
-        return <View>
+        return <View key={index}>
             <Button small={true} disabled={options.length==count} style={{height:20}} textStyle={{color:this.context.Dark}}>{selection.Name}{this.DisplayValidity(selection)}</Button>
             <Text>{selection.DisplayStats()}</Text>
         </View>;
     }
 
-    DisplayGroup(selection:Selection, colour:string, textColour:string):ReactNode{
-        return <Text style={{backgroundColor:colour, color:textColour}} key={selection.Name + selection.Count}>{selection.Name}{selection.GetSelectionCount()!==1&&selection.DisplayCount()}{this.DisplayValidity(selection)}</Text>
+    DisplayGroup(selection:Selection, colour:string, textColour:string, index:number):ReactNode{
+        return <Text style={{backgroundColor:colour, color:textColour}} key={selection.Name + selection.Count + index}>{selection.Name}{selection.GetSelectionCount()!==1&&selection.DisplayCount()}{this.DisplayValidity(selection)}</Text>
     }
 
-    DisplayModel(selection:Selection, colour:string, textColour:string):ReactNode{
-        return <View style={{flexDirection:"row", backgroundColor:colour, height:20, alignItems:"center"}} key={selection.Name + selection.Count}>
+    DisplayModel(selection:Selection, colour:string, textColour:string, index:number):ReactNode{
+        return <View style={{flexDirection:"row", backgroundColor:colour, height:20, alignItems:"center"}} key={selection.Name + selection.Count + index}>
             <Text style={{flexGrow:1, color:textColour}}>{selection.Name}{selection.DisplayCount()}{this.DisplayValidity(selection)}</Text>
             {selection.Changeable()&&<Button small disabled={!selection.CanRemove()} onPress={e=>selection.Remove(this)} style={{height:20, width:40}} textStyle={{fontSize:Variables.fontSize.small}}>-</Button>}
             {selection.Changeable()&&<Button small disabled={!selection.CanAdd()} onPress={e=>selection.Add(this)} style={{height:20, width:40}} textStyle={{fontSize:Variables.fontSize.small}}>+</Button>}
@@ -133,12 +134,12 @@ export default class BuilderMenu extends Component<props> {
         Each(selection.SelectionValue, sel=>{
             const valid = sel.Valid();
             if(sel.Type=="model"){
-                value.push(this.DisplayModel(sel, valid?colour:this.context.Main, !valid?this.context.LightAccent:this.context.Dark));
+                value.push(this.DisplayModel(sel, valid?colour:this.context.Main, !valid?this.context.LightAccent:this.context.Dark, currentIndex++));
                 skip = sel.Count == 0;
             } else if(sel.Type=="group"){
-                value.push(this.DisplayGroup(sel, valid?colour:this.context.Main, !valid?this.context.LightAccent:this.context.Dark));
+                value.push(this.DisplayGroup(sel, valid?colour:this.context.Main, !valid?this.context.LightAccent:this.context.Dark, currentIndex++));
             } else if(sel.Type=="upgrade"){
-                value.push(this.DisplayUpgrade(sel, children, selection.GetSelectionCount()));
+                value.push(this.DisplayUpgrade(sel, children, selection.GetSelectionCount(), currentIndex++));
             } else {
                 console.error("ERROR, missing selection display for type : ");
                 console.error(sel.Type);
@@ -167,7 +168,7 @@ export default class BuilderMenu extends Component<props> {
                 if(this.state.phase === BuildPhase.EQUIP) {
                     LayoutAnimation.configureNext({duration:500});
                     LayoutAnimation.easeInEaseOut();
-                    that.setState({addColumnWidth: Variables.width/2});
+                    that.setState({addColumnWidth: COLUMN_WIDTH});
                 }
                 that.setState({phase:BuildPhase.ADD, currentUnit:-2});
             }} >X</Button>
@@ -295,10 +296,10 @@ export default class BuilderMenu extends Component<props> {
                 contents= <View>
                     <View style={{flexDirection:"row"}}>
                         <View style={{width: this.state.addColumnWidth, overflow:"hidden", marginRight:10}}>
-                            <FlatList style={{minWidth:Variables.width/2}} numColumns={1} data={this.state.rosterSelectionData.Units} renderItem={render=>this.renderUnitSelection(render, this)} />
+                            <FlatList style={{minWidth:COLUMN_WIDTH}} numColumns={1} data={this.state.rosterSelectionData.Units} renderItem={render=>this.renderUnitSelection(render, this)} />
                         </View>
                         <FlatList key={this.state.update} numColumns={1} data={[this.state.detachmentSelection, ...this.state.units]} renderItem={render=>this.renderRoster(render, this)} />
-                        <View style={{width: (Variables.width/2-this.state.addColumnWidth), overflow:"hidden"}}>
+                        <View style={{width: (COLUMN_WIDTH-this.state.addColumnWidth), overflow:"hidden"}}>
                             {this.DisplayUnitSelections()}
                         </View>
                     </View>
