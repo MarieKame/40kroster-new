@@ -1,9 +1,9 @@
 import Each from "../Components/Each";
 import BuilderMenu from "./BuilderMenu";
-import RosterSelectionData, { Constraint, SelectionEntry, TargetSelectionData, Modifier, ModifierType, ProfileData } from "./RosterSelectionData";
+import { ProfilesDisplayData } from "./ProfilesDisplay";
+import RosterSelectionData, { Constraint, SelectionEntry, TargetSelectionData, Modifier, ModifierType, ProfileData, InfoLink } from "./RosterSelectionData";
 
 function Compare(modifier:Modifier, value:number):boolean{
-    console.log(modifier);
     if(modifier.Comparator=="atLeast") return value >= modifier.Comparison;
     if(modifier.Comparator=="atMost") return value < modifier.Comparison;
     return true;
@@ -23,6 +23,7 @@ abstract class PrivateSelection {
     ID:string;
 
     constructor(count:number, data:SelectionEntry, parent:Selection, ancestor?:PrivateSelection){
+        if(!data) return;
         this.Constraints = data.Constraints;
         this.modifiers = data.Modifiers;
         this.ID = data.ID;
@@ -83,6 +84,21 @@ abstract class PrivateSelection {
         return noOption;
     }
 
+    private getModelSelections():Array<PrivateSelection>{
+        let selections = new Array<PrivateSelection>();
+        if(this.Type==="model"){
+            selections.push(this);
+        }
+        Each<Selection>(this.SelectionValue, sv=>{
+            selections = [...selections, ...sv.getModelSelections()];
+        })
+        return selections;
+    }
+
+    GetModelCount():number{
+        return this.getModelSelections().map(model=>model.getValidTypeCount()).reduce((sum, current)=> sum+current, 0);
+    }
+
     Valid(adding:number=0):boolean{
         let valid=true;
         const count = this.GetValidTypeCount() + adding;
@@ -119,7 +135,7 @@ class Entry{
     }
 }
 
-export class Selection extends PrivateSelection {
+export default class Selection extends PrivateSelection {
     Name:string;
     Stats:Array<string>;
     Profiles:Array<ProfileData>;
@@ -128,6 +144,7 @@ export class Selection extends PrivateSelection {
     private secretSelection:Array<Selection>;
 
     private data:SelectionEntry;
+    private combinedFramework:Array<SelectionEntry>;
     private rse:RosterSelectionData;
 
     private static merging:Array<{ID:string, Selection:Selection}> = new Array<{ID:string, Selection:Selection}>();
@@ -139,6 +156,11 @@ export class Selection extends PrivateSelection {
         sel.applySelectionIdTree(selection.getSelectionIdTree());
         return sel;
     }
+    static Init(data:SelectionEntry, rse:RosterSelectionData) : Selection{
+        if (!data) return;
+        return new Selection(1, data, rse, null);
+        //this.Data.Debug();
+    }
 
     protected GetAncestor(): Selection {
         return this.Ancestor;
@@ -146,10 +168,12 @@ export class Selection extends PrivateSelection {
 
     constructor(count:number, data:SelectionEntry, rse:RosterSelectionData, parent:Selection, ancestor?:Selection){
         super(count, data, parent, ancestor);
+        if(!data) return;
         if(!ancestor) this.Ancestor=this;
         else this.Ancestor=ancestor;
         this.rse = rse;
         this.data = data;
+        this.combinedFramework = new Array<SelectionEntry>();
         this.Name = data.Name;
         this.Profiles = [...data.Profiles];
         this.Categories = data.Categories;
@@ -162,7 +186,7 @@ export class Selection extends PrivateSelection {
         } else {
             this.getDefaultSelection(data, rse, {SelectionValue:this.secretSelection});
         }
-        Each(this.data.ProfileInfoLinks, infoLink=>{
+        Each<InfoLink>(this.data.ProfileInfoLinks, infoLink=>{
             this.Profiles.push(rse.GetProfile(infoLink, this.Ancestor));
         });
     }
@@ -179,7 +203,6 @@ export class Selection extends PrivateSelection {
         try{
             if(this.NoOptions() || this.Type==="group" || this.Type==="unit") {
                 this.Count = entry.Count;
-                console.log(this.Name);
             } else {
                 while(this.GetValidTypeCount() > entry.Count){
                     const found = this.Parent.SelectionValue.findIndex(sv=>sv.ID===entry.SelectionID);
@@ -195,18 +218,29 @@ export class Selection extends PrivateSelection {
                 }
             }
             Each(entry.Children, c=>{
-                let found = this.SelectionValue.find(sv=>sv.ID===c.SelectionID);
-                /*if(!found) {
-                    found = new Selection(1, this.rse.GetSelectionFromId(c.SelectionID), this.rse, this, this.Ancestor);
-                    this.SelectionValue.push(found);
-                }*/
-                found.applySelectionIdTree(c);
+                this.SelectionValue.find(sv=>sv.ID===c.SelectionID).applySelectionIdTree(c);
             })
         } catch(e){
             console.error("Selection Tree Error");
             console.error(entry.SelectionID);
             console.error(this.SelectionValue.map(sv=>sv.ID));
         }
+    }
+
+    GetVariablesCategoryIndex():number{
+        return this.data.GetVariablesCategoryIndex();
+    }
+
+    GetFrameworkCategories():SelectionEntry{
+        return this.data;
+    }
+    GetFrameworkCost():number{
+        return this.data.Cost;
+    }
+
+    ReplaceWith(id:string){
+        this.Count=0;
+        this.Parent.SelectionValue.find(sv=>sv.ID===id).Count=1;
     }
 
     DisplayCount():string{
@@ -216,16 +250,30 @@ export class Selection extends PrivateSelection {
         return ((this.Type==="group" || this.Changeable())? " - " + this.GetValidTypeCount() + " [ " + (min!==null?(min+" ~ "):"") + this._getMax() +  " ]":"");
     }
 
-    DisplayStats():string{
-        return this.Profiles.map(p=>p.Characteristics.map(c=>c.Value).join(", ")).join("\n");
+    private mergeConstraints(data:ProfileData, extraConstraints:Array<Constraint>):ProfileData {
+        let pd = new ProfileData();
+        pd.Categories = data.Categories;
+        pd.Characteristics = data.Characteristics;
+        pd.Constraints = [...data.Constraints, ...extraConstraints];
+        pd.Name = data.Name;
+        pd.ID = data.ID;
+        pd.Type = data.Type;
+        return pd;
+    }
+    DisplayStats():ProfilesDisplayData|Array<ProfilesDisplayData>{
+        if(this.secretSelection.length>0){
+            return this.secretSelection.map<ProfilesDisplayData>(s=> new ProfilesDisplayData(s.Profiles.map(s2=>this.mergeConstraints(s2, s.Constraints))));
+        } else {
+            return new ProfilesDisplayData(this.Profiles.map(s=>this.mergeConstraints(s, this.Constraints)));
+        }
     }
 
     CanRemove():boolean{
-        return this.Count > this._getMin();
+        return this.GetValidTypeCount() > this._getMin();
     }
 
     CanAdd():boolean{
-        return this.GetLocalOrParentCount() < this._getMaxPossible();
+        return this.GetValidTypeCount() < this._getMaxPossible();
     }
     
     Changeable():boolean{
@@ -333,7 +381,6 @@ export class Selection extends PrivateSelection {
                     }
                     current.SelectionValue.push(sel);
                 } else {
-                    if(data.Name==="Paragon Warsuit") console.log("here???")
                     sel.Count=1;
                     for(let i= 0; i != count; i++){
                         current.SelectionValue.push(Selection.Duplicate(sel)); // TODO: make sure this is a copy, not the same object
@@ -356,24 +403,5 @@ export class Selection extends PrivateSelection {
         Each(this.SelectionValue, val=>{
             val.debugRec(space+"  ");
         });
-    }
-}
-
-export default class UnitSelection {
-    Framework:SelectionEntry;
-    Data:Selection;
-
-    static Duplicate(selection:UnitSelection):UnitSelection{
-        let sel = new UnitSelection();
-        sel.Framework = selection.Framework;
-        sel.Data = Selection.DeepDuplicate(selection.Data);
-        return sel;
-    }
-
-    Init(data:SelectionEntry, rse:RosterSelectionData){
-        if (!data) return;
-        this.Framework=data;
-        this.Data=new Selection(1, data, rse, null);
-        this.Data.Debug();
     }
 }

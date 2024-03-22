@@ -215,6 +215,7 @@ export default class RosterSelectionExtractor {
                 Each(profile.characteristics.characteristic, c=>{
                     profileData.Characteristics.push({Name:c._name, ID:c._typeId, Value:c.textValue});
                 });
+                checkForConstaints(profile, profileData);
                 return profileData;
             }
             function* generateSharedProfiles(profile, rse:RosterSelectionExtractor){

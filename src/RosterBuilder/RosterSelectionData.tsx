@@ -1,14 +1,18 @@
 import Each from "../Components/Each";
 import Variables from "../Variables";
-import {Selection} from './UnitSelection';
+import Selection from './UnitSelection';
 
-export class SelectionData{
+class SelectionDataBase {
     Name:string;
     ID:string;
     Type:string;
+}
+
+export class SelectionData extends SelectionDataBase {
     Constraints:Array<Constraint>;
     Categories:Array<string>;
     constructor(){
+        super();
         this.Constraints = new Array<Constraint>();
         this.Categories = new Array<string>();
     }
@@ -47,12 +51,11 @@ export class Characteristic {
     Value:string;
 }
 
-export class ProfileData{
-    Name:string;
-    ID:string;
+export class ProfileData extends SelectionData {
     Characteristics:Array<Characteristic>;
 
     constructor(){
+        super();
         this.Characteristics = new Array<Characteristic>();
     }
 }
@@ -99,7 +102,7 @@ export class SelectionEntry extends SelectionData {
     }
 }
 
-export class Constraint extends SelectionData {
+export class Constraint extends SelectionDataBase {
     Scope:string;
     Value:string;
     Shared:boolean;
@@ -125,6 +128,7 @@ export default class RosterSelectionData {
         let profileData = new ProfileData();
         const found = this.Profiles.find(p=>p.ID === info.Target);
         profileData.Characteristics = [...found.Characteristics];
+        profileData.Constraints = [...found.Constraints];
         profileData.ID = found.ID;
         profileData.Name = found.Name;
         Each(info.Modifiers.filter(m=>m.Type===ModifierType.CHARACTERISTIC), modifier=>{
@@ -142,30 +146,30 @@ export default class RosterSelectionData {
         return profileData;
     }
 
-    GetTarget(unit:TargetSelectionData):SelectionEntry{
-        let found = this.Selections.find(sel=>sel.ID == unit.Target);
+    private duplicateSelectionEntry(selectionEntry:SelectionEntry, extraConstraints:Array<Constraint>):SelectionEntry {
+        if(!selectionEntry) return null;
         let val = new SelectionEntry();
-        val.Name = found.Name;
-        val.ID = found.ID;
-        val.Type = found.Type;
-        val.Constraints = [...found.Constraints, ...unit.Constraints];
-        val.Categories = found.Categories;
-        val.Cost = found.Cost;
-        val.ChildrenIDs = [...found.ChildrenIDs];
-        val.DefaultSelectionID = found.DefaultSelectionID;
-        val.SubEntries = [...found.SubEntries];
-        val.Modifiers = [...found.Modifiers];
-        val.Profiles = [...found.Profiles];
-        val.ProfileInfoLinks = [...found.ProfileInfoLinks];
+        val.Name = selectionEntry.Name;
+        val.ID = selectionEntry.ID;
+        val.Type = selectionEntry.Type;
+        val.Constraints = [...selectionEntry.Constraints, ...extraConstraints];
+        val.Categories = selectionEntry.Categories;
+        val.Cost = selectionEntry.Cost;
+        val.ChildrenIDs = [...selectionEntry.ChildrenIDs];
+        val.DefaultSelectionID = selectionEntry.DefaultSelectionID;
+        val.SubEntries = [...selectionEntry.SubEntries];
+        val.Modifiers = [...selectionEntry.Modifiers];
+        val.Profiles = [...selectionEntry.Profiles];
+        val.ProfileInfoLinks = [...selectionEntry.ProfileInfoLinks];
         return val;
+    }
+
+    GetTarget(target:TargetSelectionData):SelectionEntry{
+        return this.duplicateSelectionEntry(this.Selections.find(sel=>sel.ID == target.Target), target.Constraints);
     }
 
     GetChildren(entry:SelectionEntry):Array<SelectionEntry>{
         return this.Selections.filter(selection=>entry.ChildrenIDs.find(id=>id===selection.ID));
-    }
-
-    GetSubEntry(target:TargetSelectionData):SelectionEntry{
-        return this.Selections.find(selection=>target.Target===selection.ID);
     }
 
     GetCombinedChildrenAndSubEntries(entry:SelectionEntry):Array<SelectionEntry|TargetSelectionData> {

@@ -1,5 +1,5 @@
 import { Component, ReactNode } from "react";
-import { Animated, LayoutAnimation, ListRenderItemInfo, Pressable, View } from "react-native";
+import { LayoutAnimation, ListRenderItemInfo, Pressable, View } from "react-native";
 import Variables from "../Variables";
 import { FlatList, GestureHandlerRootView, ScrollView } from "react-native-gesture-handler";
 import Text from '../Components/Text';
@@ -8,8 +8,9 @@ import { KameContext } from "../../Style/KameContext";
 import * as FileSystem from 'expo-file-system';
 import RosterSelectionExtractor from "./RosterSelectionExtractor";
 import RosterSelectionData, { Constraint, SelectionData, SelectionEntry, TargetSelectionData } from "./RosterSelectionData";
-import UnitSelection, {Selection} from "./UnitSelection";
+import Selection from "./UnitSelection";
 import Each from "../Components/Each";
+import ProfilesDisplay from "./ProfilesDisplay";
 
 enum BuildPhase{
     FACTION, LOADING, LOADING_ERROR, ADD, EQUIP
@@ -29,11 +30,13 @@ export default class BuilderMenu extends Component<props> {
         loadingText:"",
         progress:"",
         rosterSelectionData:new RosterSelectionData(),
-        units:new Array<UnitSelection>(),
-        detachmentSelection:new UnitSelection(),
+        units:new Array<Selection>(),
+        detachmentSelection:Selection.Init(null, null),
         addColumnWidth:COLUMN_WIDTH,
         currentUnit:-2,
-        update:0
+        update:0,
+        editWeapon:false,
+        editingWeapon:new Selection(1, null, null, null, null)
     }
 
     ErrorLoadingRosterFile(that:BuilderMenu){
@@ -66,9 +69,7 @@ export default class BuilderMenu extends Component<props> {
                 if (contents) {
                     new RosterSelectionExtractor(contents, (progress:string, cont, rse:RosterSelectionData, data?:RosterSelectionData)=>{
                         if (data){
-                            let detachment = new UnitSelection();
-                            detachment.Init(data.DetachmentChoice, data);
-                            that.setState({phase:BuildPhase.ADD, rosterSelectionData:data, progress:progress, detachmentSelection:detachment})
+                            that.setState({phase:BuildPhase.ADD, rosterSelectionData:data, progress:progress, detachmentSelection:Selection.Init(data.DetachmentChoice, data)})
                         } else {
                             that.setState({progress:progress}, ()=>this.cont(rse, cont));
                         }
@@ -84,17 +85,16 @@ export default class BuilderMenu extends Component<props> {
 
     AddUnitToRoster(unit:TargetSelectionData, that:BuilderMenu){
         let units = [...that.state.units];
-        let sel = new UnitSelection()
-        sel.Init(that.state.rosterSelectionData.GetTarget(unit), that.state.rosterSelectionData);
+        let sel = Selection.Init(that.state.rosterSelectionData.GetTarget(unit), that.state.rosterSelectionData)
         units.push(sel);
         that.setState({units:units.sort((unit1, unit2)=>{
-            return unit1.Framework.GetVariablesCategoryIndex() - unit2.Framework.GetVariablesCategoryIndex();
+            return unit1.GetVariablesCategoryIndex() - unit2.GetVariablesCategoryIndex();
         })});
     }
 
     CanAddMore(unit:Selection|SelectionData|TargetSelectionData):boolean{
         if(unit instanceof TargetSelectionData) unit=this.state.rosterSelectionData.GetTarget(unit);
-        const count = this.state.units.filter(u=>u.Data.ID===unit.ID).length;
+        const count = this.state.units.filter(u=>u.ID===unit.ID).length;
         let max= 3;
         if(unit.Categories.find(c=>c==="Epic Hero"))
             max= 1;
@@ -105,7 +105,7 @@ export default class BuilderMenu extends Component<props> {
 
     DuplicateUnit(index:number, that:BuilderMenu) {
         let units = that.state.units;
-        units.push(UnitSelection.Duplicate(units[index]))
+        units.push(Selection.DeepDuplicate(units[index]))
         that.setState({units:units});
     }
 
@@ -113,6 +113,11 @@ export default class BuilderMenu extends Component<props> {
         let units = that.state.units;
         units.splice(index, 1);
         that.setState({units:units});
+    }
+
+    ReplaceWeapon(id:string){
+        this.state.editingWeapon.ReplaceWith(id);
+        this.setState({editWeapon:false, editingWeapon:null, editingFramework:null});
     }
 
     /////////////////////////////////////////////////////////
@@ -123,49 +128,57 @@ export default class BuilderMenu extends Component<props> {
         return null;
     }
 
-    DisplayUpgrade(selection:Selection, options:Array<SelectionEntry|TargetSelectionData>, count:number, index:number):ReactNode{
+    DisplayUpgrade(selection:Selection, index:number):ReactNode{
         if(selection.Count===0) return null;
+        console.log(selection.Name);
+        console.log(selection.Parent.SelectionValue.length);
+        console.log(selection.Parent.GetSelectionCount());
         return <View key={index}>
-            <Button small={true} disabled={options.length==count} style={{height:20}} textStyle={{color:this.context.Dark}}>{selection.Name}{this.DisplayValidity(selection)}</Button>
-            <Text>{selection.DisplayStats()}</Text>
+            <Button 
+                small={true} 
+                disabled={selection.Parent.GetSelectionCount()===selection.Parent.SelectionValue.length} 
+                style={{height:20}} 
+                textStyle={{color:this.context.Dark}} 
+                onPress={e=>this.setState({editWeapon:true, editingWeapon:selection})}>
+                    {selection.Name}{this.DisplayValidity(selection)}
+                </Button>
+            <ProfilesDisplay Data={selection.DisplayStats()} key={index} Small />
         </View>;
     }
 
-    DisplayGroup(selection:Selection, colour:string, textColour:string, index:number):ReactNode{
-        return <Text style={{backgroundColor:colour, color:textColour}} key={selection.Name + selection.Count + index}>{selection.Name}{selection.GetSelectionCount()!==1&&selection.DisplayCount()}{this.DisplayValidity(selection)}</Text>
+    DisplayGroup(selection:Selection, colour:string, textColour:string, index:number, marginTop:number):ReactNode{
+        return <Text style={{backgroundColor:colour, color:textColour, marginTop:marginTop}} key={selection.Name + selection.Count + index}>{selection.Name}{selection.GetSelectionCount()!==1&&selection.DisplayCount()}{this.DisplayValidity(selection)}</Text>
     }
 
-    DisplayModel(selection:Selection, colour:string, textColour:string, index:number):ReactNode{
-        return <View style={{flexDirection:"row", backgroundColor:colour, height:20, alignItems:"center"}} key={selection.Name + selection.Count + index}>
+    DisplayModel(selection:Selection, colour:string, textColour:string, index:number, marginTop:number):ReactNode{
+        return <View style={{flexDirection:"row", backgroundColor:colour, height:20, alignItems:"center", marginTop:marginTop}} key={selection.Name + selection.Count + index}>
             <Text style={{flexGrow:1, color:textColour}}>{selection.Name}{selection.DisplayCount()}{this.DisplayValidity(selection)}</Text>
             {selection.Changeable()&&<Button small disabled={!selection.CanRemove()} onPress={e=>selection.Remove(this)} style={{height:20, width:40}} textStyle={{fontSize:Variables.fontSize.small}}>-</Button>}
             {selection.Changeable()&&<Button small disabled={!selection.CanAdd()} onPress={e=>selection.Add(this)} style={{height:20, width:40}} textStyle={{fontSize:Variables.fontSize.small}}>+</Button>}
         </View>;
     }
 
-    ViewSelectionRecursive(selection:Selection, framework?:SelectionEntry|TargetSelectionData, index:number=1, depth:number=1){
-        if (!framework) return null;
-        if (framework instanceof TargetSelectionData) framework= this.state.rosterSelectionData.GetTarget(framework);
+    ViewSelectionRecursive(selection:Selection, index:number=1, depth:number=1){
+        if (!selection) return null;
         let currentIndex = index;
 
-        let children = this.state.rosterSelectionData.GetCombinedChildrenAndSubEntries(framework);
         let value=[];
         let skip = false;
         const colour = depth==1?this.context.Accent:(depth==2?this.context.LightAccent:null);
-        Each(selection.SelectionValue, sel=>{
-            const valid = sel.Valid();
-            if(sel.Type=="model"){
-                value.push(this.DisplayModel(sel, valid?colour:this.context.Main, !valid?this.context.LightAccent:this.context.Dark, currentIndex++));
-                skip = sel.Count == 0;
-            } else if(sel.Type=="group"){
-                value.push(this.DisplayGroup(sel, valid?colour:this.context.Main, !valid?this.context.LightAccent:this.context.Dark, currentIndex++));
-            } else if(sel.Type=="upgrade"){
-                value.push(this.DisplayUpgrade(sel, children, selection.GetSelectionCount(), currentIndex++));
+        Each<Selection>(selection.SelectionValue, (child, index)=>{
+            const valid = child.Valid();
+            if(child.Type=="model"){
+                value.push(this.DisplayModel(child, valid?colour:this.context.Main, !valid?this.context.LightAccent:this.context.Dark, currentIndex++, index===0?0:30));
+                skip = child.Count == 0;
+            } else if(child.Type=="group"){
+                value.push(this.DisplayGroup(child, valid?colour:this.context.Main, !valid?this.context.LightAccent:this.context.Dark, currentIndex++, index===0?0:(child.GetModelCount()!==0?30:0)));
+            } else if(child.Type=="upgrade"){
+                value.push(this.DisplayUpgrade(child, currentIndex++));
             } else {
                 console.error("ERROR, missing selection display for type : ");
-                console.error(sel.Type);
+                console.error(child.Type);
             }
-            if(!skip) value.push(this.ViewSelectionRecursive(sel, this.state.rosterSelectionData.GetSelectionFromId(sel.ID), currentIndex++, depth+1));
+            if(!skip) value.push(this.ViewSelectionRecursive(child, currentIndex++, depth+1));
         });
 
         return <View key={this.state.currentUnit + selection.Name + currentIndex + this.state.update} style={{flexGrow:1, width:"100%", paddingLeft:6}}>
@@ -180,10 +193,10 @@ export default class BuilderMenu extends Component<props> {
         return <View style={{height:"100%", backgroundColor:this.context.Bg, marginLeft:10}}>
             <ScrollView>
                 <View key="title" style={{height:38}}>
-                    <Text key="name" style={{alignSelf:"center"}}>{unit.Data.Name}</Text>
-                    <Text key="pts" style={{alignSelf:"center"}}>{unit.Data.GetCost() + " pts"}</Text>
+                    <Text key="name" style={{alignSelf:"center"}}>{unit.Name}</Text>
+                    <Text key="pts" style={{alignSelf:"center"}}>{unit.GetCost() + " pts"}</Text>
                 </View>
-                {this.ViewSelectionRecursive(unit.Data, unit.Framework)}
+                {this.ViewSelectionRecursive(unit)}
             </ScrollView>
             <Button style={{position:"absolute", top:0, right:0}} onPress={e=>{
                 if(this.state.phase === BuildPhase.EQUIP) {
@@ -201,7 +214,7 @@ export default class BuilderMenu extends Component<props> {
     }
 
     rosterCategory;
-    renderRoster(render:ListRenderItemInfo<UnitSelection>, that:BuilderMenu){
+    renderRoster(render:ListRenderItemInfo<Selection>, that:BuilderMenu){
         function newCategory(entry:SelectionEntry):boolean{
             if (entry) {
                 const cat = entry.GetVariablesCategory();
@@ -217,8 +230,8 @@ export default class BuilderMenu extends Component<props> {
             return this.rosterCategory;
         }
         if(this.state.units.length == 0) return null;
-        return <View key={render.item.Data.Name+this.state.update}>
-            {newCategory(render.item.Framework)&&
+        return <View key={render.item.Name+this.state.update}>
+            {newCategory(render.item.GetFrameworkCategories())&&
                 <View style={{alignItems:"center", justifyContent:"center", backgroundColor:this.context.Accent, width:"100%"}}>
                     <Text>{getCategory()}</Text>
                 </View>
@@ -232,9 +245,16 @@ export default class BuilderMenu extends Component<props> {
                     that.setState({phase:BuildPhase.EQUIP, currentUnit:render.index-1}); 
                     }}>
                 <View style={{flexDirection:"row", backgroundColor:render.index==this.state.currentUnit+1?this.context.LightAccent:this.context.Bg, borderBottomColor:this.context.LightAccent, borderWidth:1, height:40}}>
-                    <Text style={{alignSelf:"center", flexGrow:1, marginLeft:4}}>{render.item.Data.Name}{render.item.Framework.Cost>0&&" ("+render.item.Data.GetCost()+")"}{this.DisplayValidity(render.item.Data, true)}</Text>
-                    {(render.item.Framework.Cost>0&&this.state.phase!==BuildPhase.EQUIP&&this.CanAddMore(render.item.Data))&&<Button onPress={e=>this.DuplicateUnit(render.index-1, this)} textStyle={{fontSize:10}} style={{width:44}} weight="light">x2</Button>}
-                    {(render.item.Framework.Cost>0&&this.state.phase!==BuildPhase.EQUIP)&&<Button onPress={e=>this.DeleteUnit(render.index-1, this)} textStyle={{fontSize:12}} style={{width:44}} weight="light">🗑</Button>}
+                    <View key="box" style={{alignSelf:"center", flexGrow:1, marginLeft:4}}>
+                        <Text>{render.item.Name}</Text>
+                        <Text>
+                            {render.item.GetFrameworkCost()>0&&render.item.GetCost()+" pts"}
+                            {render.item.GetFrameworkCost()>0&&" — "+render.item.GetModelCount()+" models"}
+                            {this.DisplayValidity(render.item, true)}
+                        </Text>
+                    </View>
+                    {(render.item.GetFrameworkCost()>0&&this.state.phase!==BuildPhase.EQUIP&&this.CanAddMore(render.item))&&<Button key="x2" onPress={e=>this.DuplicateUnit(render.index-1, this)} textStyle={{fontSize:10}} style={{width:40}} small weight="light">x2</Button>}
+                    {(render.item.GetFrameworkCost()>0&&this.state.phase!==BuildPhase.EQUIP)&&<Button key="-" onPress={e=>this.DeleteUnit(render.index-1, this)} textStyle={{fontSize:12}} style={{width:40}} small weight="light">🗑</Button>}
                 </View>
             </Pressable>
         </View>;
@@ -321,14 +341,29 @@ export default class BuilderMenu extends Component<props> {
                             <FlatList style={{minWidth:COLUMN_WIDTH}} numColumns={1} data={this.state.rosterSelectionData.Units} renderItem={render=>this.renderUnitSelection(render, this)} />
                         </View>
                         <FlatList key={this.state.update} numColumns={1} data={[this.state.detachmentSelection, ...this.state.units]} renderItem={render=>this.renderRoster(render, this)} />
-                        <View style={{width: (COLUMN_WIDTH-this.state.addColumnWidth), overflow:"hidden"}}>
+                        <View style={{width: (COLUMN_WIDTH-this.state.addColumnWidth)*1.3, overflow:"hidden"}}>
                             {this.DisplayUnitSelections()}
                         </View>
                     </View>
                 </View>
                 break;
         }
+        let overlay;
+        if(this.state.editWeapon){
+            console.log(this.state.editingWeapon.Parent.SelectionValue.map(s=>s.ID));
+            overlay = <View style={{height:Variables.height, width:Variables.width, position:"absolute", backgroundColor:"rgba(0,0,0,0.6)", justifyContent: 'center', alignItems: 'center', zIndex:1000}}>
+            <View style={{backgroundColor:this.context.Bg, position:"absolute", padding:10, borderColor:this.context.Accent, borderWidth:1, borderRadius:Variables.boxBorderRadius}}>
+                {this.state.editingWeapon.Parent.SelectionValue.map((option, index)=>
+                    <View key={option.Name} style={{flexDirection:"row"}}>
+                        <Button onPress={e=>this.ReplaceWeapon(option.ID)}>{option.Name}</Button>
+                        <ProfilesDisplay Data={option.DisplayStats()} key={index} />
+                    </View>
+                )}
+            </View>
+        </View>
+        }
         return <GestureHandlerRootView>
+                <View key="overlay">{overlay}</View>
                 <View style={{padding:10, marginBottom:110}}>{this.ShowMenu()}{contents}</View>
             </GestureHandlerRootView>;
     }
