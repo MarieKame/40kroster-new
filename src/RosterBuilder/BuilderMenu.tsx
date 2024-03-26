@@ -7,12 +7,15 @@ import Button from "../Components/Button";
 import { KameContext } from "../../Style/KameContext";
 import * as FileSystem from 'expo-file-system';
 import RosterSelectionExtractor from "./RosterSelectionExtractor";
-import RosterSelectionData, { Constraint, ProfileData, SelectionData, SelectionEntry, TargetSelectionData } from "./RosterSelectionData";
+import RosterSelectionData, { Characteristic, Constraint, ProfileData, SelectionData, SelectionEntry, TargetSelectionData } from "./RosterSelectionData";
 import Selection from "./UnitSelection";
 import Each from "../Components/Each";
 import ProfilesDisplay, { ProfilesDisplayData } from "./ProfilesDisplay";
 import Checkbox from "../Components/Checkbox";
 import AutoExpandingTextInput from "../Components/AutoExpandingTextInput";
+import { PopupOption } from "../Components/Popup";
+import RosterRaw, { DebugRosterRaw, DescriptorRaw, LeaderDataRaw, ModelRaw, NoteRaw, UnitRaw, WeaponRaw } from "../Roster/RosterRaw";
+import { LeaderData } from "../RosterView/UnitData";
 
 enum BuildPhase{
     FACTION, LOADING, LOADING_ERROR, ADD, EQUIP
@@ -21,6 +24,7 @@ enum BuildPhase{
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 class props{
     navigation:{goBack}
+    Popup:(question:string, options:Array<PopupOption>,def:string)=>void
 }
 const COLUMN_WIDTH = Variables.width * 0.50;
 export default class BuilderMenu extends Component<props> {
@@ -31,6 +35,7 @@ export default class BuilderMenu extends Component<props> {
         phase:BuildPhase.FACTION,
         loadingText:"",
         progress:"",
+        catalogueId:"",
         rosterSelectionData:new RosterSelectionData(),
         units:new Array<Selection>(),
         detachmentSelection:Selection.Init(null, null),
@@ -56,9 +61,9 @@ export default class BuilderMenu extends Component<props> {
         cont(rse);
     }
 
-    LoadRosterSelectionFile(name:string, url:string){
+    LoadRosterSelectionFile(name:string, url:string, catalogueId:string){
         const that = this;
-        this.setState({phase:BuildPhase.LOADING, loadingText:"Downloading Latest Roster Selection File Version...", progress:"0%"});
+        this.setState({phase:BuildPhase.LOADING, loadingText:"Downloading Latest Roster Selection File Version...", progress:"0%", catalogueId:catalogueId});
         const DR = FileSystem.createDownloadResumable(
             url,
             FileSystem.documentDirectory + name + ".xml",
@@ -93,8 +98,6 @@ export default class BuilderMenu extends Component<props> {
         let units = [...that.state.units];
         const found = that.state.rosterSelectionData.Categories.find(c=>c.Name===unit.Name);
         let sel = Selection.Init(that.state.rosterSelectionData.GetTarget(unit), that.state.rosterSelectionData, found?found.ID:null)
-        console.log(sel.Name + " - " + (sel.IsWarlord()?"warlord":"not warlord"))
-        console.log(sel.SelectionValue.map(sv=>sv.Name + " - " + sv.Count))
         if(sel.IsWarlord()) {
             if(that.state.warlord) that.state.warlord.SelectionValue.find(sv=>sv.Name==="Warlord").Count=0;
             that.setState({warlord:sel});
@@ -131,6 +134,17 @@ export default class BuilderMenu extends Component<props> {
     ReplaceWeapon(id:string){
         this.state.editingWeapon.ReplaceWith(id);
         this.setState({editWeapon:false, editingWeapon:null, editingFramework:null});
+    }
+
+    SaveRoster():RosterRaw {
+        let rr = new RosterRaw;
+        rr.Units = this.state.units.map(u=>u.GetUnitRaw());
+        rr.CatalogueID = this.state.catalogueId;
+        rr.LeaderData = new Array<LeaderDataRaw>();
+        rr.Notes = new Array<NoteRaw>();
+        rr.Name= this.state.rosterName;
+        rr.Cost = this.state.units.map(u=>u.GetCost()).reduce((current, sum)=>current+sum, 0);
+        return rr;
     }
 
     /////////////////////////////////////////////////////////
@@ -348,7 +362,7 @@ export default class BuilderMenu extends Component<props> {
                     }}>
                 <View style={{flexDirection:"row", backgroundColor:render.index==this.state.currentUnit+1?this.context.LightAccent:this.context.Bg, borderBottomColor:this.context.LightAccent, borderWidth:1, height:40}}>
                     <View key="box" style={{alignSelf:"center", flexGrow:1, marginLeft:4}}>
-                        <Text>{render.item.Name}</Text>
+                        <Text>{render.item.Name}{render.item.HasEnhancement()&&<Text style={{color:this.context.Main}}> ★</Text>}</Text>
                         <Text>
                             {render.item.GetFrameworkCost()>0&&render.item.GetCost()+" pts"}
                             {render.item.GetFrameworkCost()>0&&" — "+render.item.GetModelCount()+" model" + (render.item.GetModelCount()>1?"s":"")}
@@ -402,6 +416,7 @@ export default class BuilderMenu extends Component<props> {
     }
 
     ShowMenu(){
+        const that = this;
         switch(this.state.phase){
             case BuildPhase.FACTION:
                 return <Button onPress={e=>this.props.navigation.goBack()}>Back</Button>;
@@ -415,8 +430,27 @@ export default class BuilderMenu extends Component<props> {
                         <Text key="sp">|</Text>
                         <Text key="total">Total : {totalCost} pts</Text>
                     </View>
-                    <Button key="save" style={{position:"absolute", right:50}} disabled={this.state.rosterName==="" || this.state.warlord===null || !this.state.units.map(u=>u.ValidRecursive()).reduce((was, is)=>was&&is, true)} onPress={e=>this.setState({phase:BuildPhase.FACTION}/*TODO: add roster export here */)}>Save</Button>
-                    <Button key="exit" style={{position:"absolute", right:0}} onPress={e=>this.setState({phase:BuildPhase.FACTION})} weight="light">Exit</Button>
+                    <Button key="save" 
+                        style={{position:"absolute", right:50}} 
+                        disabled={this.state.rosterName==="" || this.state.warlord===null || !this.state.units.map(u=>u.ValidRecursive()).reduce((was, is)=>was&&is, true)} 
+                        onPress={e=> {
+                            const roster = this.SaveRoster();
+                            DebugRosterRaw(roster);
+                            }}>Save</Button>
+                    <Button key="exit" 
+                        style={{position:"absolute", right:0}} 
+                        onPress={e=>{
+                            that.props.Popup(
+                                "All progress on this roster will be lost, go back to the Main Menu?", 
+                                [{
+                                    option:"Yes",
+                                    callback:()=>{
+                                        that.props.navigation.goBack();
+                                    }
+                                }], 
+                                "Cancel");
+                        }} 
+                        weight="light">Exit</Button>
                 </View>;
         }
         return null;
@@ -427,7 +461,7 @@ export default class BuilderMenu extends Component<props> {
         switch(this.state.phase) {
             case BuildPhase.FACTION:
                 contents= <FlatList numColumns={2} data={Variables.FactionFiles} renderItem={render=>{
-                    return <Button onPress={e=>this.LoadRosterSelectionFile(render.item.Name, render.item.URL)}>{render.item.Name}</Button>;
+                    return <Button onPress={e=>this.LoadRosterSelectionFile(render.item.Name, render.item.URL, render.item.CatalogueID)}>{render.item.Name}</Button>;
                 }} />
                 break;
             case BuildPhase.LOADING:

@@ -1,5 +1,5 @@
 import Each from "../Components/Each";
-import { UnitRaw } from "../Roster/RosterRaw";
+import { DescriptorRaw, ModelRaw, UnitRaw, WeaponRaw } from "../Roster/RosterRaw";
 import BuilderMenu from "./BuilderMenu";
 import { ProfilesDisplayData } from "./ProfilesDisplay";
 import RosterSelectionData, { Constraint, SelectionEntry, TargetSelectionData, Modifier, ModifierType, ProfileData, InfoLink, Condition, LogicalModifier, Characteristic } from "./RosterSelectionData";
@@ -61,7 +61,8 @@ abstract class PrivateSelection {
             }
         });
         let cost = modifiedValue?modifiedValue:this.cost;
-        return Number(cost);
+        const en = this._getEnhancements();
+        return Number(cost) + Number(en.length>0?en[0].cost:0);
     }
 
     GetLocalOrParentCount(){
@@ -92,10 +93,10 @@ abstract class PrivateSelection {
         return noOption;
     }
 
-    private getSpecificSelections(type:string):Array<PrivateSelection>{
-        let selections = new Array<PrivateSelection>();
+    private getSpecificSelections(type:string):Array<Selection>{
+        let selections = new Array<Selection>();
         if(this.Type===type){
-            selections.push(this);
+            if (this instanceof Selection) selections.push(this);
         }
         Each<Selection>(this.SelectionValue, sv=>{
             selections = [...selections, ...sv.getSpecificSelections(type)];
@@ -103,15 +104,12 @@ abstract class PrivateSelection {
         return selections;
     }
 
-    protected _getModelSelections():Array<PrivateSelection>{
-        let selections = new Array<PrivateSelection>();
-        if(this.Type==="model"){
-            selections.push(this);
-        }
-        Each<Selection>(this.SelectionValue, sv=>{
-            selections = [...selections, ...sv._getModelSelections()];
-        })
-        return selections;
+    protected _getModelSelections():Array<Selection>{
+        return this.getSpecificSelections("model");
+    }
+
+    protected _getEnhancements():Array<PrivateSelection>{
+        return this.getSpecificSelections("upgrade").filter(s=>/Enhancement/gi.test(s.Parent.Name) && s.Count===1);
     }
 
     GetAbilities(recursive:boolean=false):Array<ProfileData> {
@@ -129,8 +127,8 @@ abstract class PrivateSelection {
         return this._getModelSelections().map(model=>model.getValidTypeCount()).reduce((sum, current)=> sum+current, 0);
     }
 
-    GetModelsWithDifferentProfiles():Array<PrivateSelection>{
-        function differentProfiles(model:PrivateSelection, index:number, models:Array<PrivateSelection>) {
+    GetModelsWithDifferentProfiles():Array<Selection>{
+        function differentProfiles(model:Selection, index:number, models:Array<Selection>) {
             if(model.Profiles.length===0) return false;
             return models.findIndex(m=>
                 m.Profiles.length===1 && 
@@ -138,6 +136,10 @@ abstract class PrivateSelection {
           }
           const filtered = this._getModelSelections().filter(differentProfiles);
         return filtered.length>0?filtered:this._getModelSelections();
+    }
+
+    protected _getWeapons():Array<Selection> {
+        return this.getSpecificSelections("upgrade").filter(s=>s.Parent.Type!=="upgrade" && s.Profiles.length>0 && /weapon/gi.test(s.Profiles[0].Type));
     }
 
     Valid(adding:number=0):boolean{
@@ -179,7 +181,6 @@ abstract class PrivateSelection {
     }
     
     Changeable():boolean{
-        console.log(this.Name + " - " + this._getMin() + " : " + this._getMax());
         return this._getMin() !== this._getMax() || this._getMax()===undefined;
     }
 
@@ -309,6 +310,10 @@ export default class Selection extends PrivateSelection {
     }
     GetFrameworkCost():number{
         return this.data.Cost;
+    }
+
+    HasEnhancement():boolean{
+        return this._getEnhancements().length>0;
     }
 
     ReplaceWith(id:string){
@@ -531,7 +536,51 @@ export default class Selection extends PrivateSelection {
 
     GetUnitRaw():UnitRaw{
         let ur = new UnitRaw();
-        ur.Models = this._getModelSelections().map(m=>{return {Name:m.Name, Characteristics:m.Profiles[0].Characteristics.map(c=>{return {Name:c.Name, Value:c.Value}})}});
+        function toCharacteristicRaw(characteristics:Array<Characteristic>):Array<DescriptorRaw> {
+            return characteristics.map(c=>{return{Name:c.Name, Value:c.Value}});
+        }
+        function toModelRaw(model:Selection, name?:string):ModelRaw {
+            let mr = new ModelRaw();
+            mr.Name=name?name:model.Name;
+            mr.Characteristics = toCharacteristicRaw(model.Profiles[0].Characteristics)
+            return mr;
+        }
+        function toProfileRaw(data:ProfileData):Array<DescriptorRaw> {
+            let adr = new Array<DescriptorRaw>();
+
+            return adr;
+        }
+        function toWeaponRaw(model:Selection):WeaponRaw|Array<WeaponRaw> {
+            if(model.secretSelection.length!==0) {
+                let subSelection = new Array<WeaponRaw>();
+                Each<Selection>(this.secretSelection, selection=>{
+                    const wr = toWeaponRaw(selection);
+                    if(wr instanceof WeaponRaw) subSelection.push(wr);
+                });
+                return subSelection;
+            }
+            let wr = new WeaponRaw();
+            wr.Count = model.Count;
+            wr.Name = model.Name;
+            wr.Profiles = model.Profiles.map(toProfileRaw);
+            return wr;
+        }
+
+        function exploreRawWeapons(wrd:WeaponRaw|Array<WeaponRaw>):Array<WeaponRaw>{
+            if (wrd instanceof WeaponRaw)
+                return [wrd]
+            return wrd;
+        }
+        const models = this._getModelSelections();
+        let weapons = new Array<WeaponRaw>;
+        Each<Selection>(this._getWeapons(), weapon=>{
+            weapons = [...weapons, ...exploreRawWeapons(toWeaponRaw(weapon))];
+        });
+        ur.Models = models.length===1?[toModelRaw(models[0], this.Name)]:models.map(m=>toModelRaw(m));
+        ur.Categories = this.Categories;
+        ur.Name = this.Name;
+        ur.Weapons = weapons;
+        ur.Tree = this.getSelectionIdTree(false);
         return ur;
     }
 

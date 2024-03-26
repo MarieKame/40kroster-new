@@ -100,7 +100,7 @@ const Variables = {
         ]
     },
     FactionFiles:[
-        {Name:"Adepta Sororitas", URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Imperium%20-%20Adepta%20Sororitas.cat"}
+        {Name:"Adepta Sororitas", CatalogueID:"b39e-4401-8f3e-fdf7", URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Imperium%20-%20Adepta%20Sororitas.cat"}
     ]
     
 }

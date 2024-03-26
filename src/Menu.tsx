@@ -350,7 +350,7 @@ class Menu extends React.Component{
     }
 
     CallPopup(question:string, options:Array<PopupOption>,def:string){
-        this.setState({
+        Menu.Instance.setState({
             popupQuestion:question,
             popupOptions:options,
             popupDefault:def
@@ -407,7 +407,7 @@ class Menu extends React.Component{
                                 {(props)=> <Options {...props} onColourChange={(colour:Colour, value:string)=>this.applyColourChangeGlobally(colour, value, this)} onCategoriesChange={this.saveUnitCategoriesChange} onReset={(colours)=>this.resetColours(colours, this)} onNameDisplayChange={(nd)=>this.saveNameDisplayChange(nd)}/>}
                             </Stack.Screen>
                             <Stack.Screen name="RosterBuilder" options={{animation:"fade"}}>
-                                {(props)=> <BuilderMenu {...props} />}
+                                {(props)=> <BuilderMenu {...props} Popup={this.CallPopup} />}
                             </Stack.Screen>
                         </Stack.Navigator>
                     </NavigationContainer>
