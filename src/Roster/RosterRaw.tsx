@@ -58,6 +58,7 @@ export default class RosterRaw{
     Units:Array<UnitRaw>;
     Name:string;
     Cost:number;
+    Faction:string;
 }
 
 export function DebugRosterRaw(roster:RosterRaw) {

@@ -16,6 +16,7 @@ import AutoExpandingTextInput from "../Components/AutoExpandingTextInput";
 import { PopupOption } from "../Components/Popup";
 import RosterRaw, { DebugRosterRaw, DescriptorRaw, LeaderDataRaw, ModelRaw, NoteRaw, UnitRaw, WeaponRaw } from "../Roster/RosterRaw";
 import Info from "../Components/Info";
+import Menu from "../Menu";
 
 enum BuildPhase{
     FACTION, LOADING, LOADING_ERROR, ADD, EQUIP
@@ -38,6 +39,7 @@ export default class BuilderMenu extends Component<props> {
         loadingText:"",
         progress:"",
         catalogueId:"",
+        factionName:"",
         rosterSelectionData:new RosterSelectionData(),
         units:new Array<Selection>(),
         detachmentSelection:Selection.Init(null, null),
@@ -45,7 +47,7 @@ export default class BuilderMenu extends Component<props> {
         currentUnit:-2,
         update:0,
         editWeapon:false,
-        editingWeapon:new Selection(1, null, null, null, null),
+        editingWeapon:null,
         totalCost:0,
         warlord:null,
         equipedEnhancementIDs:new Array<string>(),
@@ -65,7 +67,7 @@ export default class BuilderMenu extends Component<props> {
 
     LoadRosterSelectionFile(name:string, url:string, catalogueId:string){
         const that = this;
-        this.setState({phase:BuildPhase.LOADING, loadingText:"Downloading Latest Roster Selection File Version...", progress:"0%", catalogueId:catalogueId});
+        this.setState({phase:BuildPhase.LOADING, loadingText:"Downloading Latest Roster Selection File Version...", progress:"0%", catalogueId:catalogueId, factionName:name});
         const DR = FileSystem.createDownloadResumable(
             url,
             FileSystem.documentDirectory + name + ".xml",
@@ -82,7 +84,15 @@ export default class BuilderMenu extends Component<props> {
                 if (contents) {
                     new RosterSelectionExtractor(contents, (progress:string, cont, rse:RosterSelectionData, data?:RosterSelectionData)=>{
                         if (data){
-                            that.setState({phase:BuildPhase.ADD, rosterSelectionData:data, progress:progress, detachmentSelection:Selection.Init(data.DetachmentChoice, data)})
+                            if(Menu.Instance.state.EditingRoster) {
+                                let units = new Array<Selection>(); 
+                                Each<UnitRaw>(Menu.Instance.state.EditingRoster.Units, unit=>{
+                                    units.push(Selection.FromTree(unit.Tree, data));
+                                });
+                                that.setState({phase:BuildPhase.ADD, rosterSelectionData:data, progress:progress, detachmentSelection:Selection.Init(data.DetachmentChoice, data), units:units})
+                            } else {
+                                that.setState({phase:BuildPhase.ADD, rosterSelectionData:data, progress:progress, detachmentSelection:Selection.Init(data.DetachmentChoice, data)})
+                            }
                         } else {
                             that.setState({progress:progress}, ()=>this.cont(rse, cont));
                         }
@@ -139,11 +149,18 @@ export default class BuilderMenu extends Component<props> {
     }
 
     SaveRoster():RosterRaw {
-        let rr = new RosterRaw;
-        rr.Units = this.state.units.map((u, i)=>u.GetUnitRaw(i));
+        let rr:RosterRaw;
+        if(Menu.Instance.state.EditingRoster !== null) {
+            rr = Menu.Instance.state.EditingRoster;
+        } else {
+            rr = new RosterRaw();
+        }
+        
         rr.CatalogueID = this.state.catalogueId;
-        rr.Notes = new Array<NoteRaw>();
+        rr.Faction = this.state.factionName;
         rr.Name= this.state.rosterName;
+        rr.Notes = new Array<NoteRaw>();
+        rr.Units = this.state.units.map((u, i)=>u.GetUnitRaw(i));
         rr.Cost = this.state.units.map(u=>u.GetCost()).reduce((current, sum)=>current+sum, 0);
         rr.LeaderData = new Array<LeaderDataRaw>();
         let id= 1;
@@ -487,7 +504,12 @@ export default class BuilderMenu extends Component<props> {
                             const roster = this.SaveRoster();
                             DebugRosterRaw(roster);
                             this.props.navigation.goBack();
-                            this.props.OnSaveRoster(roster)
+                            if(Menu.Instance.state.EditingRoster===null){
+                                this.props.OnSaveRoster(roster)
+                            } else {
+                                Menu.Instance.state.EditingRoster = roster;
+                            }
+                            Menu.Instance.setState({EditingRoster:null});
                             }}>Save</Button>
                     <Button key="exit" 
                         style={{position:"absolute", right:0}} 
@@ -497,6 +519,7 @@ export default class BuilderMenu extends Component<props> {
                                 [{
                                     option:"Yes",
                                     callback:()=>{
+                                        Menu.Instance.setState({EditingRoster:null});
                                         that.props.navigation.goBack();
                                     }
                                 }], 
@@ -509,6 +532,10 @@ export default class BuilderMenu extends Component<props> {
     }
 
     render(){
+        if(Menu.Instance.state.EditingRoster!==null && this.state.phase === BuildPhase.FACTION){
+            const found = Variables.FactionFiles.find(ff=>ff.CatalogueID===Menu.Instance.state.EditingRoster.CatalogueID);
+            this.LoadRosterSelectionFile(found.Name, found.URL, found.CatalogueID);
+        } 
         let contents;
         switch(this.state.phase) {
             case BuildPhase.FACTION:

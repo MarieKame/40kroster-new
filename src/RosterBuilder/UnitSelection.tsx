@@ -202,8 +202,10 @@ abstract class PrivateSelection {
 
 export class SelectionTreeEntry{
     SelectionID:string;
+    ExtraID:string;
     Count:number;
     Children:Array<SelectionTreeEntry>;
+    Index:number;
 }
 
 class SelectionID {
@@ -223,17 +225,25 @@ export default class Selection extends PrivateSelection {
 
     private static merging:Array<SelectionID> = new Array<SelectionID>();
     static Duplicate(selection:Selection):Selection{
-        return new Selection(1, selection.data, selection.rse, selection.Parent, selection.Ancestor);
+        return new Selection(1, selection.data, selection.rse, selection.Parent, selection.Ancestor, selection.ExtraID, 0);
     }
     static DeepDuplicate(selection:Selection):Selection{
-        let sel = new Selection(1, selection.data, selection.rse, selection.Parent, selection.Ancestor);
+        let sel = new Selection(1, selection.data, selection.rse, selection.Parent, selection.Ancestor, selection.ExtraID, 0);
         sel.applySelectionIdTree(selection.getSelectionIdTree());
         return sel;
     }
     static Init(data:SelectionEntry, rse:RosterSelectionData, extraId?:string) : Selection{
         if (!data) return;
-        let sel = new Selection(1, data, rse, null, null, extraId);
-        sel.Debug();
+        let sel = new Selection(1, data, rse, null, null, extraId, 0);
+        //sel.Debug();
+        return sel;
+    }
+
+    static FromTree(entry:SelectionTreeEntry, rse:RosterSelectionData):Selection {
+        let sel = new Selection(1, rse.GetSelectionFromId(entry.SelectionID), rse, null, null, entry.ExtraID, 0);
+        //sel.Debug();
+        sel.applySelectionIdTree(entry);
+        //sel.Debug();
         return sel;
     }
 
@@ -241,7 +251,7 @@ export default class Selection extends PrivateSelection {
         return this.Ancestor;
     }
 
-    constructor(count:number, data:SelectionEntry, rse:RosterSelectionData, parent:Selection, ancestor:Selection, extraId?:string){
+    private constructor(count:number, data:SelectionEntry, rse:RosterSelectionData, parent:Selection, ancestor:Selection, extraId:string, index:number){
         super(count, data, parent);
         if(ancestor===null) {
             this.Ancestor=this;
@@ -267,34 +277,36 @@ export default class Selection extends PrivateSelection {
         });
     }
 
-    private getSelectionIdTree(duplicate:boolean=true):SelectionTreeEntry {
-        let entry = {SelectionID:this.ID, Count:(this.Parent!==null && duplicate && /Enhancement/gi.test(this.Parent.Name))?0:this.Count, Children:new Array<SelectionTreeEntry>()};
-        Each(this.SelectionValue, sv=>{
-            entry.Children.push(sv.getSelectionIdTree());
+    private getSelectionIdTree(duplicate:boolean=true, index:number=0):SelectionTreeEntry {
+        let entry = {
+            SelectionID:this.ID,
+            Count:(this.Parent!==null && duplicate && /Enhancement/gi.test(this.Parent.Name))?0:this.Count, 
+            Children:new Array<SelectionTreeEntry>(), 
+            ExtraID:this.ExtraID,
+            Index:index
+        };
+        Each(this.SelectionValue, (sv, index)=>{
+            entry.Children.push(sv.getSelectionIdTree(duplicate, index));
         });
         return entry;
     }
 
     private applySelectionIdTree(entry:SelectionTreeEntry) {
         try{
-            if(this.NoOptions() || this.Type==="group" || this.Type==="unit") {
-                this.Count = entry.Count;
-            } else {
-                while(this.GetValidTypeCount() > entry.Count){
-                    const found = this.Parent.SelectionValue.findIndex(sv=>sv.ID===entry.SelectionID);
-                    this.Parent.SelectionValue.splice(found, 1);
-                }
-                while(this.GetValidTypeCount() < entry.Count){
-                    const found = this.Parent.SelectionValue.find(sv=>sv.ID===entry.SelectionID);
-                    if(found.Count===0) {
-                        found.Count=1;
-                    } else {
-                        this.Parent.SelectionValue.push(Selection.Duplicate(found));
-                    }
-                }
+            this.Count = entry.Count;
+            let same = true;
+            Each<SelectionTreeEntry>(entry.Children, c=>{
+                if(c.SelectionID !== this.SelectionValue[c.Index].ID) same=false;
+            });
+            if(!same) {
+                let newSelectionValue = new Array<Selection>();
+                Each<SelectionTreeEntry>(entry.Children, c=>{
+                    newSelectionValue.push(Selection.Duplicate(this.SelectionValue.find(sv=>sv.ID === c.SelectionID)))
+                });
+                this.SelectionValue = newSelectionValue;
             }
-            Each(entry.Children, c=>{
-                this.SelectionValue.find(sv=>sv.ID===c.SelectionID).applySelectionIdTree(c);
+            Each<SelectionTreeEntry>(entry.Children, c=>{
+                this.SelectionValue[c.Index].applySelectionIdTree(c);
             })
         } catch(e){
             console.error("Selection Tree Error");
@@ -425,7 +437,7 @@ export default class Selection extends PrivateSelection {
     private getDefaultSelection(data:SelectionEntry, rse:RosterSelectionData, current:{SelectionValue:Array<Selection>}){
         let options = [...rse.GetChildren(data), ...data.SubEntries];
         const that = this;
-        function newSelection(data:SelectionEntry|TargetSelectionData, defaultId?:string):Selection{
+        function newSelection(data:SelectionEntry|TargetSelectionData, index:number, defaultId?:string):Selection{
             if(!data) return;
             let found=-1;
             let setMergeId;
@@ -457,7 +469,7 @@ export default class Selection extends PrivateSelection {
                 count = Math.min(Number(that._getMin()?that._getMax():that.GetMinimumCount(data)), that.GetMaximumCount(data));
             }
             count = (defaultId?(isDefault?count:0):count);
-            let sel = new Selection((defaultId?(isDefault?count:0):count), data, rse, that, that.Ancestor);
+            let sel = new Selection((defaultId?(isDefault?count:0):count), data, rse, that, that.Ancestor, null, index);
             sel.Ancestor.selectionMap.push({ID:sel.ID, Selection:sel});
             if(sel.Name==="Warlord") {
                 count=sel._getMin();
@@ -492,13 +504,13 @@ export default class Selection extends PrivateSelection {
                         current.SelectionValue.push(sel);
                     }
                     for(let i= 0; i != count; i++){
-                        current.SelectionValue.push(Selection.Duplicate(sel)); // TODO: make sure this is a copy, not the same object
+                        current.SelectionValue.push(Selection.Duplicate(sel)); 
                     }
                 }
             }
         }
-        Each(options, option=>{
-            newSelection(option, data.DefaultSelectionID);
+        Each(options, (option, index)=>{
+            newSelection(option, index, data.DefaultSelectionID);
         });
         current.SelectionValue = current.SelectionValue.sort((sv1:Selection, sv2:Selection)=> {
             function sortMelee(sv1:Selection, sv2:Selection) :number {

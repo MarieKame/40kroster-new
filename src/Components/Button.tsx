@@ -12,6 +12,8 @@ export interface ButtonProps extends TextProps {
     tab?:boolean
     small?:boolean
     disabled?:boolean
+    mergeLeft?:boolean
+    mergeRight?:boolean
 }
 
 export class Button extends Component<ButtonProps>  {   
@@ -108,6 +110,24 @@ export class Button extends Component<ButtonProps>  {
                 borderColor:this.context.LightAccent,
             });
             forceTextColour = {color:this.context.LightAccent}
+        }
+        if(this.props.mergeLeft) {
+            style.push({
+                borderTopLeftRadius:0,
+                borderBottomLeftRadius:0,
+                marginLeft:0,
+                paddingLeft:0,
+                borderLeftWidth:0
+            });
+        }
+        if(this.props.mergeRight) {
+            style.push({
+                borderTopRightRadius:0,
+                borderBottomRightRadius:0,
+                marginRight:0,
+                paddingRight:0,
+                borderRightWidth:0
+            });
         }
         if (this.props.image)
             return <Pressable style={[style, this.props.style]} onPress={e=>this.onPress(e, this)}>{this.props.children}</Pressable>

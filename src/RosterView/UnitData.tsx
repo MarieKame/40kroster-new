@@ -169,6 +169,22 @@ export function ExtractWeaponData(weapons:Array<WeaponRaw>):{melee:Array<WeaponD
             }
         }
     });
+
+    
+    function sortWeapon(wpn1:WeaponData, wpn2:WeaponData):number{
+        if (wpn1.Count > wpn2.Count)
+            return -1;
+        if (wpn1.Count < wpn2.Count)
+            return 1;
+        if (wpn1 instanceof ProfileWeaponData && !(wpn2 instanceof ProfileWeaponData))
+            return 1;
+        if (!(wpn1 instanceof ProfileWeaponData) && wpn2 instanceof ProfileWeaponData)
+            return -1;
+        return 0;
+    }
+    MeleeWeapons.sort(sortWeapon);
+    RangedWeapons.sort(sortWeapon);
+
     return {melee:MeleeWeapons, ranged:RangedWeapons};
 }
 
@@ -234,20 +250,6 @@ class UnitData {
         const extracted = ExtractWeaponData(unit.Weapons);
         this.MeleeWeapons = extracted.melee;
         this.RangedWeapons = extracted.ranged;
-
-        function sortWeapon(wpn1:WeaponData, wpn2:WeaponData):number{
-            if (wpn1.Count > wpn2.Count)
-                return -1;
-            if (wpn1.Count < wpn2.Count)
-                return 1;
-            if (wpn1 instanceof ProfileWeaponData && !(wpn2 instanceof ProfileWeaponData))
-                return 1;
-            if (!(wpn1 instanceof ProfileWeaponData) && wpn2 instanceof ProfileWeaponData)
-                return -1;
-            return 0;
-        }
-        this.MeleeWeapons.sort(sortWeapon);
-        this.RangedWeapons.sort(sortWeapon);
         
         this.Models = new Array<ModelData>();
         Each<ModelRaw>(unit.Models, (model, index)=>{

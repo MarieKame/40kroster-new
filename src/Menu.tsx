@@ -48,6 +48,7 @@ class Menu extends React.Component{
     
     state = {
         Rosters: new Array<RosterRaw>(),
+        EditingRoster:null,
         Errors: {
             rosterFile: null
         },
@@ -396,8 +397,9 @@ class MenuDisplay extends Component<MenuDisplayProps> {
             <View style={{flexDirection: 'row', flexWrap: 'wrap', width:"100%"}}>
                  {rosters.map((roster, index) => 
                     <View style={{flexBasis:"50%", flexDirection:"row"}} key={index}>
-                        <Button onPress={(e) => that.viewRoster(index)} style={{flex:1, height:60}}>{roster.Name}{("\n( "+roster.Cost+" pts )")}</Button>
-                        <Button onPress={(e) => that.deleteRoster(index)} textStyle={{fontSize:20}} style={{width:44}} weight="light">🗑</Button>
+                        <Button onPress={(e) => that.viewRoster(index)} style={{flex:1, height:60}} mergeRight>{roster.Name}{"\n"+roster.Faction}{("\n( "+roster.Cost+" pts )")}</Button>
+                        <Button onPress={(e) => {Menu.Instance.setState({EditingRoster:roster}); this.props.navigation.navigate("RosterBuilder");}} textStyle={{fontSize:20}} style={{width:44}} mergeLeft mergeRight>✎</Button>
+                        <Button onPress={(e) => that.deleteRoster(index)} textStyle={{fontSize:20}} style={{width:44}} mergeLeft>🗑</Button>
                     </View>
                  )}
             </View>
