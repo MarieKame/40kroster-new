@@ -4,7 +4,8 @@ import Variables from "../src/Variables";
 const Style = StyleSheet.create({
     info:{
         flexDirection:"row",
-        marginLeft:4
+        marginLeft:28,
+        paddingLeft:4
     },
     moreThanOne:{
         position:"absolute",
@@ -14,10 +15,6 @@ const Style = StyleSheet.create({
         borderLeftWidth:1,
         borderTopLeftRadius:Variables.boxBorderRadius,
         borderBottomLeftRadius:Variables.boxBorderRadius
-    },
-    quantity1:{
-        width:28 * Variables.zoom,
-        textAlign:"center"
     },
     quantity2:{
         height:31 * Variables.zoom,
@@ -55,7 +52,6 @@ const Style = StyleSheet.create({
         borderStyle:"dotted",
         width:32 * Variables.zoom
     },
-    profile:{},
     odd:{
         zIndex:-1
     },

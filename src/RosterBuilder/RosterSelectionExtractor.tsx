@@ -184,6 +184,12 @@ export default class RosterSelectionExtractor {
                                 });
                             }
                             selection.ProfileInfoLinks.push({Target:infoLink._targetId, Modifiers:modifiers});
+                        } else if (infoLink._type === "rule") {
+                            if(infoLink.modifiers) {
+                                selection.Rules.push(infoLink._name + " " + infoLink.modifiers.modifier._value);
+                            } else {
+                                selection.Rules.push(infoLink._name);
+                            }
                         }
                     });
                 }

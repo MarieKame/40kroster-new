@@ -12,26 +12,25 @@ export class NoteRaw {
     Descriptor:DescriptorRaw;
 }
 
+export class WeaponProfileRaw {
+    Name:string;
+    Profile:Array<DescriptorRaw>;
+}
+
 export class WeaponRaw {
     Count:number;
     Name:string;
-    Profiles:Array<Array<DescriptorRaw>>;
+    Profiles:Array<WeaponProfileRaw>;
 }
 
 export class LeaderDataRaw {
     Leading:Array<string>; // The names of the units it can lead
     Effects:Array<DescriptorRaw>;
-    CurrentlyLeading:string; // the UniqueID of the unit it is leading, default is null
+    CurrentlyLeading:string|null; // the UniqueID of the unit it is leading, default is null
     BaseName:string;
     CustomName:string;
-    MultiRangeWeapons:Array<WeaponRaw>;
-    MeleeWeapons:Array<WeaponRaw>;
-    RangedWeapons:Array<WeaponRaw>;
-}
-
-export function NewLeaderData():LeaderDataRaw {
-    let ldr = new LeaderDataRaw();
-    return ldr;
+    Weapons:Array<WeaponRaw>;
+    UniqueId:number;
 }
 
 export class ModelRaw {
@@ -40,10 +39,15 @@ export class ModelRaw {
 }
 
 export class UnitRaw {
-    Name:string;
+    BaseName:string;
+    CustomName:string;
+    UniqueID:string;
+    Cost:number;
     Models:Array<ModelRaw>;
     Weapons:Array<WeaponRaw>;
     Categories:Array<string>;
+    Abilities:Array<DescriptorRaw>;
+    Rules:Array<string>;
     Tree:SelectionTreeEntry;
 }
 
@@ -61,9 +65,15 @@ export function DebugRosterRaw(roster:RosterRaw) {
     console.log(roster.Cost + " pts");
     console.log(roster.Units);
     Each<UnitRaw>(roster.Units, unit=>{
-        console.log(" - " + unit.Name);
-        console.log(unit.Weapons.map(w=>w.Name + " - " + w.Count))
-        console.log(unit.Models.map(w=>w.Name + " - " + w.Characteristics.map(c=>c.Name + ":" + c.Value)))
-        console.log(unit.Categories.join(", "))
+        console.log(" - " + unit.BaseName);
+        console.log(" -- Weapons");
+        console.log(unit.Weapons.map(w=>"    - " + w.Name + " - " + w.Count + " - " + w.Profiles.map(p=>" > " + p.Name + " " + p.Profile.map(c=>c.Name + ":" + c.Value).join(", ")).join("\n")));
+        console.log(" -- Models");
+        console.log(unit.Models.map(w=>"    - " + w.Name + " - " + w.Characteristics.map(c=>c.Name + ":" + c.Value)));
+        console.log(" -- Abilities");
+        console.log(unit.Abilities.map(c=>"    - " + c.Name + " : " + c.Value).join("\n"));
+        console.log(" -- Categories" + unit.Categories.join(", "))
     });
+    console.log("LeaderData");
+    console.log(roster.LeaderData.map(ld=>ld.BaseName + ld.Leading.join(", ")));
 }

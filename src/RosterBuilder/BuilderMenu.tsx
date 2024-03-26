@@ -7,7 +7,7 @@ import Button from "../Components/Button";
 import { KameContext } from "../../Style/KameContext";
 import * as FileSystem from 'expo-file-system';
 import RosterSelectionExtractor from "./RosterSelectionExtractor";
-import RosterSelectionData, { Characteristic, Constraint, ProfileData, SelectionData, SelectionEntry, TargetSelectionData } from "./RosterSelectionData";
+import RosterSelectionData, { SelectionData, SelectionEntry, TargetSelectionData } from "./RosterSelectionData";
 import Selection from "./UnitSelection";
 import Each from "../Components/Each";
 import ProfilesDisplay, { ProfilesDisplayData } from "./ProfilesDisplay";
@@ -15,7 +15,7 @@ import Checkbox from "../Components/Checkbox";
 import AutoExpandingTextInput from "../Components/AutoExpandingTextInput";
 import { PopupOption } from "../Components/Popup";
 import RosterRaw, { DebugRosterRaw, DescriptorRaw, LeaderDataRaw, ModelRaw, NoteRaw, UnitRaw, WeaponRaw } from "../Roster/RosterRaw";
-import { LeaderData } from "../RosterView/UnitData";
+import Info from "../Components/Info";
 
 enum BuildPhase{
     FACTION, LOADING, LOADING_ERROR, ADD, EQUIP
@@ -23,8 +23,10 @@ enum BuildPhase{
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 class props{
-    navigation:{goBack}
-    Popup:(question:string, options:Array<PopupOption>,def:string)=>void
+    navigation:{goBack};
+    NamesTaken:Array<string>;
+    Popup:(question:string, options:Array<PopupOption>,def:string)=>void;
+    OnSaveRoster:(roster:RosterRaw)=>void;
 }
 const COLUMN_WIDTH = Variables.width * 0.50;
 export default class BuilderMenu extends Component<props> {
@@ -138,12 +140,37 @@ export default class BuilderMenu extends Component<props> {
 
     SaveRoster():RosterRaw {
         let rr = new RosterRaw;
-        rr.Units = this.state.units.map(u=>u.GetUnitRaw());
+        rr.Units = this.state.units.map((u, i)=>u.GetUnitRaw(i));
         rr.CatalogueID = this.state.catalogueId;
-        rr.LeaderData = new Array<LeaderDataRaw>();
         rr.Notes = new Array<NoteRaw>();
         rr.Name= this.state.rosterName;
         rr.Cost = this.state.units.map(u=>u.GetCost()).reduce((current, sum)=>current+sum, 0);
+        rr.LeaderData = new Array<LeaderDataRaw>();
+        let id= 1;
+        Each<UnitRaw>(rr.Units, unit=>{
+            let leaderData:LeaderDataRaw;
+            Each<DescriptorRaw>(unit.Abilities, ability=>{
+                if(/Leader/gi.test(ability.Name)) {
+                    leaderData= new LeaderDataRaw();
+                    leaderData.BaseName = unit.BaseName;
+                    leaderData.CustomName = unit.CustomName;
+                    leaderData.CurrentlyLeading="";
+                    leaderData.UniqueId = id++;
+                    leaderData.Leading = ability.Value.match(/(?<=[-■]).*/ig).map(item=>item.trim());
+                    leaderData.Weapons = [...unit.Weapons];
+                }
+            });
+
+            if (!leaderData) return;
+
+            leaderData.Effects = new Array<DescriptorRaw>();
+            Each<DescriptorRaw>(unit.Abilities, ability=>{
+                if (ability.Value.match(/(leading)|(bearer[’'`]s unit)|(this model[’'`]s unit)/ig)) {
+                    leaderData.Effects.push(ability);
+                }
+            });
+            rr.LeaderData.push(leaderData);
+        });
         return rr;
     }
 
@@ -311,6 +338,7 @@ export default class BuilderMenu extends Component<props> {
                     {unitModelsDisplay}
                 </View>
                 {this.ViewSelectionRecursive(unit)}
+                <Text key="rules" style={{padding:10}}><Text style={{fontFamily:Variables.fonts.WHB}}>Categories : </Text>{unit.Rules.join(", ")}</Text>
                 {this.ViewUnitAbilties(unit)}
                 <Text key="cats" style={{padding:10}}><Text style={{fontFamily:Variables.fonts.WHB}}>Categories : </Text>{unit.Categories.join(", ")}</Text>
             </ScrollView>
@@ -424,18 +452,42 @@ export default class BuilderMenu extends Component<props> {
             case BuildPhase.EQUIP:
                 const totalCost =  this.state.units.map(u=>u.GetCost()).reduce((cost, total)=> cost+total, 0)
                 return <View style={{flexDirection:"row", height:38, marginBottom:4, gap:8, alignItems:"center"}}>
-                    <AutoExpandingTextInput key="rosterName" onSubmit={e=>{this.setState({rosterName:e})}} defaultValue="New Roster Name" style={{width:200}}/>
+                    <AutoExpandingTextInput key="rosterName" onSubmit={e=>{this.setState({rosterName:e===undefined?"":e})}} defaultValue="New Roster Name" style={{width:200}}/>
+                    <Info key="nameError" 
+                        MessageOnPress={
+                            this.state.rosterName===""?
+                                "Enter a Name":
+                                "This name is already in use"} 
+                        Visible={
+                            this.state.rosterName===""||
+                            this.props.NamesTaken.findIndex(name=>name===this.state.rosterName)!==-1}/>
                     <View key="info" style={{backgroundColor:this.context.Bg, height:38, alignItems:"center", paddingLeft:10, paddingRight:10, gap:5, flexDirection:"row"}}>
                         <Text key="wl">Warlord : {this.state.warlord?this.state.warlord.Name:"Not Selected"}</Text>
                         <Text key="sp">|</Text>
                         <Text key="total">Total : {totalCost} pts</Text>
                     </View>
+                    <Info key="saveError" 
+                        MessageOnPress={
+                            (this.state.rosterName==="" || 
+                            this.props.NamesTaken.findIndex(name=>name===this.state.rosterName)!==-1) ?
+                                "Enter a valid roster name" :
+                                ((this.state.warlord===null)?
+                                    "Select a Warlord":
+                                    "Validate all your units")} 
+                        Visible={
+                            this.state.rosterName==="" || 
+                            this.props.NamesTaken.findIndex(name=>name===this.state.rosterName)!==-1 ||
+                            this.state.warlord===null || 
+                            !this.state.units.map(u=>u.ValidRecursive()).reduce((was, is)=>was&&is, true)}
+                        Style={{position:"absolute", right:110}}/>
                     <Button key="save" 
                         style={{position:"absolute", right:50}} 
                         disabled={this.state.rosterName==="" || this.state.warlord===null || !this.state.units.map(u=>u.ValidRecursive()).reduce((was, is)=>was&&is, true)} 
                         onPress={e=> {
                             const roster = this.SaveRoster();
                             DebugRosterRaw(roster);
+                            this.props.navigation.goBack();
+                            this.props.OnSaveRoster(roster)
                             }}>Save</Button>
                     <Button key="exit" 
                         style={{position:"absolute", right:0}} 

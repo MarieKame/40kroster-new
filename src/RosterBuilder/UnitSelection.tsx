@@ -1,5 +1,5 @@
 import Each from "../Components/Each";
-import { DescriptorRaw, ModelRaw, UnitRaw, WeaponRaw } from "../Roster/RosterRaw";
+import { DescriptorRaw, ModelRaw, UnitRaw, WeaponProfileRaw, WeaponRaw } from "../Roster/RosterRaw";
 import BuilderMenu from "./BuilderMenu";
 import { ProfilesDisplayData } from "./ProfilesDisplay";
 import RosterSelectionData, { Constraint, SelectionEntry, TargetSelectionData, Modifier, ModifierType, ProfileData, InfoLink, Condition, LogicalModifier, Characteristic } from "./RosterSelectionData";
@@ -26,6 +26,7 @@ abstract class PrivateSelection {
     Name:string;
     Stats:Array<string>;
     Categories:Array<string>;
+    Rules:Array<string>;
 
     constructor(count:number, data:SelectionEntry, parent:Selection){
         if(!data) return;
@@ -45,6 +46,7 @@ abstract class PrivateSelection {
         this.Profiles = [...data.Profiles];
         this.Name = data.Name;
         this.Categories = data.Categories;
+        this.Rules = data.Rules;
     }
 
     GetCost():number{
@@ -534,7 +536,7 @@ export default class Selection extends PrivateSelection {
         });
     }
 
-    GetUnitRaw():UnitRaw{
+    GetUnitRaw(index:number):UnitRaw{
         let ur = new UnitRaw();
         function toCharacteristicRaw(characteristics:Array<Characteristic>):Array<DescriptorRaw> {
             return characteristics.map(c=>{return{Name:c.Name, Value:c.Value}});
@@ -545,16 +547,25 @@ export default class Selection extends PrivateSelection {
             mr.Characteristics = toCharacteristicRaw(model.Profiles[0].Characteristics)
             return mr;
         }
-        function toProfileRaw(data:ProfileData):Array<DescriptorRaw> {
-            let adr = new Array<DescriptorRaw>();
-
+        function toProfileRaw(data:ProfileData, nameToIgnore?:string):WeaponProfileRaw {
+            let adr = new WeaponProfileRaw();
+            const reg = new RegExp("(" + nameToIgnore + " - )(.*)", "gi").exec(data.Name);
+            if (reg && reg.length>0) {
+                adr.Name = reg[2];
+            } else {
+                adr.Name = data.Name;
+            }
+            adr.Profile = new Array<DescriptorRaw>();
+            Each<Characteristic>(data.Characteristics, characteristic=>{
+                adr.Profile.push({Name:characteristic.Name, Value:characteristic.Value});
+            });
             return adr;
         }
-        function toWeaponRaw(model:Selection):WeaponRaw|Array<WeaponRaw> {
+        function toWeaponRaw(model:Selection, nameToIgnore?:string):WeaponRaw|Array<WeaponRaw> {
             if(model.secretSelection.length!==0) {
                 let subSelection = new Array<WeaponRaw>();
                 Each<Selection>(this.secretSelection, selection=>{
-                    const wr = toWeaponRaw(selection);
+                    const wr = toWeaponRaw(selection, model.Name);
                     if(wr instanceof WeaponRaw) subSelection.push(wr);
                 });
                 return subSelection;
@@ -562,7 +573,7 @@ export default class Selection extends PrivateSelection {
             let wr = new WeaponRaw();
             wr.Count = model.Count;
             wr.Name = model.Name;
-            wr.Profiles = model.Profiles.map(toProfileRaw);
+            wr.Profiles = model.Profiles.map(p=>toProfileRaw(p, nameToIgnore?nameToIgnore:model.Name));
             return wr;
         }
 
@@ -571,15 +582,29 @@ export default class Selection extends PrivateSelection {
                 return [wrd]
             return wrd;
         }
-        const models = this._getModelSelections();
+        const models = this.GetModelsWithDifferentProfiles();
         let weapons = new Array<WeaponRaw>;
         Each<Selection>(this._getWeapons(), weapon=>{
             weapons = [...weapons, ...exploreRawWeapons(toWeaponRaw(weapon))];
         });
+        let mergedWeapons = new Array<WeaponRaw>();
+        Each<WeaponRaw>(weapons, weapon=>{
+            const found = mergedWeapons.find(wpn=>wpn.Name===weapon.Name);
+            if(found) {
+                found.Count+= weapon.Count;
+            } else {
+                mergedWeapons.push(weapon);
+            }
+        });
         ur.Models = models.length===1?[toModelRaw(models[0], this.Name)]:models.map(m=>toModelRaw(m));
         ur.Categories = this.Categories;
-        ur.Name = this.Name;
-        ur.Weapons = weapons;
+        ur.Cost = this.GetCost();
+        ur.BaseName = this.Name;
+        //TODO: ur.CustomName = this.CustomName;
+        ur.UniqueID = this.Name + index;
+        ur.Weapons = mergedWeapons.filter(wpn=>wpn.Count!==0);
+        ur.Abilities = this.GetAbilities(true).map(p=>{return{Name:p.Name, Value:p.Characteristics[0].Value}});
+        ur.Rules = [...this.Rules];
         ur.Tree = this.getSelectionIdTree(false);
         return ur;
     }

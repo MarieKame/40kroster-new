@@ -1,75 +1,45 @@
-import { Exception } from 'sass';
 import Variables from '../Variables';
-import { transpileModule } from 'typescript';
-
-class DescriptorData {
-    Name: string;
-    Description: string;
-
-    constructor(name:string, description:string){
-        this.Name = name;
-        this.Description = description.replaceAll("\n\n", "\n").replaceAll(/^(?:[a-z :])+\n(?![-■])/gi, " ");
-    }
-}
+import { DescriptorRaw, LeaderDataRaw, ModelRaw, UnitRaw, WeaponRaw } from '../Roster/RosterRaw';
+import Each from '../Components/Each';
 
 class StatsData {
-    Data:string;
-    protected _M: number;
-    protected _T: number;
-    protected _SV: number;
-    protected _IV: number|null;
-    protected _W: number;
-    protected _LD: number;
-    protected _OC: number;
+    private data:Array<DescriptorRaw>;
+    private _IV:string|null;
     
     public M():string {
-        return this._M + '"';
+        return this.data[0].Value;
     }
     public T():string {
-        return this._T.toString();
+        return this.data[1].Value;
     }
     public SV():string {
-        return this._SV+'+';
+        return this.data[2].Value;
     }
     public IV():string|null {
-        return (this._IV)?this._IV+'+':null;
+        return this._IV;
     }
     public W():string {
-        return this._W.toString();
+        return this.data[3].Value;
     }
     public LD():string {
-        return this._LD.toString();
+        return this.data[4].Value;
     }
     public OC():string {
-        return this._OC.toString();
+        return this.data[5].Value;
     }
 
-    public isRealModel(){
-        return !isNaN(this._OC);
+    public IsSame(stats:StatsData):boolean{
+        let same = true;
+        Each<DescriptorRaw>(this.data, (desctiptor, index)=>{
+            same = same && (desctiptor.Value===stats.data[index].Value);
+        });
+        return same;
     }
 
-    public same(stats:StatsData):boolean{
-        return this._M == stats._M &&
-        this._T == stats._T &&
-        this._SV == stats._SV &&
-        this._IV == stats._IV &&
-        this._W == stats._W &&
-        this._LD == stats._LD &&
-        this._OC == stats._OC;
-    }
-
-    constructor(data:string, invulnerableDescription:string|undefined) {
-        this.Data = data;
-        let split = data.split(',');
-        this._M = parseInt(split[0]);
-        this._T = parseInt(split[1]);
-        this._SV = parseInt(split[2]);
-        this._W = parseInt(split[3]);
-        this._LD = parseInt(split[4]);
-        this._OC = parseInt(split[5]);
-
+    constructor(data:Array<DescriptorRaw>, invulnerableDescription:string|undefined) {
+        this.data = data;
         if (invulnerableDescription) {
-            this._IV = parseInt(invulnerableDescription.charAt(invulnerableDescription.search(/.\+/g)));
+            this._IV = invulnerableDescription.charAt(invulnerableDescription.search(/.\+/g)) + "+";
         } else {
             this._IV = null;
         }
@@ -86,84 +56,49 @@ class ModelData {
     }
 }
 
-class CostData {
-    public Val: number;
-    public Unit: string;
-
-    public toString():string {
-        return this.Val.toFixed(0) + ' ' + this.Unit;
-    }
-
-    constructor(val:number, unit:string) {
-        this.Val = val;
-        this.Unit = unit;
-    }
-}
-
 class WeaponData {
-    protected _Range: number | null;
-    protected _A: string;
-    protected _BS: number|null;
-    protected _S: string;
-    protected _AP: string;
-    protected _D: string;
-    _Traits: Array<string>;
+    Data:Array<DescriptorRaw>;
+    private count:number;
+    private name:string;
 
-    public Data:string;
-    public Count: number;
-    public Name: string;
+    Name():string {return this.name;}
+
+    Count():number {return this.count;}
 
     public Range():string{
-        return (this._Range && this._Range !== 0) ? (this._Range+'"') :'Melee';
+        return this.Data[0].Value;
     }
     public A():string {
-        return this._A;
+        return this.Data[1].Value;
     }
     public BS():string {
-        return (this._BS)?this._BS+'+':'N/A';
+        return this.Data[2].Value;
     }
     public S():string {
-        return this._S;
+        return this.Data[3].Value;
     }
     public AP():string {
-        return this._AP;
+        return this.Data[4].Value;
     }
     public D():string {
-        return this._D;
+        return this.Data[5].Value;
     }
     public Traits():Array<string> {
-        return this._Traits;
+        return this.Data.filter((trait, index)=>index>=6&&trait.Value!=="-").map(trait=>trait.Value);
     }
 
     public IsMelee():boolean {
-        return this._Range === null || this._Range === 0;
-    }
-
-    public IsWeapon():boolean {
-        return this._D !== undefined;
+        return this.Range()==="Melee";
     }
 
     public IsMultiRange():boolean{
         return false;
     }
 
-    constructor(data:string, count:number, name:string, avoidTrait:string|null = null) {
+    constructor(data:Array<DescriptorRaw>, count:number, name:string) {
         this.Data = data;
-        let split = data.split(',');
-        this._Range = Number.isInteger(parseInt(split[0]))?parseInt(split[0]):null;
-        this._A = split[1];
-        this._BS = Number.isInteger(parseInt(split[2]))?parseInt(split[2]):null;
-        this._S = split[3];
-        this._AP = split[4];
-        this._D = split[5];
-        this._Traits = new Array<string>();
-        for(let i= 6; i < split.length; i++) {
-            if (split[i] !== '-' && (!avoidTrait || split[i] !== avoidTrait) && split[i] !== "") {
-                this._Traits.push(split[i]); 
-            }
-        }
-        this.Count = count;
-        this.Name = name;
+        this.count = count;
+        this.name = name;
     }
 }
 
@@ -179,14 +114,13 @@ class MultiRangeWeaponData extends WeaponData {
     }
 
     constructor(profiles: Array<WeaponData>, count:number, name:string){
-        super("0,0,0,0,0,1", count, name);
+        super(null, count, name);
         this.MeleeProfiles = profiles.filter(profile=>profile.IsMelee());
         this.RangedProfiles = profiles.filter(profile=>!profile.IsMelee());
     }
 }
 
 class ProfileWeaponData extends WeaponData {
-    
     public Profiles: Array<WeaponData>;
 
     public IsMelee():boolean {
@@ -194,34 +128,48 @@ class ProfileWeaponData extends WeaponData {
     }
 
     constructor(profiles: Array<WeaponData>, count:number, name:string){
-        super("0,0,0,0,0,1", count, name);
+        super(null, count, name);
         this.Profiles = profiles;
     }
 }
 
-class LeaderData{
-    private static UniqueBase = 0;
+export function ExtractWeaponData(weapons:Array<WeaponRaw>):{melee:Array<WeaponData>, ranged:Array<WeaponData>} {
+    let MeleeWeapons = new Array<WeaponData>();
+    let RangedWeapons = new Array<WeaponData>();
+    Each<WeaponRaw>(weapons, weapon=>{
+        if(weapon.Profiles.length===1){
+            if(weapon.Profiles[0].Profile[0].Value==="Melee"){
+                MeleeWeapons.push(new WeaponData(weapon.Profiles[0].Profile, weapon.Count, weapon.Name));
+            } else {
+                RangedWeapons.push(new WeaponData(weapon.Profiles[0].Profile, weapon.Count, weapon.Name));
+            }
+        } else {
+            const meleeProfiles = weapon.Profiles.filter(p=>p.Profile[0].Value ==="Melee");
+            const rangedProfiles = weapon.Profiles.filter(p=>p.Profile[0].Value!=="Melee");
+            if(meleeProfiles.length === weapon.Profiles.length) {
+                MeleeWeapons.push(new ProfileWeaponData(weapon.Profiles.map(p=>new WeaponData(p.Profile, 0, p.Name)), weapon.Count, weapon.Name))
+            } else if (rangedProfiles.length === weapon.Profiles.length) {
+                RangedWeapons.push(new ProfileWeaponData(weapon.Profiles.map(p=>new WeaponData(p.Profile, 0, p.Name)), weapon.Count, weapon.Name))
+            } else {
+                const mrw = new MultiRangeWeaponData(weapon.Profiles.map(p=>new WeaponData(p.Profile, 0, p.Name)), weapon.Count, weapon.Name);
+                function __formatName(wpnName, profileName){
+                    return "➤ " + wpnName + (profileName!==""?" - " + profileName:"");
+                }
+                if(mrw.MeleeProfiles.length > 1){
+                    MeleeWeapons.push(new ProfileWeaponData(mrw.MeleeProfiles, weapon.Count, weapon.Name));
+                } else if (mrw.MeleeProfiles.length == 1 ){
+                    MeleeWeapons.push(new WeaponData(mrw.MeleeProfiles[0].Data, weapon.Count, __formatName(weapon.Name, mrw.MeleeProfiles[0].Name)));
+                }
 
-    Leading:Array<string>;
-    Effects:Array<DescriptorData>;
-    CurrentlyLeading:number;
-    UniqueId:number;
-    BaseName:string;
-    CustomName:string;
-    MultiRangeWeapons:Array<MultiRangeWeaponData>;
-    MeleeWeapons:Array<WeaponData>;
-    RangedWeapons:Array<WeaponData>;
-
-    constructor(unit:UnitData, leading:Array<string>){
-        this.BaseName = unit.Name;
-        this.CustomName = unit.CustomName;
-        this.MeleeWeapons = unit.MeleeWeapons;
-        this.RangedWeapons = unit.RangedWeapons;
-        this.Leading = leading;
-        this.Effects = new Array<DescriptorData>();
-        this.CurrentlyLeading=-1;
-        this.UniqueId = LeaderData.UniqueBase++;
-    }
+                if(mrw.RangedProfiles.length > 1){
+                    RangedWeapons.push(new ProfileWeaponData(mrw.RangedProfiles, weapon.Count, weapon.Name));
+                } else if (mrw.RangedProfiles.length == 1 ){
+                    RangedWeapons.push(new WeaponData(mrw.RangedProfiles[0].Data, weapon.Count, __formatName(weapon.Name, mrw.RangedProfiles[0].Name)));
+                }
+            }
+        }
+    });
+    return {melee:MeleeWeapons, ranged:RangedWeapons};
 }
 
 class UnitData {
@@ -229,43 +177,95 @@ class UnitData {
     static CompareUnits(unit1:UnitData, unit2:UnitData) {
         const weight1 = unit1.getWeight();
         const weight2 = unit2.getWeight();
-        return (weight2 !== weight1)?weight2-weight1:unit1.Name.localeCompare(unit2.Name);
+        return (weight2 !== weight1)?weight2-weight1:unit1.Name().localeCompare(unit2.Name());
     }
 
-    Name : string;
-    CustomName : string;
+    Name() : string {return this.data.BaseName}
+    CustomName() : string {return this.data.CustomName!==undefined?this.data.CustomName:null}
+    Key():string {return this.data.UniqueID};
+
     Keywords: Array<string>;
     Factions: Array<string>;
-    Rules: Array<DescriptorData>;
-    Profiles: Array<DescriptorData>;
-    MultiRangeWeapons:Array<MultiRangeWeaponData>;
+    Rules: Array<string>;
+    Abilities: Array<DescriptorRaw>;
     MeleeWeapons:Array<WeaponData>;
     RangedWeapons:Array<WeaponData>;
-    OtherEquipment:Array<WeaponData>;
-    Key:number;
+
     Count:number = 1;
 
-    Costs: CostData;
-    Models: Array<ModelData>|ModelData;
+    Models: Array<ModelData>;
 
-    private Leader?:LeaderData|false = null;
+    private data:UnitRaw;
 
-    private differentStats(modelList:Array<ModelData>):Array<StatsData>|StatsData{
-        let stats = new Array<StatsData>();
-        modelList.forEach(function(model){
-            let index = stats.findIndex((stat) => model.Stats.same(stat));
-            if (index === -1) {
-                stats.push(model.Stats);
+    constructor(unit:UnitRaw) {
+        this.data = unit;
+        this.Factions = new Array<string>();
+        this.Keywords = new Array<string>();
+        Each<string>(unit.Categories, categories=>{
+            let result = /(?<=Faction: ).*/g.exec(categories)
+            if (result){
+                this.Factions.push(result[0]);
+            } else  {
+                this.Keywords.push(categories);
             }
         });
-        if (stats.length > 1)
-            return stats;
-        else 
-            return modelList.slice(-1)[0].Stats;
+        this.Rules = new Array<string>();
+        this.Abilities = new Array<DescriptorRaw>();
+        let invuls = new Array<DescriptorRaw>();
+        Each<DescriptorRaw>(unit.Abilities, ability=>{
+            let add = true;
+            Each<string>(unit.Rules, rule=>{
+                let r = rule;
+                const regex = new RegExp(rule, "gi");
+                if(regex.test(ability.Name)) {
+                    console.log("???")
+                    r += " " + /D?[0-9]\+?/i.exec(ability.Value).toString().trim();
+                    add=false;
+                } 
+                if(!this.Rules.find(ru=>ru===r)) this.Rules.push(r);
+            });
+            if(/invulnerable/gi.test(ability.Name)) {
+                invuls.push(ability);
+            } else if (add) {
+                this.Abilities.push(ability);
+            }
+        });
+
+        const extracted = ExtractWeaponData(unit.Weapons);
+        this.MeleeWeapons = extracted.melee;
+        this.RangedWeapons = extracted.ranged;
+
+        function sortWeapon(wpn1:WeaponData, wpn2:WeaponData):number{
+            if (wpn1.Count > wpn2.Count)
+                return -1;
+            if (wpn1.Count < wpn2.Count)
+                return 1;
+            if (wpn1 instanceof ProfileWeaponData && !(wpn2 instanceof ProfileWeaponData))
+                return 1;
+            if (!(wpn1 instanceof ProfileWeaponData) && wpn2 instanceof ProfileWeaponData)
+                return -1;
+            return 0;
+        }
+        this.MeleeWeapons.sort(sortWeapon);
+        this.RangedWeapons.sort(sortWeapon);
+        
+        this.Models = new Array<ModelData>();
+        Each<ModelRaw>(unit.Models, (model, index)=>{
+            let invul:DescriptorRaw = null;
+            if(invuls.length===1 && index === unit.Models.length-1) {
+                invul = invuls[0];
+            } else if (invuls.length>1) {
+                const foundIndex = invuls.findIndex(i=>new RegExp(model.Name.substring(0, model.Name.length-1), "gi").test(i.Name));
+                if(foundIndex!==-1) {
+                    invul=invuls[foundIndex];
+                }
+            }
+            this.Models.push(new ModelData(model.Name, new StatsData(model.Characteristics, invul.Value)))
+        });
     }
 
     private getWeight():number{
-        let weight = this.Costs.Val;
+        let weight = this.data.Cost;
         let index = 1000 ** Variables.unitCategories.length;
         const cat = this.GetUnitCategory();
         Variables.unitCategories.forEach((category)=>{
@@ -278,26 +278,16 @@ class UnitData {
     }
 
     private flat():string{
-        return this.Name + 
-            this.CustomName + 
-            this.Profiles.map(x=>x.Name).toString() + 
-            this.Rules.map(x=>x.Name).toString() + 
-            this.MeleeWeapons.map(x=>x.Name).toString() + 
-            this.RangedWeapons.map(x=>x.Name).toString() + 
-            this.OtherEquipment.map(x=>x.Name).toString();
+        return this.Name() + 
+            this.CustomName() + 
+            this.Abilities.map(x=>x.Name).toString() + 
+            this.Rules.toString() + 
+            this.MeleeWeapons.map(x=>x.Name+x.Count.toString()).toString() + 
+            this.RangedWeapons.map(x=>x.Name+x.Count.toString()).toString();
     }
 
-    GetStats():StatsData|Array<StatsData>{
-        if (this.Models instanceof ModelData) {
-            return this.Models.Stats;
-        } else {
-            if (this.Models) {
-                return this.differentStats(this.Models);
-            } else {
-                console.log("ERROR : " + this.Name)
-                return new StatsData("0,0,0", "");
-            }
-        }
+    GetStats():Array<StatsData>{
+        return this.Models.map(m=>m.Stats);
     }
 
     GetModelName(index:number) {
@@ -316,105 +306,18 @@ class UnitData {
         return this.Keywords[categoryIndex];
     }
 
-    GetLeaderData():LeaderData|null{
-        if (this.Leader)
-            return this.Leader;
-        if (this.Leader === false)
-            return null;
-        const that = this;
-        this.Profiles.forEach(function(profile){
-            if (profile.Name == "Leader") {
-                that.Leader = new LeaderData(that, profile.Description.match(/(?<=[-■]).*/ig).map(item=>item.trim()));
-            }
-        });
-        if (this.Leader === null) {
-            this.Leader=false;
-            return null;
-        }
-        this.Profiles.forEach(function(profile){
-            if (profile.Description.match(/(leading)|(bearer[’'`]s unit)|(this model[’'`]s unit)/ig)) {
-                if (that.Leader) {
-                    that.Leader.Effects.push(profile)
-                }
-            }
-        });
-        this.OtherEquipment.forEach(function(profile){
-            if (profile.Data.match(/(leading)|(bearer[’'`]s unit)|(this model[’'`]s unit)/ig)) {
-                if (that.Leader) {
-                    that.Leader.Effects.push(new DescriptorData(profile.Name, profile.Data))
-                }
-            }
-        });
-        return this.Leader;
-    }
-
-    GetModelsForStats():Array<ModelData>|ModelData{
-        if (this.Models instanceof ModelData)
-            return this.Models;
-        else {
-            let statsSent = new Array<StatsData>();
-            const filtered = this.Models.filter(model=>{const send=statsSent.findIndex(stats=>model.Stats.same(stats)) == -1;statsSent.push(model.Stats); return send;});
-            if (filtered.length==1) 
-                return filtered[0];
-            else
-                return filtered;
-        }
-    }
-
     HasNoModel():boolean {
         return this.Models == null || (this.Models instanceof Array && this.Models.length == 0);
     }
 
-    Equals(other:UnitData, leaderData:LeaderData[]):boolean{
-        return this.flat() == other.flat() && leaderData.findIndex(data=>data.CurrentlyLeading === this.Key || data.CurrentlyLeading === other.Key)===-1;
-    }
-
-    private unique:boolean|null=null;
-    private uniqueIV:string|null=null;
-
-    UniqueInvul():boolean{
-        if(this.unique !== null) {
-            return this.unique;
-        }
-        if (this.Models instanceof ModelData) {
-            this.unique = this.Models.Stats.IV() !== null;
-            this.uniqueIV = this.Models.Stats.IV();
-            return this.unique;
-        } else {
-            let unique=false;
-            let lastNonNullVal=null;
-            this.Models.forEach(model=>{
-                if(model.Stats.IV() !== null){
-                    if (lastNonNullVal!==null &&lastNonNullVal !== model.Stats.IV()) {
-                        unique=false;
-                        this.unique=false
-                    } else {
-                        unique= this.Profiles.findIndex(profile=> /.*Invulnerable Save.*/gi.test(profile.Name) && new RegExp(".*"+model.Name+".*", "gi").test(profile.Description))=== -1;
-                        lastNonNullVal=model.Stats.IV();
-                    }
-                }
-            });
-            if (unique) {
-                this.uniqueIV = lastNonNullVal;
-            }
-            this.unique = unique;
-            return this.unique;
-        }
-    }
-    GetUniqueInvul():string{
-        if (!this.UniqueInvul()) {
-            throw "Has to be unique";
-        }
-        return this.uniqueIV;
+    Equals(other:UnitData, leaderData:LeaderDataRaw[]):boolean{
+        return this.flat() == other.flat() && leaderData.findIndex(data=>data.CurrentlyLeading === this.Key() || data.CurrentlyLeading === other.Key())===-1;
     }
 }
 
 export {UnitData,
-CostData,
 WeaponData,
 ProfileWeaponData,
 MultiRangeWeaponData,
 ModelData,
-StatsData,
-DescriptorData,
-LeaderData};
+StatsData,};

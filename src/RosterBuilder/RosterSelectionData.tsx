@@ -89,6 +89,7 @@ export class SelectionEntry extends SelectionData {
     Modifiers:Array<Modifier>;
     Profiles:Array<ProfileData>;
     ProfileInfoLinks:Array<InfoLink>;
+    Rules:Array<string>;
 
     constructor(){
         super();
@@ -98,6 +99,7 @@ export class SelectionEntry extends SelectionData {
         this.Modifiers = new Array<Modifier>();
         this.Profiles = new Array<ProfileData>();
         this.ProfileInfoLinks = new Array<InfoLink>();
+        this.Rules = new Array<string>();
     }
 
     GetVariablesCategory():string{
@@ -181,6 +183,7 @@ export default class RosterSelectionData {
         val.Modifiers = [...selectionEntry.Modifiers];
         val.Profiles = [...selectionEntry.Profiles];
         val.ProfileInfoLinks = [...selectionEntry.ProfileInfoLinks];
+        val.Rules = [...selectionEntry.Rules];
         return val;
     }
 
