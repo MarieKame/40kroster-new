@@ -112,7 +112,7 @@ export class Button extends Component<ButtonProps>  {
         if (this.props.image)
             return <Pressable style={[style, this.props.style]} onPress={e=>this.onPress(e, this)}>{this.props.children}</Pressable>
         return (
-            <Pressable style={[style, this.props.style]} onPress={e=>this.onPress(e, this)}>
+            <Pressable style={[style, {height:"auto"}, this.props.style]} onPress={e=>this.onPress(e, this)}>
                 <Text style={[{textAlign:"center"}, forceTextColour, this.props.textStyle]}>
                     {this.props.children}
                 </Text>

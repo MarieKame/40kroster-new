@@ -7,10 +7,12 @@ import Button from "../Components/Button";
 import { KameContext } from "../../Style/KameContext";
 import * as FileSystem from 'expo-file-system';
 import RosterSelectionExtractor from "./RosterSelectionExtractor";
-import RosterSelectionData, { Constraint, SelectionData, SelectionEntry, TargetSelectionData } from "./RosterSelectionData";
+import RosterSelectionData, { Constraint, ProfileData, SelectionData, SelectionEntry, TargetSelectionData } from "./RosterSelectionData";
 import Selection from "./UnitSelection";
 import Each from "../Components/Each";
-import ProfilesDisplay from "./ProfilesDisplay";
+import ProfilesDisplay, { ProfilesDisplayData } from "./ProfilesDisplay";
+import Checkbox from "../Components/Checkbox";
+import AutoExpandingTextInput from "../Components/AutoExpandingTextInput";
 
 enum BuildPhase{
     FACTION, LOADING, LOADING_ERROR, ADD, EQUIP
@@ -36,7 +38,11 @@ export default class BuilderMenu extends Component<props> {
         currentUnit:-2,
         update:0,
         editWeapon:false,
-        editingWeapon:new Selection(1, null, null, null, null)
+        editingWeapon:new Selection(1, null, null, null, null),
+        totalCost:0,
+        warlord:null,
+        equipedEnhancementIDs:new Array<string>(),
+        rosterName:""
     }
 
     ErrorLoadingRosterFile(that:BuilderMenu){
@@ -85,7 +91,14 @@ export default class BuilderMenu extends Component<props> {
 
     AddUnitToRoster(unit:TargetSelectionData, that:BuilderMenu){
         let units = [...that.state.units];
-        let sel = Selection.Init(that.state.rosterSelectionData.GetTarget(unit), that.state.rosterSelectionData)
+        const found = that.state.rosterSelectionData.Categories.find(c=>c.Name===unit.Name);
+        let sel = Selection.Init(that.state.rosterSelectionData.GetTarget(unit), that.state.rosterSelectionData, found?found.ID:null)
+        console.log(sel.Name + " - " + (sel.IsWarlord()?"warlord":"not warlord"))
+        console.log(sel.SelectionValue.map(sv=>sv.Name + " - " + sv.Count))
+        if(sel.IsWarlord()) {
+            if(that.state.warlord) that.state.warlord.SelectionValue.find(sv=>sv.Name==="Warlord").Count=0;
+            that.setState({warlord:sel});
+        }
         units.push(sel);
         that.setState({units:units.sort((unit1, unit2)=>{
             return unit1.GetVariablesCategoryIndex() - unit2.GetVariablesCategoryIndex();
@@ -128,61 +141,132 @@ export default class BuilderMenu extends Component<props> {
         return null;
     }
 
-    DisplayUpgrade(selection:Selection, index:number):ReactNode{
-        if(selection.Count===0) return null;
-        console.log(selection.Name);
-        console.log(selection.Parent.SelectionValue.length);
-        console.log(selection.Parent.GetSelectionCount());
-        return <View key={index}>
-            <Button 
-                small={true} 
-                disabled={selection.Parent.GetSelectionCount()===selection.Parent.SelectionValue.length} 
-                style={{height:20}} 
-                textStyle={{color:this.context.Dark}} 
-                onPress={e=>this.setState({editWeapon:true, editingWeapon:selection})}>
-                    {selection.Name}{this.DisplayValidity(selection)}
-                </Button>
-            <ProfilesDisplay Data={selection.DisplayStats()} key={index} Small />
-        </View>;
+    DisplayUpgrade(selection:Selection, index:number, disabled:boolean, enhancement:boolean):ReactNode{
+        let option;
+        if((selection.Parent.ID !== selection.Ancestor.ID && !/Enhancement/gi.test(selection.Parent.Name)) || !selection.Changeable()) {
+            if(selection.Count===0) return;
+            option= <Button 
+                    small={true} 
+                    disabled={selection.Parent.GetSelectionCount()===selection.Parent.SelectionValue.length || disabled || !selection.Changeable()} 
+                    style={{height:"auto"}} 
+                    textStyle={{color:disabled?this.context.LightAccent:this.context.Dark}} 
+                    onPress={e=>this.setState({editWeapon:true, editingWeapon:selection})}>
+                        {selection.Name}{this.DisplayValidity(selection)}
+                    </Button>;
+        } else {
+            const trulyDisabled = 
+                disabled || 
+                (selection.Name==="Warlord" && 
+                    (this.state.warlord!==null && 
+                    this.state.warlord.ID !== selection.Ancestor.ID)) ||
+                enhancement && 
+                    (selection.Parent.GetSelectionCount()===1 || 
+                    this.state.equipedEnhancementIDs.findIndex(eeID => eeID === selection.ID) !== -1);
+            option= <Checkbox 
+                Text={selection.Name} 
+                Style={{opacity:trulyDisabled?0.5:1}} 
+                Disabled={trulyDisabled} 
+                Checked={!disabled&&selection.Count===1} 
+                OnCheckedChanged={e=>{
+                    selection.Count=(e?1:0);
+                    this.setState({update:this.state.update++})
+                    if(selection.Name==="Warlord") {
+                        this.setState({warlord:(e?selection.Ancestor:null)});
+                    }
+                    if(enhancement) {
+                        let eeIDs = this.state.equipedEnhancementIDs;
+                        if (e) eeIDs.push(selection.ID);
+                        else eeIDs.splice(eeIDs.findIndex(eeID=> eeID === selection.ID), 1);
+                        this.setState({equipedEnhancementIDs:eeIDs});
+                    }
+                }}/>
+        }
+        if(!option) return null;
+        return <View key={index} style={{flexDirection:"row", backgroundColor:this.context.Bg, marginBottom:6, marginTop:6}}>
+            <View style={{width:"25%", justifyContent:"center"}}>{option}</View>
+            <ProfilesDisplay Data={selection.DisplayStats()} key={index} Small Disabled={disabled} Style={{width:"75%", marginLeft:4, marginRight:4}} />
+        </View>
     }
 
-    DisplayGroup(selection:Selection, colour:string, textColour:string, index:number, marginTop:number):ReactNode{
-        return <Text style={{backgroundColor:colour, color:textColour, marginTop:marginTop}} key={selection.Name + selection.Count + index}>{selection.Name}{selection.GetSelectionCount()!==1&&selection.DisplayCount()}{this.DisplayValidity(selection)}</Text>
+    DisplayGroup(selection:Selection, colour:string, textColour:string, index:number, marginTop:number, disabled:boolean):ReactNode{
+        return <Text style={{backgroundColor:colour, color:textColour, marginTop:marginTop, opacity:disabled?0.5:1}} key={selection.Name + selection.Count + index}>{selection.Name}{selection.GetSelectionCount()!==1&&selection.DisplayCount()}{this.DisplayValidity(selection)}</Text>
     }
 
-    DisplayModel(selection:Selection, colour:string, textColour:string, index:number, marginTop:number):ReactNode{
-        return <View style={{flexDirection:"row", backgroundColor:colour, height:20, alignItems:"center", marginTop:marginTop}} key={selection.Name + selection.Count + index}>
+    DisplayModel(selection:Selection, colour:string, textColour:string, index:number, marginTop:number, disabled:boolean):ReactNode{
+        return <View style={{flexDirection:"row", backgroundColor:colour, height:28, alignItems:"center", marginTop:marginTop, opacity:disabled?0.5:1, paddingRight:6}} key={selection.Name + selection.Count + index}>
             <Text style={{flexGrow:1, color:textColour}}>{selection.Name}{selection.DisplayCount()}{this.DisplayValidity(selection)}</Text>
-            {selection.Changeable()&&<Button small disabled={!selection.CanRemove()} onPress={e=>selection.Remove(this)} style={{height:20, width:40}} textStyle={{fontSize:Variables.fontSize.small}}>-</Button>}
-            {selection.Changeable()&&<Button small disabled={!selection.CanAdd()} onPress={e=>selection.Add(this)} style={{height:20, width:40}} textStyle={{fontSize:Variables.fontSize.small}}>+</Button>}
+            {selection.Changeable()&&<Button small disabled={!selection.CanRemove()} onPress={e=>selection.Remove(this)} style={{height:28, width:40}} textStyle={{fontSize:Variables.fontSize.small}}>-</Button>}
+            {selection.Changeable()&&<Button small disabled={!selection.CanAdd()} onPress={e=>selection.Add(this)} style={{height:28, width:40}} textStyle={{fontSize:Variables.fontSize.small}}>+</Button>}
         </View>;
     }
 
-    ViewSelectionRecursive(selection:Selection, index:number=1, depth:number=1){
+    ViewSelectionRecursive(selection:Selection, index:number=1, depth:number=1, disabled:boolean=false, isEnhancement:boolean=false){
         if (!selection) return null;
         let currentIndex = index;
+
+        function extractGroups(sv:Array<Selection>):Array<Selection>{
+            if (depth === 1) return sv;
+            let result = new Array<Selection>();
+            
+            Each<Selection>(sv, s=>{
+                if(s.Type==="group"){
+                    result = [...result, ...extractGroups(s.SelectionValue)];
+                }
+                else result = [...result, s];
+            });
+            return result;
+        }
 
         let value=[];
         let skip = false;
         const colour = depth==1?this.context.Accent:(depth==2?this.context.LightAccent:null);
-        Each<Selection>(selection.SelectionValue, (child, index)=>{
+        const sv = extractGroups(selection.SelectionValue);
+        
+        Each<Selection>(sv, (child, index)=>{
             const valid = child.Valid();
             if(child.Type=="model"){
-                value.push(this.DisplayModel(child, valid?colour:this.context.Main, !valid?this.context.LightAccent:this.context.Dark, currentIndex++, index===0?0:30));
+                value.push(this.DisplayModel(
+                    child, 
+                    valid?colour:this.context.Main, 
+                    !valid?this.context.LightAccent:this.context.Dark, 
+                    currentIndex++, 
+                    index===0?0:10, 
+                    child.IsHidden()||disabled));
                 skip = child.Count == 0;
             } else if(child.Type=="group"){
-                value.push(this.DisplayGroup(child, valid?colour:this.context.Main, !valid?this.context.LightAccent:this.context.Dark, currentIndex++, index===0?0:(child.GetModelCount()!==0?30:0)));
+                value.push(this.DisplayGroup(
+                    child, 
+                    valid?colour:this.context.Main, 
+                    !valid?this.context.LightAccent:this.context.Dark, 
+                    currentIndex++, 
+                    index===0?0:(child.GetModelCount()!==0?10:0),
+                    child.IsHidden()||disabled));
             } else if(child.Type=="upgrade"){
-                value.push(this.DisplayUpgrade(child, currentIndex++));
+                value.push(this.DisplayUpgrade(
+                    child, 
+                    currentIndex++,
+                    child.IsHidden()||disabled,
+                    isEnhancement));
             } else {
                 console.error("ERROR, missing selection display for type : ");
                 console.error(child.Type);
             }
-            if(!skip) value.push(this.ViewSelectionRecursive(child, currentIndex++, depth+1));
+            if(!skip) value.push(this.ViewSelectionRecursive(child, currentIndex++, depth+1, child.IsHidden(), /Enhancement/gi.test(child.Name)));
         });
 
         return <View key={this.state.currentUnit + selection.Name + currentIndex + this.state.update} style={{flexGrow:1, width:"100%", paddingLeft:6}}>
             {value}
+        </View>;
+    }
+
+    ViewUnitAbilties(unit:Selection):ReactNode {
+        return <View style={{padding:10, gap:6}}>
+            {unit.GetAbilities().map((ability, index)=>
+                <View key={index} style={{width:"100%"}}>
+                    <Text style={{backgroundColor:this.context.LightAccent, width:"100%"}}>{ability.Name}</Text>
+                    <Text>{ability.Characteristics[0].Value}</Text>
+                </View>
+            )}
         </View>;
     }
     
@@ -190,13 +274,31 @@ export default class BuilderMenu extends Component<props> {
         if (this.state.currentUnit===-2) return null;
         const unit = this.state.units[this.state.currentUnit];
         const that = this;
+        const unitModels = unit.GetModelsWithDifferentProfiles();
+        let unitModelsDisplay = new Array<ReactNode>();
+
+        function newUnitDisplay(name:string, data:ProfilesDisplayData|ProfilesDisplayData[], key) {
+            unitModelsDisplay.push(<View key={key} style={{flexDirection:"row"}}>
+                <Text key="name" style={{marginRight:4, alignSelf:"center", width:120, textAlign:"right", height:"auto", alignContent:"center"}}>{name}</Text>
+                <ProfilesDisplay Data={data} DisplayName={false} OnlyDisplayFirst={true} />
+            </View>);
+        }
+        if(unitModels.length===1){
+            newUnitDisplay(unit.Name, unitModels[0].DisplayStats(), "title")
+        } else {
+            Each<Selection>(unitModels, (unitModel, index)=>{
+                newUnitDisplay(unitModel.Name, unitModel.DisplayStats(), index);
+            });
+        }
+
         return <View style={{height:"100%", backgroundColor:this.context.Bg, marginLeft:10}}>
             <ScrollView>
-                <View key="title" style={{height:38}}>
-                    <Text key="name" style={{alignSelf:"center"}}>{unit.Name}</Text>
-                    <Text key="pts" style={{alignSelf:"center"}}>{unit.GetCost() + " pts"}</Text>
+                <View style={{height:48*unitModels.length+6}}>
+                    {unitModelsDisplay}
                 </View>
                 {this.ViewSelectionRecursive(unit)}
+                {this.ViewUnitAbilties(unit)}
+                <Text key="cats" style={{padding:10}}><Text style={{fontFamily:Variables.fonts.WHB}}>Categories : </Text>{unit.Categories.join(", ")}</Text>
             </ScrollView>
             <Button style={{position:"absolute", top:0, right:0}} onPress={e=>{
                 if(this.state.phase === BuildPhase.EQUIP) {
@@ -249,7 +351,7 @@ export default class BuilderMenu extends Component<props> {
                         <Text>{render.item.Name}</Text>
                         <Text>
                             {render.item.GetFrameworkCost()>0&&render.item.GetCost()+" pts"}
-                            {render.item.GetFrameworkCost()>0&&" — "+render.item.GetModelCount()+" models"}
+                            {render.item.GetFrameworkCost()>0&&" — "+render.item.GetModelCount()+" model" + (render.item.GetModelCount()>1?"s":"")}
                             {this.DisplayValidity(render.item, true)}
                         </Text>
                     </View>
@@ -281,6 +383,7 @@ export default class BuilderMenu extends Component<props> {
             return this.selectionCategory;
         }
         const target = that.state.rosterSelectionData.GetTarget(render.item);
+        if(!target) return null;
         return <View>
             {newCategory(target)&&
                 <View style={{alignItems:"center", justifyContent:"center", backgroundColor:this.context.Accent, width:"100%"}}>
@@ -304,7 +407,17 @@ export default class BuilderMenu extends Component<props> {
                 return <Button onPress={e=>this.props.navigation.goBack()}>Back</Button>;
             case BuildPhase.ADD:
             case BuildPhase.EQUIP:
-                return <Button onPress={e=>this.setState({phase:BuildPhase.FACTION})}>Back to Faction list</Button>;
+                const totalCost =  this.state.units.map(u=>u.GetCost()).reduce((cost, total)=> cost+total, 0)
+                return <View style={{flexDirection:"row", height:38, marginBottom:4, gap:8, alignItems:"center"}}>
+                    <AutoExpandingTextInput key="rosterName" onSubmit={e=>{this.setState({rosterName:e})}} defaultValue="New Roster Name" style={{width:200}}/>
+                    <View key="info" style={{backgroundColor:this.context.Bg, height:38, alignItems:"center", paddingLeft:10, paddingRight:10, gap:5, flexDirection:"row"}}>
+                        <Text key="wl">Warlord : {this.state.warlord?this.state.warlord.Name:"Not Selected"}</Text>
+                        <Text key="sp">|</Text>
+                        <Text key="total">Total : {totalCost} pts</Text>
+                    </View>
+                    <Button key="save" style={{position:"absolute", right:50}} disabled={this.state.rosterName==="" || this.state.warlord===null || !this.state.units.map(u=>u.ValidRecursive()).reduce((was, is)=>was&&is, true)} onPress={e=>this.setState({phase:BuildPhase.FACTION}/*TODO: add roster export here */)}>Save</Button>
+                    <Button key="exit" style={{position:"absolute", right:0}} onPress={e=>this.setState({phase:BuildPhase.FACTION})} weight="light">Exit</Button>
+                </View>;
         }
         return null;
     }
@@ -337,11 +450,13 @@ export default class BuilderMenu extends Component<props> {
             case BuildPhase.EQUIP:
                 contents= <View>
                     <View style={{flexDirection:"row"}}>
-                        <View style={{width: this.state.addColumnWidth, overflow:"hidden", marginRight:10}}>
+                        <View style={{width: this.state.addColumnWidth, overflow:"hidden", marginRight:10, height:Variables.height-60}}>
                             <FlatList style={{minWidth:COLUMN_WIDTH}} numColumns={1} data={this.state.rosterSelectionData.Units} renderItem={render=>this.renderUnitSelection(render, this)} />
                         </View>
-                        <FlatList key={this.state.update} numColumns={1} data={[this.state.detachmentSelection, ...this.state.units]} renderItem={render=>this.renderRoster(render, this)} />
-                        <View style={{width: (COLUMN_WIDTH-this.state.addColumnWidth)*1.3, overflow:"hidden"}}>
+                        <View style={{overflow:"hidden", height:Variables.height-60, flexGrow:1}}>
+                            <FlatList key={this.state.update} numColumns={1} data={[this.state.detachmentSelection, ...this.state.units]} renderItem={render=>this.renderRoster(render, this)} />
+                        </View>
+                        <View style={{width: (COLUMN_WIDTH-this.state.addColumnWidth)*1.3, overflow:"hidden", height:Variables.height-60}}>
                             {this.DisplayUnitSelections()}
                         </View>
                     </View>
@@ -350,21 +465,24 @@ export default class BuilderMenu extends Component<props> {
         }
         let overlay;
         if(this.state.editWeapon){
-            console.log(this.state.editingWeapon.Parent.SelectionValue.map(s=>s.ID));
-            overlay = <View style={{height:Variables.height, width:Variables.width, position:"absolute", backgroundColor:"rgba(0,0,0,0.6)", justifyContent: 'center', alignItems: 'center', zIndex:1000}}>
-            <View style={{backgroundColor:this.context.Bg, position:"absolute", padding:10, borderColor:this.context.Accent, borderWidth:1, borderRadius:Variables.boxBorderRadius}}>
-                {this.state.editingWeapon.Parent.SelectionValue.map((option, index)=>
-                    <View key={option.Name} style={{flexDirection:"row"}}>
-                        <Button onPress={e=>this.ReplaceWeapon(option.ID)}>{option.Name}</Button>
-                        <ProfilesDisplay Data={option.DisplayStats()} key={index} />
-                    </View>
-                )}
+            overlay = 
+            <View style={{height:Variables.height, width:Variables.width, position:"absolute", backgroundColor:"rgba(0,0,0,0.6)", justifyContent: 'center', alignItems: 'center', zIndex:1000}}>
+                <View style={{backgroundColor:this.context.Bg, position:"absolute", padding:10, borderColor:this.context.Accent, borderWidth:1, borderRadius:Variables.boxBorderRadius, width:Variables.width*0.9, maxHeight:Variables.height*0.9}}>
+                    <Button onPress={e=>this.setState({editWeapon:false})}>X</Button>
+                    <ScrollView>
+                        {this.state.editingWeapon.Parent.SelectionValue.map((option, index)=>
+                            <View key={option.Name} style={{flexDirection:"row"}}>
+                                <Button onPress={e=>this.ReplaceWeapon(option.ID)} style={{width:"30%", height:"auto"}}>{option.Name}</Button>
+                                <ProfilesDisplay Data={option.DisplayStats()} key={index} Style={{width:"70%", height:"auto"}} />
+                            </View>
+                        )}
+                    </ScrollView>
+                </View>
             </View>
-        </View>
         }
         return <GestureHandlerRootView>
                 <View key="overlay">{overlay}</View>
-                <View style={{padding:10, marginBottom:110}}>{this.ShowMenu()}{contents}</View>
+                <View style={{padding:8}}>{this.ShowMenu()}{contents}</View>
             </GestureHandlerRootView>;
     }
 }

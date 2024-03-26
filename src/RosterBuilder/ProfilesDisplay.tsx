@@ -1,5 +1,5 @@
 import { Component, ReactNode } from "react";
-import { View, Image } from "react-native";
+import { StyleProp, View, ViewStyle, Image } from "react-native"
 import { Characteristic, ProfileData } from "./RosterSelectionData";
 import Each from "../Components/Each";
 import Text from "../Components/Text";
@@ -11,6 +11,9 @@ interface Props{
     DisplayName?:boolean
     Small?:boolean
     ForceNameSpace?:boolean
+    Disabled?:boolean
+    OnlyDisplayFirst?:boolean
+    Style?:StyleProp<ViewStyle>
 }
 
 export class ProfilesDisplayData {
@@ -26,7 +29,6 @@ export default class ProfilesDisplay extends Component<Props>{
     declare context: React.ContextType<typeof KameContext>;
 
     DisplayProfile(data:ProfileData, index:number=0, prefix?:string):ReactNode {
-        const isModel = data.Characteristics.length===6;
         const name = / - /gi.test(data.Name)?/(?<= - ).*/gi.exec(data.Name):data.Name;
         const amount = data.Constraints.find(c=>c.Type==="min")?.Value;
         const fontSize = this.props.Small?Variables.fontSize.small:Variables.fontSize.normal;
@@ -36,7 +38,8 @@ export default class ProfilesDisplay extends Component<Props>{
             width:this.props.Small?25:30, 
             height:this.props.Small?20:30, 
             marginTop:4,
-            marginBottom:4
+            marginBottom:4,
+            backgroundColor:this.props.Small?null:this.context.LightAccent
         };
         const borderStyle={
             borderWidth:1, 
@@ -45,8 +48,8 @@ export default class ProfilesDisplay extends Component<Props>{
         }
 
         if(data.Characteristics.length===1){
-            return <View key={index} style={{flexDirection:"row"}}>
-                <View key="name" style={[boxStyle, {width:"auto"}]}>
+            return <View key={index} style={{opacity:this.props.Disabled?0.5:1, height:"auto"}}>
+                <View key="name" style={[boxStyle, {width:"auto", height:"auto"}]}>
                     <Text>{data.Characteristics[0].Value}</Text>
                 </View>
             </View>
@@ -56,9 +59,9 @@ export default class ProfilesDisplay extends Component<Props>{
         let characteristics = [...data.Characteristics];
         let weaponKeywords = characteristics.splice(6).filter(c=>!c.Value||c.Value.trim() !== "-");
 
-        profile.push(<View key="name" style={[boxStyle, {width:"auto"}]}>
-            <Text style={{minWidth:(!(this.props.DisplayName||prefix)&&!this.props.ForceNameSpace)?0:(this.props.Small?110:150), textAlign:"right", fontSize:fontSize, paddingRight:spacing}} >
-                {prefix&&prefix}{(this.props.DisplayName||prefix)&&name}{(amount&&Number(amount)>1)&&amount+"x"}
+        profile.push(<View key="name" style={[boxStyle, {width:"auto", justifyContent:"center", height:"auto"}]}>
+            <Text style={{width:this.props.OnlyDisplayFirst?0:((this.props.Small||!this.props.DisplayName)?30:150), textAlign:"right", fontSize:fontSize, paddingRight:spacing}} >
+                {prefix&&prefix}{(this.props.DisplayName&&!this.props.Small)&&" "+name}{(amount&&Number(amount)>1)&&amount+"x"}
             </Text>
         </View>);
 
@@ -69,40 +72,51 @@ export default class ProfilesDisplay extends Component<Props>{
             } else {
                 item = <Text style={{fontSize:fontSize}}>{characteristic.Value}</Text>;
             }
-            profile.push(<View key={index} style={[boxStyle, borderStyle, {alignItems:"center", justifyContent:"center"}]}>
-                    {isModel&&<Text style={{position:"absolute"}}>{characteristic.Name}</Text>}
+            profile.push(<View key={index} style={[boxStyle,{height:"auto"}]}>
+                <View style={[boxStyle, borderStyle, {alignItems:"center", justifyContent:"center"}]}>
+                    {(!this.props.Small&&!/range/gi.test(characteristic.Name))&&
+                        <Text style={{
+                            position:"absolute", 
+                            top:-10, 
+                            backgroundColor:this.context.LightAccent, 
+                            width:20, 
+                            borderRadius:Variables.boxBorderRadius,
+                            textAlign:"center"}}>
+                                {characteristic.Name}
+                        </Text>
+                    }
                     {item}
-                </View>);
+                </View>
+            </View>);
         });
 
         if(weaponKeywords.length !== 0) {
-            profile.push(<View key="keywords" style={[boxStyle, {width:"auto", flexShrink:1}]}><Text style={{fontSize:fontSize, paddingLeft:spacing}}>{weaponKeywords.map(c=>c.Value).join(", ")}</Text></View>);
+            profile.push(<View key="keywords" style={[boxStyle, {height:"auto", flex:0, flexGrow:1}]}><Text style={{fontSize:fontSize, paddingLeft:spacing}}>{weaponKeywords.map(c=>c.Value).join(", ")}</Text></View>);
         }
+        profile.push(<View key="spacing" style={[boxStyle, {width:spacing, height:"auto"}]}></View>)
 
-        return <View key={index} style={{flexDirection:"row"}}>
+        return <View key={index} style={{flexDirection:"row", opacity:this.props.Disabled?0.5:1, height:"auto"}}>
                 {profile}
             </View>;
     }
 
     render() {
+        let data = new Array<ReactNode>();
         if(this.props.Data instanceof ProfilesDisplayData){
-            let profiles = new Array<ReactNode>();
-            if(this.props.Data.Profiles.length===1){
-                profiles.push(this.DisplayProfile(this.props.Data.Profiles[0]));
+            if(this.props.Data.Profiles.length===1 || this.props.OnlyDisplayFirst){
+                data.push(this.DisplayProfile(this.props.Data.Profiles[0]));
             } else {
                 Each<ProfileData>(this.props.Data.Profiles, (profile, index)=>{
-                    profiles.push(this.DisplayProfile(profile, index, "➤ "));
+                    data.push(this.DisplayProfile(profile, index, "➤"));
                 });
             }
-            return <View>
-                {profiles}
-            </View>;
         } else {
-            let data = new Array<ReactNode>();
             Each<ProfilesDisplayData>(this.props.Data, (displayData, index)=>{
                 data.push(<ProfilesDisplay Data={displayData} key={index} Small={this.props.Small} DisplayName={this.props.DisplayName} ForceNameSpace />);
             });
-            return <View>{data}</View>;
         }
+        return <View style={[this.props.Style, {height:"auto", paddingBottom:this.props.Small?0:4, paddingTop:this.props.Small?0:4}]}>
+            {data}
+        </View>;
     }
 }

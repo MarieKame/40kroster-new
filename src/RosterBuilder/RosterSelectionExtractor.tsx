@@ -1,5 +1,5 @@
 import fastXMLParser from 'fast-xml-parser';
-import RosterSelectionData, { Constraint, Modifier, ModifierType, ProfileData, SelectionData, SelectionEntry, TargetSelectionData } from './RosterSelectionData';
+import RosterSelectionData, { Condition, Constraint, LogicalModifier, Modifier, ModifierType, ProfileData, SelectionData, SelectionEntry, TargetSelectionData } from './RosterSelectionData';
 import Each from '../Components/Each';
 
 export default class RosterSelectionExtractor {
@@ -73,6 +73,7 @@ export default class RosterSelectionExtractor {
                 unitData.Type = entry._type;
                 unitData.Target = entry._targetId;
                 unitData.ID = entry._id;
+                unitData.Hidden = entry.hidden?entry.hidden==="true":false;
                 checkForConstaints(entry, unitData);
                 const maxConstraint = unitData.Constraints.find(c=>c.Type==="max");
                 if(entry.modifiers){
@@ -109,9 +110,11 @@ export default class RosterSelectionExtractor {
                 this.operations.push(generateLinkOperation(entry, this));
             });
 
+            function* generateCategoryEntryOperations(entry, rse:RosterSelectionExtractor) {
+                rse.data.Categories.push({Name: entry._name, ID: entry._id})
+            }
             Each(this.catalogue.categoryEntries.categoryEntry, (entry)=> {
-                //TODO: maybe useless?
-                //this.Progress(this);
+                this.operations.push(generateCategoryEntryOperations(entry, this));
             });
             
             function TreatSelectionEntry(entry, rse:RosterSelectionExtractor, group:boolean, parent?:SelectionEntry){
@@ -126,6 +129,7 @@ export default class RosterSelectionExtractor {
                 selection.Type = group?"group":entry._type;
                 selection.Name = entry._name;
                 selection.ID = entry._id;
+                selection.Hidden = entry.hidden?entry.hidden==="true":false;
                 if (entry._defaultSelectionEntryId) {
                     selection.DefaultSelectionID = entry._defaultSelectionEntryId;
                 }
@@ -159,6 +163,13 @@ export default class RosterSelectionExtractor {
                         selection.Profiles.push(TreatProfileEntry(profile));
                     });
                 }
+                if(entry.infoGroups){
+                    Each(entry.infoGroups.infoGroup, infoGroup=>{
+                        Each(infoGroup.profiles.profile, profile=>{
+                            selection.Profiles.push(TreatProfileEntry(profile));
+                        });
+                    });
+                }
                 if(entry.infoLinks){
                     Each(entry.infoLinks.infoLink, infoLink=>{
                         if (infoLink._type==="profile") {
@@ -188,7 +199,20 @@ export default class RosterSelectionExtractor {
                                 if(maxConstraint && modifier._field === maxConstraint.ID) {
                                     selection.Modifiers.push({Type: ModifierType.MAX, Comparator:condition._type, Comparison:condition._value, Value:modifier._value, Field:""})
                                 }
+                                if(modifier.field="hidden") {
+                                    selection.Modifiers.push({Type: ModifierType.HIDE, Comparator:condition._type, Comparison:condition._value, Value:modifier._value, Field:condition._childId});
+                                }
                             });
+                        } else if (modifier.conditionGroups) {
+                            let conditions = new Array<Condition>();
+                            Each(modifier.conditionGroups.conditionGroup.conditions.condition, condition=>{
+                                conditions.push({Comparator:condition._type, Comparison:condition._value, Value:modifier._value, Field:condition._childId})
+                            });
+                            if(modifier.field="hidden") {
+                                selection.Modifiers.push(new LogicalModifier(ModifierType.HIDE, modifier.conditionGroups.conditionGroup._type, conditions));
+                            }
+                        } else {
+                            console.log("modifier without condition?");
                         }
                     });
                 }
@@ -212,6 +236,7 @@ export default class RosterSelectionExtractor {
                 let profileData = new ProfileData();
                 profileData.Name = profile._name;
                 profileData.ID = profile._id;
+                profileData.Type = profile._typeName;
                 Each(profile.characteristics.characteristic, c=>{
                     profileData.Characteristics.push({Name:c._name, ID:c._typeId, Value:c.textValue});
                 });

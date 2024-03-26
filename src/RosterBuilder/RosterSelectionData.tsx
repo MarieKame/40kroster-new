@@ -11,6 +11,7 @@ class SelectionDataBase {
 export class SelectionData extends SelectionDataBase {
     Constraints:Array<Constraint>;
     Categories:Array<string>;
+    Hidden:boolean;
     constructor(){
         super();
         this.Constraints = new Array<Constraint>();
@@ -34,15 +35,30 @@ export class TargetSelectionData extends SelectionData {
 }
 
 export enum ModifierType{
-    COST, MAX, CHARACTERISTIC
+    COST, MAX, CHARACTERISTIC, HIDE
 }
 
-export class Modifier {
-    Type:ModifierType;
+export class Condition {
     Comparator:string;
-    Comparison:number;
-    Value:number;
+    Comparison:string;
+    Value:string;
     Field:string;
+}
+
+export class Modifier extends Condition {
+    Type:ModifierType;
+}
+
+export class LogicalModifier extends Modifier{
+    Conditions:Array<Condition>;
+    Logic:string;
+
+    constructor(type:ModifierType, logic:string, conditions:Array<Condition>){
+        super();
+        this.Logic = logic;
+        this.Conditions = conditions;
+        this.Type = type;
+    }
 }
 
 export class Characteristic {
@@ -123,6 +139,7 @@ export default class RosterSelectionData {
     DetachmentChoice:SelectionEntry;
     Selections:Array<SelectionEntry>;
     Profiles:Array<ProfileData>;
+    Categories:Array<{Name:string, ID:string}>;
 
     GetProfile(info:InfoLink, ancestor:Selection):ProfileData{
         let profileData = new ProfileData();
@@ -131,11 +148,14 @@ export default class RosterSelectionData {
         profileData.Constraints = [...found.Constraints];
         profileData.ID = found.ID;
         profileData.Name = found.Name;
-        Each(info.Modifiers.filter(m=>m.Type===ModifierType.CHARACTERISTIC), modifier=>{
+        Each<Modifier>(info.Modifiers.filter(m=>m.Type===ModifierType.CHARACTERISTIC), modifier=>{
             let characteristic = profileData.Characteristics.find(c=>c.ID===modifier.Field);
             switch(modifier.Comparator){
                 case "instanceOf":
-                    if(ancestor.ID === modifier.Comparison) characteristic.Value = modifier.Value;
+                    if(ancestor.ID === modifier.Comparison || ancestor.ExtraID === modifier.Comparison) characteristic.Value = modifier.Value;
+                    break;
+                case "notInstanceOf":
+                    if(ancestor.ID !== modifier.Comparison && ancestor.ExtraID !== modifier.Comparison) characteristic.Value = modifier.Value;
                     break;
                 default:
                     if (modifier.Comparator !== null) console.log("Untreated modifier comparator : " + modifier.Comparator)
@@ -187,5 +207,6 @@ export default class RosterSelectionData {
         this.Units = new Array<TargetSelectionData>();
         this.Selections = new Array<SelectionEntry>();
         this.Profiles = new Array<ProfileData>();
+        this.Categories = new Array<{Name:string, ID:string}>();
     }
 }
