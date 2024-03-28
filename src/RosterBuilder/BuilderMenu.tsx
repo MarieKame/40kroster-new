@@ -215,9 +215,10 @@ export default class BuilderMenu extends Component<props> {
 
     private printRoster():string {
         let cost = 0;
+        let current = {category:""};
         const units = this.state.units.map(unit=> {
             cost += unit.GetCost();
-            return unit.Print() + "\n";
+            return unit.Print(current) + "\n";
         });
         return this.state.rosterName + " - " + cost + "pts \n" + 
             units.join("") + 

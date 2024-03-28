@@ -673,7 +673,7 @@ export default class Selection extends PrivateSelection {
         return ur;
     }
 
-    Print(space:string="", count:number=0):string {
+    Print(current:{category:string}=null, space:string="", count:number=0):string {
         function doSelections(next:Array<Selection>, s:string):string {
             let toAdd = new Array<{value:string, sel:Selection, count:number}>();
             Each<Selection>(next, n=>{
@@ -685,18 +685,28 @@ export default class Selection extends PrivateSelection {
                     toAdd.push({value:test, sel:n, count:n.Count});
                 }
             })
-            return toAdd.map(a=>a.sel.Print(s, a.count)).join("");
+            return toAdd.map(a=>a.sel.Print(current, s, a.count)).join("");
         }
         const cost = this.GetCost();
         const first = this.ID === this.Ancestor.ID;
         let toString = "";
+        if(first && current!==null) {
+            console.log(current.category);
+            const cat = this.data.GetVariablesCategory();
+            if(current.category !== cat) {
+                toString+= "--- " + cat+" ---\n";
+                current.category = cat;
+            }
+        }
         if(this.Type==="group" && !first) {
             toString += doSelections(this.SelectionValue, space);
-        } else if(this.secretSelection.length>0 ) {
-            toString += doSelections(this.secretSelection, space);
+        } else if(this.secretSelection.length>0) {
+            if(this.Count>0) {
+                toString += doSelections(this.secretSelection, space);
+            }
         } else {
             if(this.Count!==0) {
-                toString += space + (first?"":count+"x ") + this.Name + (cost>0?" - "+cost+"pts\n":"\n");
+                toString += space + ((first)?"":(count>1)?count+"x ":"- ") + this.Name + (cost>0?" - "+cost+"pts\n":"\n");
                 toString += doSelections(this.SelectionValue, space+" ");
             }
         }
