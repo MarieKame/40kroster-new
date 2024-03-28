@@ -674,7 +674,7 @@ export default class Selection extends PrivateSelection {
         return ur;
     }
 
-    Print(current:{category:string}=null, space:string="", count:number=0):string {
+    Print(current:{category:string}=null, count:number=0, space:string=""):string {
         function doSelections(next:Array<Selection>, s:string):string {
             let toAdd = new Array<{value:string, sel:Selection, count:number}>();
             Each<Selection>(next, n=>{
@@ -686,7 +686,7 @@ export default class Selection extends PrivateSelection {
                     toAdd.push({value:test, sel:n, count:n.Count});
                 }
             })
-            return toAdd.map(a=>a.sel.Print(current, s, a.count)).join("");
+            return toAdd.map(a=>a.sel.Print(current, a.count, s)).join("");
         }
         const cost = this.GetCost();
         const first = this.ID === this.Ancestor.ID;
@@ -694,7 +694,7 @@ export default class Selection extends PrivateSelection {
         if(first && current!==null) {
             const cat = this.data.GetVariablesCategory();
             if(current.category !== cat) {
-                toString+= "--- " + cat+" ---\n";
+                toString+= "--= " + cat+" =--\n";
                 current.category = cat;
             }
         }
@@ -706,8 +706,11 @@ export default class Selection extends PrivateSelection {
             }
         } else {
             if(this.Count!==0) {
-                toString += space + ((first)?"":(count>1)?count+"x ":"- ") + this.Name + (cost>0?" - "+cost+"pts\n":"\n");
-                toString += doSelections(this.SelectionValue, space+" ");
+                toString += space + 
+                    ((first && count <= 1)?"":(count>1)?" "+count+"x ":(first)?"":" ") + 
+                    this.Name + 
+                    (cost>0?" - "+(count>1?count+"x ":"")+cost+"pts\n":"\n");
+                toString += doSelections(this.SelectionValue, space+" .");
             }
         }
 

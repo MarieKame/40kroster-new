@@ -233,13 +233,21 @@ export default class BuilderMenu extends Component<props> {
 
     private printRoster():string {
         let cost = 0;
-        let current = {category:""};
-        const units = this.state.units.map(unit=> {
+        let units = new Array<{val:string, count:number, sel:Selection}>();
+        Each<Selection>(this.state.units, unit=> {
             cost += unit.GetCost();
-            return unit.Print(current) + "\n";
+            const print = unit.Print({category:""}) + "\n";
+            const foundIndex = units.findIndex(u=>u.val===print);
+            if(foundIndex!==-1) {
+                units[foundIndex].count++;
+            } else {
+                console.log(unit.Name);
+                units.push({val:print, sel:unit, count:1})
+            }
         });
+        let current = {category:""};
         return this.state.rosterName + " - " + cost + "pts \n" + 
-            units.join("") + 
+            units.map(u=>u.sel.Print(current, u.count)).join("\n") + 
             "Made with Sammie's App";    
     }
 
@@ -471,11 +479,7 @@ export default class BuilderMenu extends Component<props> {
                             useNativeDriver:true
                         }).start();
                     } 
-                    that.setState({phase:BuildPhase.EQUIP, currentUnit:render.index-1}, ()=>{
-                        if(this.state.rosterScrollViewLayout) {
-                            this.state.rosterScrollViewLayout.scrollTo({x:0, y:40*(render.index)})
-                        }
-                    }); 
+                    that.setState({phase:BuildPhase.EQUIP, currentUnit:render.index-1}); 
                 }}>
                 <Animated.View style={{
                     flexDirection:"row", 
