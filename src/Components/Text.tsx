@@ -1,6 +1,6 @@
 import {Text as RNText, TextProps, View} from 'react-native';
 import {Component, ReactNode} from 'react';
-import Variables from '../../Style/Variables';
+import Variables from '../Variables';
 import {KameContext} from '../../Style/KameContext';
 
 export class Text extends Component<TextProps>  {

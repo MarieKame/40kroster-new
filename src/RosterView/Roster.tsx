@@ -1,28 +1,29 @@
 import React from "react";
 import Unit from "./Unit";
-import {UnitData,  DescriptorData, LeaderData} from "./UnitData";
+import {UnitData} from "./UnitData";
 import {View, ScrollView, Platform, FlatList, Pressable} from 'react-native';
-import fastXMLParser from 'fast-xml-parser';
-import Variables from "../../Style/Variables";
+import Variables from "../Variables";
 import Button from "../Components/Button";
 import {Text} from "../Components/Text";
 import {KameContext} from "../../Style/KameContext";
-import RosterExtraction, { Reminder } from "./RosterExtraction";
-import { Stratagem } from "./Stratagems";
+import { STRATAGEMS, Stratagem } from "./Stratagems";
 import AutoExpandingTextInput from "../Components/AutoExpandingTextInput";
 import Checkbox from "expo-checkbox";
-import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { GestureHandlerRootView, PanGestureHandler } from "react-native-gesture-handler";
+import RosterRaw, { DescriptorRaw, LeaderDataRaw, NoteRaw, RuleDataRaw, UnitRaw } from "../Roster/RosterRaw";
+import Each from "../Components/Each";
 
+class Reminder{
+    Data:DescriptorRaw;
+    UnitName:string;
+    Phase:string|null;
+}
 
 interface Props {
-    XML:string,
     navigation:{navigate},
-    onLoad:CallableFunction,
-    onUpdateLeaders:CallableFunction,
-    onUpdateNotes:CallableFunction,
-    forceLeaders?:Array<LeaderData>,
-    Notes:Array<Array<DescriptorData>>
+    OnUpdateLeaders:(leaderData:Array<LeaderDataRaw>)=>void,
+    OnUpdateNotes:(notesData:Array<NoteRaw>)=>void,
+    Data:RosterRaw
 }
 
 enum NoteState{
@@ -34,17 +35,15 @@ class Roster extends React.Component<Props> {
     static contextType = KameContext; 
     declare context: React.ContextType<typeof KameContext>;
     state = {
-        Index:0,
-        Name: "",
-        Costs:"",
         Faction:"",
         Detachment:"",
+        CurrentUnit:0,
         Units: new Array<UnitData>(),
         UnitsToSkip: new Array<number>(),
-        Leaders: new Array<LeaderData>(),
-        Rules: new Array<DescriptorData>(),
+        Rules: new Array<RuleDataRaw>(),
         Reminders:new Array<Reminder>(),
-        DetachmentStratagems: new Array<Stratagem>,
+        DetachmentStratagems: new Array<Stratagem>(),
+
         NoteState:NoteState.CLOSED,
         NoteTitle:"",
         NoteDescription:"",
@@ -60,59 +59,84 @@ class Roster extends React.Component<Props> {
     constructor(props:Props) {
         super(props);
         Roster.Instance = this;
-        const parser = new fastXMLParser.XMLParser({ignoreAttributes:false, attributeNamePrefix :"_", textNodeName:"textValue"});
-        const exploration = new RosterExtraction(parser.parse(props.XML).roster, this.props.forceLeaders, this.props.onUpdateLeaders);
-        this.state.Name = exploration.data.Name;
-        this.state.Costs = exploration.data.Costs;
-        this.state.Faction = exploration.data.Faction;
-        this.state.Detachment = exploration.data.Detachment;
-        this.state.Units = exploration.data.Units;
-        this.state.UnitsToSkip = exploration.data.UnitsToSkip;
-        this.state.Leaders = exploration.data.Leaders;
-        this.state.Rules = exploration.data.Rules;
-        this.state.Reminders = exploration.data.Reminders;
-        this.state.DetachmentStratagems = exploration.data.DetachmentStratagems;
-        this.props.onLoad(this.state.Costs);
+
+        this.state.Units = this.props.Data.Units.map(u=> new UnitData(u));
+        this.state.Units.sort(UnitData.CompareUnits);
+
+        this.state.UnitsToSkip = new Array<number>();
+        this.state.Rules = [...this.props.Data.Rules];
+        this.state.Reminders = new Array<Reminder>();
+        Each<UnitData>(this.state.Units, (unit, index)=>{
+            this.state.Units.slice(index+1).forEach((unit2, index2)=>{
+                if (unit.Equals(unit2, this.props.Data.LeaderData)) {
+                    this.state.UnitsToSkip.push(index2 + index + 1);
+                    unit.Count++;
+                }
+            });
+            Each<DescriptorRaw>(unit.Abilities, ability=>{
+                const r = this.checkAddReminder(ability, unit.Name());
+                if(r !== null && this.state.Reminders.findIndex(re=>re.UnitName===r.UnitName && re.Data.Name===r.Data.Name)===-1) {
+                    this.state.Reminders.push(r);
+                }
+            });
+        });
+        console.log(this.state.Reminders);
+
+        this.state.DetachmentStratagems = [...STRATAGEMS].filter(s=>s.Faction === this.props.Data.Faction);
+    }
+
+    private checkAddReminder(data:DescriptorRaw, unitName:string){
+        if (/(per battle)|(at the end of)|(each time)/gi.test(data.Value) && !/leading/gi.test(data.Value)){
+            let reminder = new Reminder();
+            reminder.UnitName=unitName;
+            const results = /(((Command)|(Movement)|(Shooting)|(Charge)|(Fighting)|(Any)) (phase))/gi.exec(data.Value)
+            if (results)
+                reminder.Phase = results[2][0].toLocaleUpperCase() + results[2].slice(1);
+            else
+                reminder.Phase=null;
+            reminder.Data = data;
+            return reminder;
+        }
+        return null;
     }
 
     Previous(){
-        let newIndex = (this.state.Index-1);
-        newIndex= newIndex<0?this.state.Units.length-1:newIndex;
+        let newIndex = (this.state.CurrentUnit-1);
+        newIndex= newIndex<0?this.props.Data.Units.length-1:newIndex;
         while (this.state.UnitsToSkip.indexOf(newIndex)!==-1) {
             newIndex--;
-            newIndex= newIndex<0?this.state.Units.length-1:newIndex;
+            newIndex= newIndex<0?this.props.Data.Units.length-1:newIndex;
         }
-        this.setState({Index:newIndex});
+        this.setState({CurrentUnit:newIndex});
     }
 
     Next(){
-        let newIndex = (this.state.Index+1)%this.state.Units.length;
+        let newIndex = (this.state.CurrentUnit+1)%this.props.Data.Units.length;
         while (this.state.UnitsToSkip.indexOf(newIndex)!==-1) {
-            newIndex = (newIndex+1)%this.state.Units.length
+            newIndex = (newIndex+1)%this.props.Data.Units.length
         }
-        this.setState({Index:newIndex});
+        this.setState({CurrentUnit:newIndex});
     }
 
     GetUnit():UnitData{
-        return this.state.Units[this.state.Index];
+        return this.state.Units[this.state.CurrentUnit];
     }
 
     DisplayUnit(index:number){
-        this.setState({Index:index});
+        this.setState({CurrentUnit:index});
     }
 
-    UpdateLeader(leader:LeaderData, that:Roster) {
-        let leaders = that.state.Leaders;
+    UpdateLeader(leader:LeaderDataRaw, that:Roster) {
+        let leaders = that.props.Data.LeaderData;
         const index = leaders.findIndex(leader2=>leader2.UniqueId==leader.UniqueId);
         leaders[index] = leader;
-        that.props.onUpdateLeaders(leaders);
+        that.props.OnUpdateLeaders(leaders);
         let skip = new Array<number>();
         let units = this.state.Units;
-
         units.forEach((unit1, index)=>{
             unit1.Count=1;
             units.slice(index+1).forEach((unit2, index2)=>{
-                if (unit1.Equals(unit2, this.state.Leaders)) {
+                if (unit1.Equals(unit2, that.props.Data.LeaderData)) {
                     skip.push(index2 + index + 1);
                     unit1.Count++;
                 }
@@ -134,20 +158,15 @@ class Roster extends React.Component<Props> {
     }
 
     DeleteNote(noteIndex:number){
-        let notes = [...this.props.Notes]
-        let currentNotes = [...notes[this.state.Index]];
-        currentNotes.splice(noteIndex, 1);
-        notes[this.state.Index] = currentNotes;
-        this.props.onUpdateNotes(notes);
+        let notes = [...this.props.Data.Notes];
+        notes.splice(noteIndex, 1);
+        this.props.OnUpdateNotes(notes);
     }
 
-    SaveNote(note:DescriptorData){
-        let notes = [...this.props.Notes];
-        if (!notes[this.state.Index]) {
-            notes[this.state.Index] = new Array<DescriptorData>();
-        }
-        notes[this.state.Index].push(note);
-        this.props.onUpdateNotes(notes);
+    SaveNote(note:DescriptorRaw){
+        let notes = [...this.props.Data.Notes];
+        notes.push({AssociatedID:this.GetUnit().Key(), Descriptor:note});
+        this.props.OnUpdateNotes(notes);
         this.setState({NoteState:NoteState.CLOSED});
     }
 
@@ -168,7 +187,7 @@ class Roster extends React.Component<Props> {
         let descriptions = "";
         function getDescription(index:number):string{
             const mod = Variables.WeaponMods[index];
-            return mod.Name + ": " + mod.Description + "\n";
+            return mod.Name + ": " + mod.Value + "\n";
         }
         descriptions += (this.state.wpnMod1?getDescription(0):"");
         descriptions += (this.state.wpnMod2?getDescription(1):"");
@@ -179,8 +198,8 @@ class Roster extends React.Component<Props> {
         return descriptions;
     }
 
-    getCurrentTraitCategory():Array<DescriptorData>|null{
-        const unit = this.state.Units[this.state.Index];
+    getCurrentTraitCategory():Array<DescriptorRaw>|null{
+        const unit = this.GetUnit();
         if (unit.Keywords.find(keyword=> /(epic hero)/gi.test(keyword)))
             return null;
         if (unit.Keywords.find(keyword=> /(vehicle)|(monster)/gi.test(keyword)))
@@ -204,22 +223,21 @@ class Roster extends React.Component<Props> {
                     </View>
                     <Text>Description : </Text>
                     <AutoExpandingTextInput multiline editable value={this.state.NoteDescription} onSubmit={text=>this.updateNoteDescription(text)} style={{height:"55%"}} />
-                    <Button onPress={e=>this.SaveNote(new DescriptorData(this.state.NoteTitle, this.state.NoteDescription))}>Add Note</Button>
+                    <Button onPress={e=>this.SaveNote({Name:this.state.NoteTitle, Value:this.state.NoteDescription})}>Add Note</Button>
                 </View>;
             case NoteState.WPN:
                 return <View style={{flexDirection:"row", flexWrap:"wrap", paddingLeft:4}}>
                     <View key="wpns" style={{width:"65%"}}>
                         <Text key="title" style={{paddingBottom:6}}>Select a weapon : </Text>
-                        
                         <FlatList 
                             numColumns={2}
-                            data={[...this.state.Units[this.state.Index].MeleeWeapons, ...this.state.Units[this.state.Index].RangedWeapons]}
+                            data={[...this.GetUnit().MeleeWeapons, ...this.GetUnit().RangedWeapons]}
                             renderItem={(item)=>
                                 <View style={{width:"50%", flexDirection:"row", alignItems:"center", paddingBottom:2, height:24}}>
-                                    <Checkbox value={this.state.RadioWeapon==item.item.Name} 
-                                        onValueChange={(e)=>{if (e) this.setState({RadioWeapon:item.item.Name})}}
+                                    <Checkbox value={this.state.RadioWeapon==item.item.Name()} 
+                                        onValueChange={(e)=>{if (e) this.setState({RadioWeapon:item.item.Name()})}}
                                         style={{marginRight:4}} />
-                                        <Pressable onPress={e=>this.setState({RadioWeapon:item.item.Name})}><Text style={{fontSize:Variables.fontSize.small}}>{item.item.Name}</Text></Pressable>
+                                        <Pressable onPress={e=>this.setState({RadioWeapon:item.item.Name()})}><Text style={{fontSize:Variables.fontSize.small}}>{item.item.Name()}</Text></Pressable>
                                 </View>
                             }
                         />
@@ -252,7 +270,7 @@ class Roster extends React.Component<Props> {
                             <Pressable onPress={e=>this.setState({wpnMod6:!this.state.wpnMod6})}><Text>Precise</Text></Pressable>
                         </View>
                     </View>
-                    <Button disabled={this.state.RadioWeapon=="" || this.getNbSelected() < 2} style={{width:"98%", marginTop:4}} onPress={e=>this.SaveNote(new DescriptorData("Mod : " + this.state.RadioWeapon, this.getModsDescriptions()))}>
+                    <Button disabled={this.state.RadioWeapon=="" || this.getNbSelected() < 2} style={{width:"98%", marginTop:4}} onPress={e=>this.SaveNote({Name:"Mod : " + this.state.RadioWeapon, Value:this.getModsDescriptions()})}>
                         {this.state.RadioWeapon==""?"Select a weapon":(this.getNbSelected()<2?"Select at least 2 mods":"Add as Note")}
                     </Button>
                 </View>;
@@ -285,15 +303,16 @@ class Roster extends React.Component<Props> {
     }
 
     private GetDisplayIndex():number{
-        let index = this.state.Index;
+        let index = this.state.CurrentUnit;
         this.state.UnitsToSkip.reverse().forEach(toSkip=>{
             if (toSkip < index) index--;
         });
         return index + 1;
     }
 
-    private GetCurrentNotes(that:Roster):Array<DescriptorData> {
-        return that.props.Notes[that.state.Index]??new Array<DescriptorData>();
+    private GetCurrentNotes(that:Roster):Array<NoteRaw> {
+        const unit = that.GetUnit();
+        return that.props.Data.Notes.filter(n=>n.AssociatedID===unit.Key());
     }
 
     render(){
@@ -303,7 +322,7 @@ class Roster extends React.Component<Props> {
             return <View style={{width:Variables.width, alignSelf:"center", padding:10}}>{this.state.Units.map(unitData => (
                 <Unit data={unitData} 
                     key={key++} 
-                    Leaders={this.state.Leaders}
+                    Leaders={this.props.Data.LeaderData}
                     onUpdateLeader={(leader)=>this.UpdateLeader(leader,this)} 
                     onNoteRemoved={index=>this.DeleteNote(index)}
                     onAddNotePressed={e=>this.AddNote(this)} 
@@ -314,11 +333,11 @@ class Roster extends React.Component<Props> {
             return <GestureHandlerRootView><PanGestureHandler minPointers={2} onEnded={e=>
                 // @ts-ignore
             {if(e.nativeEvent.translationX > 100){this.Previous()} else if (e.nativeEvent.translationX<-100){this.Next()}else if (e.nativeEvent.translationY>100){this.props.navigation.navigate('RosterMenu')}}}>
-                <View>
+                <View key={this.state.CurrentUnit}>
                 <ScrollView>
                     <View style={{width:Variables.width, alignSelf:"center", padding:10, height:"100%"}}>
-                        <Unit data={this.state.Units[this.state.Index]} 
-                            Leaders={this.state.Leaders} 
+                        <Unit data={this.GetUnit()} 
+                            Leaders={this.props.Data.LeaderData} 
                             onUpdateLeader={(leader)=>this.UpdateLeader(leader,this)} 
                             onAddNotePressed={e=>this.AddNote(this)} 
                             onNoteRemoved={index=>this.DeleteNote(index)}
@@ -334,7 +353,7 @@ class Roster extends React.Component<Props> {
                         </View>
                         <Button key="for" onPress={(e)=> this.Next()}>➤</Button>
                     </View>
-                    <Text style={{textAlign:"center"}}>{(this.GetDisplayIndex()) + " / " + (this.state.Units.length  - this.state.UnitsToSkip.length) + (this.state.UnitsToSkip.length>0?" ( "+this.state.Units.length+" )":"")}</Text>
+                    <Text style={{textAlign:"center"}}>{(this.GetDisplayIndex()) + " / " + (this.props.Data.Units.length  - this.state.UnitsToSkip.length) + (this.state.UnitsToSkip.length>0?" ( "+this.props.Data.Units.length+" )":"")}</Text>
                 </View>
                 {this.state.NoteState!==NoteState.CLOSED&&
                 <View style={{height:Variables.height, width:Variables.width, position:"absolute", backgroundColor:"rgba(0,0,0,0.6)", justifyContent: 'center', alignItems: 'center', zIndex:1000}}>
@@ -342,8 +361,8 @@ class Roster extends React.Component<Props> {
                         <View key="tabs" style={{flexDirection:"row"}}>
                             <Button tab key="custom" weight={this.state.NoteState==NoteState.CUSTOM?"heavy":"normal"} onPress={e=>this.setState({NoteState:NoteState.CUSTOM})}>Custom</Button>
                             {this.getCurrentTraitCategory()!==null&&<Button tab key="battleTrait" weight={this.state.NoteState==NoteState.TRAIT?"heavy":"normal"} onPress={e=>this.setState({NoteState:NoteState.TRAIT})}>Battle Trait</Button>}
-                            {!this.state.Units[this.state.Index].Keywords.find(keyword=> /(epic hero)/gi.test(keyword))&&<Button tab key="wpnMod" weight={this.state.NoteState==NoteState.WPN?"heavy":"normal"} onPress={e=>this.setState({NoteState:NoteState.WPN})}>Weapons Mod</Button>}
-                            {!this.state.Units[this.state.Index].Keywords.find(keyword=> /(epic hero)/gi.test(keyword))&&<Button tab key="battleScar" weight={this.state.NoteState==NoteState.SCAR?"heavy":"normal"} onPress={e=>this.setState({NoteState:NoteState.SCAR})}>Battle Scar</Button>}
+                            {!this.GetUnit().Keywords.find(keyword=> /(epic hero)/gi.test(keyword))&&<Button tab key="wpnMod" weight={this.state.NoteState==NoteState.WPN?"heavy":"normal"} onPress={e=>this.setState({NoteState:NoteState.WPN})}>Weapons Mod</Button>}
+                            {!this.GetUnit().Keywords.find(keyword=> /(epic hero)/gi.test(keyword))&&<Button tab key="battleScar" weight={this.state.NoteState==NoteState.SCAR?"heavy":"normal"} onPress={e=>this.setState({NoteState:NoteState.SCAR})}>Battle Scar</Button>}
                         </View>
                         <View key="content" style={{backgroundColor:this.context.Accent, top:-4, paddingTop:10, bottom:10, height:"74%", left:4, width:"99%"}}>
                             {this.RenderAddNoteContent(this.state.NoteState)}

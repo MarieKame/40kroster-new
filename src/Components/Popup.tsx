@@ -1,6 +1,6 @@
 import React from "react";
 import { View } from "react-native";
-import Variables from "../../Style/Variables";
+import Variables from "../Variables";
 import { KameContext } from "../../Style/KameContext";
 import Text from "./Text";
 import Button from "./Button";
@@ -45,9 +45,9 @@ export default class Popup extends React.Component<Props> {
             <View style={{backgroundColor:this.context.Bg, position:"absolute", padding:10, borderColor:this.context.Accent, borderWidth:1, borderRadius:Variables.boxBorderRadius}}>
                 <Text key="question" style={{fontSize:Variables.fontSize.big, margin:10}}>{this.props.question}</Text>
                 {this.props.options.map((option, index)=>
-                    <Button key={index} onPress={e=>this.ChooseOption(option.callback)}>{option.option}</Button>
+                    <Button key={index} onPress={e=>this.ChooseOption(option.callback)} style={{height:40}}>{option.option}</Button>
                 )}
-                {this.props.default&&<Button key="default" onPress={e=>this.ChooseOption()}>{this.props.default}</Button>}
+                {this.props.default&&<Button key="default" onPress={e=>this.ChooseOption()} style={{height:40}}>{this.props.default}</Button>}
             </View>
         </View>;
     }

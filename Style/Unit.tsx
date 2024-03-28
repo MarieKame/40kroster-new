@@ -1,7 +1,7 @@
 
 import { StyleSheet } from "react-native";
 import React from "react";
-import Variables from "./Variables";
+import Variables from "../src/Variables";
 import {KameContext} from "./KameContext";
 
 const Style = StyleSheet.create({

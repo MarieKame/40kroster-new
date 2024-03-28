@@ -1,15 +1,15 @@
 import React, { Component, ReactNode } from "react";
 import { KameContext } from "../../Style/KameContext";
-import { ScrollView, View, Image} from "react-native";
-import Variables from "../../Style/Variables";
-import { DescriptorData } from "./UnitData";
+import { ScrollView, View, Image } from "react-native";
+import Variables from "../Variables";
 import Roster from "./Roster";
 import Button from "../Components/Button";
 import Text, { ComplexText } from "../Components/Text";
 import { Background } from "../../Style/svgs";
 import { CORE_STRATAGEMS, Stratagem } from "./Stratagems";
 import MasonryList from '@react-native-seoul/masonry-list';
-import { Gesture, GestureHandlerRootView, GestureType, NativeViewGestureHandler, PanGestureHandler } from "react-native-gesture-handler";
+import { GestureHandlerRootView, PanGestureHandler } from "react-native-gesture-handler";
+import { DescriptorRaw, RuleDataRaw } from "../Roster/RosterRaw";
 
 enum RosterMenuCategories {
     UNIT_LIST, RULES, REMINDERS, STRATAGEMS, CORE
@@ -103,7 +103,16 @@ class RosterMenu extends Component<Props> {
             <Text style={{width:"100%", textAlign:"center", fontFamily:Variables.fonts.spaceMarine, paddingBottom:4}}>— {category} —</Text>
             <View style={{flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', width:"100%"}}>
                 {Roster.Instance.state.Units.map((unit, index) => 
-                    (unit.GetUnitCategory() == category && Roster.Instance.state.UnitsToSkip.indexOf(index)==-1)&&<View key={unit.Name+index+Roster.Instance.state.Name} style={{width:"50%"}}><Button onPress={(e)=>{Roster.Instance.DisplayUnit(index); this.props.navigation.goBack();}} weight={(index==Roster.Instance.state.Index)?"heavy":"normal"}>{unit.CustomName?unit.CustomName:unit.Name}{unit.Count>1?" (x"+unit.Count+")":""}</Button></View>
+                    (unit.GetUnitCategory() == category && Roster.Instance.state.UnitsToSkip.indexOf(index)==-1)&&
+                        <View key={unit.Name()+index+Roster.Instance.props.Data.Name} style={{width:"50%"}}>
+                            <Button 
+                                onPress={(e)=>{
+                                    Roster.Instance.DisplayUnit(index);
+                                    this.props.navigation.goBack();
+                                }} weight={(index==Roster.Instance.state.CurrentUnit)?"heavy":"normal"}>
+                                    {unit.CustomName()?unit.CustomName():unit.Name()}{unit.Count>1?" (x"+unit.Count+")":""}
+                            </Button>
+                        </View>
                 )}
             </View>
         </View>;
@@ -116,13 +125,13 @@ class RosterMenu extends Component<Props> {
                     {Roster.Instance.state.Reminders.map((reminder, reminderIndex)=>
                     reminder.Phase==phase&&
                         <View key={index+reminderIndex}><Text style={{backgroundColor:this.context.LightAccent, fontFamily:Variables.fonts.spaceMarine, padding:5}}>{reminder.UnitName + " - " + reminder.Data.Name}</Text>
-                        <ComplexText fontSize={Variables.fontSize.normal} style={{marginLeft:10, marginRight:10}}>{reminder.Data.Description}</ComplexText></View>
+                        <ComplexText fontSize={Variables.fontSize.normal} style={{marginLeft:10, marginRight:10}}>{reminder.Data.Value}</ComplexText></View>
                     )}
                     
                 </View>;
     }
 
-    ShowRule(rule:DescriptorData, index:number):ReactNode{
+    ShowRule(rule:RuleDataRaw, index:number):ReactNode{
         return <View key={index} style={{marginBottom:10}}>
                     <Text style={{backgroundColor:this.context.Accent, fontFamily:Variables.fonts.spaceMarine, padding:5}}>{rule.Name}</Text>
                     <ComplexText fontSize={Variables.fontSize.normal} style={{marginLeft:10, marginRight:10}}>{rule.Description}</ComplexText>
@@ -172,8 +181,13 @@ class RosterMenu extends Component<Props> {
                         {Roster.Instance&&Roster.Instance.state.DetachmentStratagems.length>0&&<Button key="strat" tab={true} onPress={(e)=>this.setState({MenuSection:RosterMenuCategories.STRATAGEMS})} weight={this.state.MenuSection==RosterMenuCategories.STRATAGEMS?"heavy":"normal"}>Stratagems</Button>}
                         <Button key="core" tab={true} onPress={(e)=>this.setState({MenuSection:RosterMenuCategories.CORE})} weight={this.state.MenuSection==RosterMenuCategories.CORE?"heavy":"normal"}>Core</Button>
                     </View>
-                    <View key={this.state.MenuSection} style={{backgroundColor:this.context.Bg, top:-4, paddingTop:10, bottom:10, height:Variables.height - 52}}>
-                        {menuContents}
+                    <View key={
+                        this.state.MenuSection + 
+                        Roster.Instance.props.Data.Name + 
+                        Roster.Instance.props.Data.Units.length + 
+                        Roster.Instance.state.CurrentUnit
+                        } style={{backgroundColor:this.context.Bg, top:-4, paddingTop:10, bottom:10, height:Variables.height - 52}}>
+                            {menuContents}
                     </View>
         </View></PanGestureHandler></GestureHandlerRootView>;
     }
