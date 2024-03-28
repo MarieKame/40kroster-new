@@ -227,6 +227,7 @@ class SelectionID {
 export default class Selection extends PrivateSelection {
     Ancestor:Selection;
     CustomName:string=null;
+    Temporary:number;
     private hidden:boolean;
     private secretSelection:Array<Selection>;
     private selectionMap:Array<SelectionID>;
@@ -691,7 +692,6 @@ export default class Selection extends PrivateSelection {
         const first = this.ID === this.Ancestor.ID;
         let toString = "";
         if(first && current!==null) {
-            console.log(current.category);
             const cat = this.data.GetVariablesCategory();
             if(current.category !== cat) {
                 toString+= "--- " + cat+" ---\n";

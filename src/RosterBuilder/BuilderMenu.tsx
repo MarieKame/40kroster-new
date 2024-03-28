@@ -1,5 +1,5 @@
 import { Component, ReactNode } from "react";
-import { LayoutAnimation, ListRenderItemInfo, Pressable, View, Animated } from "react-native";
+import { ListRenderItemInfo, Pressable, View, Animated } from "react-native";
 import Variables from "../Variables";
 import { FlatList, GestureHandlerRootView, ScrollView } from "react-native-gesture-handler";
 import Text from '../Components/Text';
@@ -14,7 +14,7 @@ import ProfilesDisplay, { ProfilesDisplayData } from "./ProfilesDisplay";
 import Checkbox from "../Components/Checkbox";
 import AutoExpandingTextInput from "../Components/AutoExpandingTextInput";
 import { PopupOption } from "../Components/Popup";
-import RosterRaw, { DebugRosterRaw, DescriptorRaw, LeaderDataRaw, ModelRaw, NoteRaw, UnitRaw, WeaponRaw } from "../Roster/RosterRaw";
+import RosterRaw, { DebugRosterRaw, DescriptorRaw, LeaderDataRaw, NoteRaw, UnitRaw } from "../Roster/RosterRaw";
 import Info from "../Components/Info";
 import * as Clipboard from "expo-clipboard";
 
@@ -45,7 +45,7 @@ export default class BuilderMenu extends Component<props> {
         rosterSelectionData:new RosterSelectionData(),
         units:new Array<Selection>(),
         detachmentSelection:Selection.Init(null, null),
-        addColumnWidth:COLUMN_WIDTH,
+        addColumnWidth:new Animated.Value(1),
         currentUnit:-2,
         update:0,
         editWeapon:false,
@@ -54,7 +54,10 @@ export default class BuilderMenu extends Component<props> {
         warlord:null,
         equipedEnhancementIDs:new Array<string>(),
         rosterName:"",
-        pastedInfo:new Animated.Value(0)
+        pastedInfo:new Animated.Value(0),
+        pastedInfoView:false,
+        rosterScrollViewLayout:null,
+        newUnit: new Animated.Value(0)
     }
 
     constructor(props) {
@@ -133,6 +136,7 @@ export default class BuilderMenu extends Component<props> {
         })
     }
 
+    lastAddedUnitTemporary=0;
     AddUnitToRoster(unit:TargetSelectionData, that:BuilderMenu){
         let units = [...that.state.units];
         const found = that.state.rosterSelectionData.Categories.find(c=>c.Name===unit.Name);
@@ -141,10 +145,24 @@ export default class BuilderMenu extends Component<props> {
             if(that.state.warlord) that.state.warlord.SelectionValue.find(sv=>sv.Name==="Warlord").Count=0;
             that.setState({warlord:sel});
         }
+        that.lastAddedUnitTemporary++;
+        sel.Temporary = that.lastAddedUnitTemporary;
         units.push(sel);
         that.setState({units:units.sort((unit1, unit2)=>{
-            return unit1.GetVariablesCategoryIndex() - unit2.GetVariablesCategoryIndex();
-        })});
+            const catdiff = unit1.GetVariablesCategoryIndex() - unit2.GetVariablesCategoryIndex();
+            return catdiff!==0?catdiff:unit1.Name.localeCompare(unit2.Name);
+        })}, ()=>{
+            if (that.state.rosterScrollViewLayout) {
+                const index = that.state.units.findIndex(u=>u.Temporary === that.lastAddedUnitTemporary);
+                that.state.rosterScrollViewLayout.scrollTo({x:0, y:index*40})
+            }
+            this.state.newUnit.setValue(1);
+            Animated.timing(this.state.newUnit, {
+                toValue:0,
+                duration:1000,
+                useNativeDriver:true
+            }).start();
+        });
     }
 
     CanAddMore(unit:Selection|SelectionData|TargetSelectionData):boolean{
@@ -374,11 +392,14 @@ export default class BuilderMenu extends Component<props> {
 
         function newUnitDisplay(name:string, data:ProfilesDisplayData|ProfilesDisplayData[], index) {
             unitModelsDisplay.push(<View key={index} style={{flexDirection:"row", marginLeft:12}}>
-                {index===0&&<AutoExpandingTextInput style={{marginRight:4, alignSelf:"center", width:120, height:"auto", alignContent:"center"}} onSubmit={e=>{
-                        if (e && e !== "" && e !== undefined) unit.CustomName = e;
+                {index===0&&<AutoExpandingTextInput style={{marginRight:4, alignSelf:"center", width:150, height:"auto", alignContent:"center"}} onSubmit={e=>{
+                        if (e && e !== "" && e !== undefined) {
+                            unit.CustomName = e;
+                            that.setState({update:that.state.update+1})
+                        }
                     }} hint={unit.Name}
                     value={unit.CustomName} />}
-                {index!==0&&<Text key="name" style={{marginRight:4, alignSelf:"center", width:120, textAlign:"right", height:"auto", alignContent:"center"}}>{name}</Text>}
+                {index!==0&&<Text key="name" style={{marginRight:4, alignSelf:"center", width:150, textAlign:"right", height:"auto", alignContent:"center"}}>{name}</Text>}
                 <ProfilesDisplay Data={data} DisplayName={false} OnlyDisplayFirst={true} />
             </View>);
         }
@@ -404,11 +425,13 @@ export default class BuilderMenu extends Component<props> {
             </ScrollView>
             <Button style={{position:"absolute", top:0, right:0}} onPress={e=>{
                 if(this.state.phase === BuildPhase.EQUIP) {
-                    LayoutAnimation.configureNext({duration:500});
-                    LayoutAnimation.easeInEaseOut();
-                    that.setState({addColumnWidth: COLUMN_WIDTH});
+                    Animated.timing(that.state.addColumnWidth, {
+                        toValue:1,
+                        duration:500,
+                        useNativeDriver:true
+                    }).start();
                 }
-                that.setState({phase:BuildPhase.ADD, currentUnit:-2});
+                that.setState({phase:BuildPhase.ADD});
             }} >X</Button>
         </View>;
         
@@ -436,21 +459,41 @@ export default class BuilderMenu extends Component<props> {
         if(this.state.units.length == 0) return null;
         return <View key={render.item.Name}>
             {newCategory(render.item.GetFrameworkCategories())&&
-                <View style={{alignItems:"center", justifyContent:"center", backgroundColor:this.context.Accent, width:"100%"}}>
+                <View style={{alignItems:"center", justifyContent:"center", backgroundColor:this.context.Accent}}>
                     <Text>{getCategory()}</Text>
                 </View>
             }
             <Pressable onPress={e=>{
                     if(that.state.phase !== BuildPhase.EQUIP){ 
-                        LayoutAnimation.configureNext({duration:500});
-                        LayoutAnimation.easeInEaseOut();
-                        that.setState({addColumnWidth: 0});
+                        Animated.timing(that.state.addColumnWidth, {
+                            toValue:0,
+                            duration:500,
+                            useNativeDriver:true
+                        }).start();
                     } 
-                    that.setState({phase:BuildPhase.EQUIP, currentUnit:render.index-1}); 
-                    }}>
-                <View key={this.state.update} style={{flexDirection:"row", backgroundColor:render.index==this.state.currentUnit+1?this.context.LightAccent:this.context.Bg, borderBottomColor:this.context.LightAccent, borderWidth:1, height:40}}>
+                    that.setState({phase:BuildPhase.EQUIP, currentUnit:render.index-1}, ()=>{
+                        if(this.state.rosterScrollViewLayout) {
+                            this.state.rosterScrollViewLayout.scrollTo({x:0, y:40*(render.index)})
+                        }
+                    }); 
+                }}>
+                <Animated.View style={{
+                    flexDirection:"row", 
+                    backgroundColor:
+                        (render.index==this.state.currentUnit + 1 ? 
+                            this.context.LightAccent : 
+                            (this.lastAddedUnitTemporary===render.item.Temporary ?
+                                (this.state.newUnit.interpolate({
+                                    inputRange:[0, 1],
+                                    outputRange:[this.context.Bg, this.context.Main]
+                                })) :
+                                this.context.Bg)
+                        ), 
+                    borderBottomColor:this.context.LightAccent, 
+                    borderWidth:1, 
+                    height:40}}>
                     <View key="box" style={{alignSelf:"center", flexGrow:1, marginLeft:4}}>
-                        <Text>{render.item.CustomName?render.item.CustomName:render.item.Name}{render.item.HasEnhancement()&&<Text style={{color:this.context.Main}}> ★</Text>}</Text>
+                        <Text key={render.index + this.state.update}>{render.item.CustomName?render.item.CustomName:render.item.Name}{render.item.HasEnhancement()&&<Text style={{color:this.context.Main}}> ★</Text>}</Text>
                         <Text>
                             {render.item.GetFrameworkCost()>0&&render.item.GetCost()+" pts"}
                             {render.item.GetFrameworkCost()>0&&" — "+render.item.GetModelCount()+" model" + (render.item.GetModelCount()>1?"s":"")}
@@ -459,7 +502,7 @@ export default class BuilderMenu extends Component<props> {
                     </View>
                     {(render.item.GetFrameworkCost()>0&&this.state.phase!==BuildPhase.EQUIP&&this.CanAddMore(render.item))&&<Button key="x2" onPress={e=>this.DuplicateUnit(render.index-1, this)} textStyle={{fontSize:10}} style={{width:40}} small weight="light">x2</Button>}
                     {(render.item.GetFrameworkCost()>0&&this.state.phase!==BuildPhase.EQUIP)&&<Button key="-" onPress={e=>this.DeleteUnit(render.index-1, this)} textStyle={{fontSize:12}} style={{width:40}} small weight="light">🗑</Button>}
-                </View>
+                </Animated.View>
             </Pressable>
         </View>;
 
@@ -556,6 +599,7 @@ export default class BuilderMenu extends Component<props> {
                         onPress={e=>{
                             const clip = this.printRoster();
                             console.debug(clip);
+                            this.setState({pastedInfoView:true});
                             Clipboard.setStringAsync(clip).then(()=>{
                                 Animated.timing(this.state.pastedInfo, {
                                     toValue:1,
@@ -572,7 +616,7 @@ export default class BuilderMenu extends Component<props> {
                                             duration:300,
                                             useNativeDriver:true
                                         }).start(()=>{
-                                            this.setState({animating:false})
+                                            this.setState({pastedInfoView:false})
                                         });
                                     });
                                 });
@@ -639,17 +683,41 @@ export default class BuilderMenu extends Component<props> {
             case BuildPhase.ADD:
             case BuildPhase.EQUIP:
                 contents= <View>
-                    <View style={{flexDirection:"row"}}>
-                        <View style={{width: this.state.addColumnWidth, overflow:"hidden", marginRight:10, height:Variables.height-60}}>
-                            <FlatList style={{minWidth:COLUMN_WIDTH}} numColumns={1} data={this.state.rosterSelectionData.Units} renderItem={render=>this.renderUnitSelection(render, this)} />
+                    <Animated.View style={{
+                            flexDirection:"row",
+                            transform:[{
+                                translateX:this.state.addColumnWidth.interpolate({
+                                    inputRange:[0, 1],
+                                    outputRange:[-COLUMN_WIDTH-10, 0]
+                                }), 
+                            }],}}>
+                        <View style={{
+                                overflow:"hidden", 
+                                marginRight:10, 
+                                height:Variables.height-60}}>
+                            <FlatList style={{minWidth:COLUMN_WIDTH}} 
+                                numColumns={1} 
+                                data={this.state.rosterSelectionData.Units} 
+                                renderItem={render=>this.renderUnitSelection(render, this)} />
                         </View>
-                        <View style={{overflow:"hidden", height:Variables.height-60, flexGrow:1}}>
-                            <FlatList key={this.state.update} numColumns={1} data={[this.state.detachmentSelection, ...this.state.units]} renderItem={render=>this.renderRoster(render, this)} />
+                        <View style={{
+                                width: this.state.phase===BuildPhase.ADD?COLUMN_WIDTH-30:(COLUMN_WIDTH*0.7)-20,
+                                overflow:"hidden", 
+                                height:Variables.height-60, 
+                                flexGrow:1}}>
+                            <FlatList onLayout={(event)=> this.setState({rosterScrollViewLayout:event.target})} 
+                                key={"roster"} 
+                                numColumns={1} 
+                                data={[this.state.detachmentSelection, ...this.state.units]} 
+                                renderItem={render=>this.renderRoster(render, this)} />
                         </View>
-                        <View style={{width: (COLUMN_WIDTH-this.state.addColumnWidth)*1.3, overflow:"hidden", height:Variables.height-60}}>
+                        <View style={{
+                                width: COLUMN_WIDTH*1.3,
+                                overflow:"hidden", 
+                                height:Variables.height-60}}>
                             {this.DisplayUnitSelections()}
                         </View>
-                    </View>
+                    </Animated.View>
                 </View>
                 break;
         }
@@ -671,7 +739,9 @@ export default class BuilderMenu extends Component<props> {
             </View>
         }
         return <GestureHandlerRootView>
-                <Animated.View key="info" style={{
+                <View key="overlay">{overlay}</View>
+                <View style={{padding:8}}>{this.ShowMenu()}{contents}</View>
+                {this.state.pastedInfoView&&<Animated.View key="info" style={{
                         position:"absolute", 
                         opacity:this.state.pastedInfo, 
                         bottom:40, 
@@ -680,14 +750,11 @@ export default class BuilderMenu extends Component<props> {
                         borderRadius:Variables.boxBorderRadius, 
                         borderWidth:1, 
                         borderColor:this.context.Main,
-                        zIndex:1000,
                         alignSelf:"center",
                         justifyContent:"center",
                         height:50}}>
                     <Text style={{textAlign:"center"}}>Roster copied to clipboard!</Text>
-                </Animated.View>
-                <View key="overlay">{overlay}</View>
-                <View style={{padding:8}}>{this.ShowMenu()}{contents}</View>
+                </Animated.View>}
             </GestureHandlerRootView>;
     }
 }
