@@ -16,7 +16,7 @@ import AutoExpandingTextInput from "../Components/AutoExpandingTextInput";
 import { PopupOption } from "../Components/Popup";
 import RosterRaw, { DebugRosterRaw, DescriptorRaw, LeaderDataRaw, ModelRaw, NoteRaw, UnitRaw, WeaponRaw } from "../Roster/RosterRaw";
 import Info from "../Components/Info";
-import Menu from "../Menu";
+import * as Clipboard from "expo-clipboard";
 
 enum BuildPhase{
     FACTION, LOADING, LOADING_ERROR, ADD, EQUIP
@@ -212,6 +212,12 @@ export default class BuilderMenu extends Component<props> {
         return rr;
     }
 
+    private printRoster():string {
+        return this.state.rosterName + " - " + this.state.totalCost + "pts \n" + 
+            this.state.units.map(unit=>unit.Print() + "\n").join("") + 
+            "Made with Sammie's App";    
+    }
+
     /////////////////////////////////////////////////////////
     /*                     DISPLAY                         */
     /////////////////////////////////////////////////////////
@@ -357,7 +363,6 @@ export default class BuilderMenu extends Component<props> {
         const unit = this.state.units[this.state.currentUnit];
         const that = this;
         const unitModels = unit.GetModelsWithDifferentProfiles();
-        console.log(unitModels.map(u=>u.Name+" - "+u.Profiles.length).join(", "))
         let unitModelsDisplay = new Array<ReactNode>();
 
         function newUnitDisplay(name:string, data:ProfilesDisplayData|ProfilesDisplayData[], index) {
@@ -505,7 +510,10 @@ export default class BuilderMenu extends Component<props> {
                 return <Button onPress={e=>this.props.navigation.goBack()}>Back</Button>;
             case BuildPhase.ADD:
             case BuildPhase.EQUIP:
-                const totalCost =  this.state.units.map(u=>u.GetCost()).reduce((cost, total)=> cost+total, 0)
+                const totalCost =  this.state.units.map(u=>u.GetCost()).reduce((cost, total)=> cost+total, 0);
+                const toggle = (!ValidName()) ||
+                this.state.warlord===null || 
+                !this.state.units.map(u=>u.ValidRecursive()).reduce((was, is)=>was&&is, true);
                 return <View style={{flexDirection:"row", height:38, marginBottom:4, gap:8, alignItems:"center"}}>
                     <AutoExpandingTextInput 
                         key="rosterName" 
@@ -533,10 +541,13 @@ export default class BuilderMenu extends Component<props> {
                                     "Select a Warlord":
                                     "Validate all your units")} 
                         Visible={
-                            (!ValidName()) ||
-                            this.state.warlord===null || 
-                            !this.state.units.map(u=>u.ValidRecursive()).reduce((was, is)=>was&&is, true)}
+                            toggle
+                            }
                         Style={{position:"absolute", right:110}}/>
+                    {!toggle&&<Button key="copy"
+                        style={{position:"absolute", right:100}} 
+                        onPress={e=>/*Clipboard.setStringAsync(this.printRoster())*/console.log(this.printRoster())}
+                        >📋</Button>}
                     <Button key="save" 
                         style={{position:"absolute", right:50}} 
                         disabled={this.state.rosterName==="" || this.state.warlord===null || !this.state.units.map(u=>u.ValidRecursive()).reduce((was, is)=>was&&is, true)} 

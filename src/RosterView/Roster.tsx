@@ -10,7 +10,7 @@ import { Stratagem } from "./Stratagems";
 import AutoExpandingTextInput from "../Components/AutoExpandingTextInput";
 import Checkbox from "expo-checkbox";
 import { GestureHandlerRootView, PanGestureHandler } from "react-native-gesture-handler";
-import RosterRaw, { DescriptorRaw, LeaderDataRaw, NoteRaw } from "../Roster/RosterRaw";
+import RosterRaw, { DescriptorRaw, LeaderDataRaw, NoteRaw, UnitRaw } from "../Roster/RosterRaw";
 import Each from "../Components/Each";
 
 class Reminder{

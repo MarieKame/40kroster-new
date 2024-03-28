@@ -1,6 +1,6 @@
 import React, { Component, ReactNode } from "react";
 import { KameContext } from "../../Style/KameContext";
-import { ScrollView, View, Image} from "react-native";
+import { ScrollView, View, Image } from "react-native";
 import Variables from "../Variables";
 import Roster from "./Roster";
 import Button from "../Components/Button";

@@ -673,6 +673,37 @@ export default class Selection extends PrivateSelection {
         return ur;
     }
 
+    Print(space:string="", count:number=0):string {
+        function doSelections(next:Array<Selection>, s:string):string {
+            let toAdd = new Array<{value:string, sel:Selection, count:number}>();
+            Each<Selection>(next, n=>{
+                const test = n.Print();
+                const found = toAdd.find(a=>a.value===test);
+                if(found) {
+                    found.count+= n.Count;
+                } else {
+                    toAdd.push({value:test, sel:n, count:n.Count});
+                }
+            })
+            return toAdd.map(a=>a.sel.Print(s, a.count)).join("");
+        }
+        const cost = this.GetCost();
+        const first = this.ID === this.Ancestor.ID;
+        let toString = "";
+        if(this.Type==="group" && !first) {
+            toString += doSelections(this.SelectionValue, space);
+        } else if(this.secretSelection.length>0 ) {
+            toString += doSelections(this.secretSelection, space);
+        } else {
+            if(this.Count!==0) {
+                toString += space + (first?"":count+"x ") + this.Name + (cost>0?" - "+cost+"pts\n":"\n");
+                toString += doSelections(this.SelectionValue, space+" ");
+            }
+        }
+
+        return toString;
+    }
+
     Debug(){
         console.debug("----------------DEBUG--------------------")
         this.debugRec("");
