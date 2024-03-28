@@ -102,12 +102,11 @@ class Roster extends React.Component<Props> {
     }
 
     DisplayUnit(index:number){
-        this.setState({Index:index});
+        this.setState({CurrentUnit:index});
     }
 
     UpdateLeader(leader:LeaderDataRaw, that:Roster) {
         let leaders = that.props.Data.LeaderData;
-        console.log(leader);
         const index = leaders.findIndex(leader2=>leader2.UniqueId==leader.UniqueId);
         leaders[index] = leader;
         that.props.OnUpdateLeaders(leaders);

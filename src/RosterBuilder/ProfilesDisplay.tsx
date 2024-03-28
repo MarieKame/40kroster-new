@@ -29,6 +29,7 @@ export default class ProfilesDisplay extends Component<Props>{
     declare context: React.ContextType<typeof KameContext>;
 
     DisplayProfile(data:ProfileData, index:number=0, prefix?:string):ReactNode {
+        console.log(data);
         const name = / - /gi.test(data.Name)?/(?<= - ).*/gi.exec(data.Name):data.Name;
         const amount = data.Constraints.find(c=>c.Type==="min")?.Value;
         const fontSize = this.props.Small?Variables.fontSize.small:Variables.fontSize.normal;
@@ -103,8 +104,10 @@ export default class ProfilesDisplay extends Component<Props>{
     render() {
         let data = new Array<ReactNode>();
         if(this.props.Data instanceof ProfilesDisplayData){
-            if(this.props.Data.Profiles.length===1 || this.props.OnlyDisplayFirst){
+            if(this.props.Data.Profiles.length===1){
                 data.push(this.DisplayProfile(this.props.Data.Profiles[0]));
+            } else if (this.props.OnlyDisplayFirst){
+                data.push(this.DisplayProfile(this.props.Data.Profiles.find(p=>p.Characteristics.length>1)));
             } else {
                 Each<ProfileData>(this.props.Data.Profiles, (profile, index)=>{
                     data.push(this.DisplayProfile(profile, index, "➤"));

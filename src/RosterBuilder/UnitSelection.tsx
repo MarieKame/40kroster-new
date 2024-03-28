@@ -95,28 +95,41 @@ abstract class PrivateSelection {
         return noOption;
     }
 
-    private getSpecificSelections(type:string):Array<Selection>{
+    protected _getSpecificSelections(type:string):Array<Selection>{
         let selections = new Array<Selection>();
         if(this.Type===type){
             if (this instanceof Selection) selections.push(this);
         }
         Each<Selection>(this.SelectionValue, sv=>{
-            selections = [...selections, ...sv.getSpecificSelections(type)];
+            selections = [...selections, ...sv._getSpecificSelections(type)];
         })
         return selections;
     }
 
     protected _getModelSelections():Array<Selection>{
-        return this.getSpecificSelections("model");
+        return this._getSpecificSelections("model");
     }
 
     protected _getEnhancements():Array<PrivateSelection>{
-        return this.getSpecificSelections("upgrade").filter(s=>/Enhancement/gi.test(s.Parent.Name) && s.Count===1);
+        return this._getSpecificSelections("upgrade").filter(s=>/Enhancement/gi.test(s.Parent.Name) && s.Count===1);
+    }
+
+    GetAbilitiesContainers():Array<PrivateSelection>{
+        let abilityContainers = new Array<PrivateSelection>();
+        if(this.Profiles.filter(p=>p.Type==="Abilities").length>0) {
+            abilityContainers.push(this);
+        }
+        Each<Selection>(this.SelectionValue, sv=>{
+            abilityContainers = [...abilityContainers, ...sv.GetAbilitiesContainers()];
+        });
+        return abilityContainers;
     }
 
     GetAbilities(recursive:boolean=false):Array<ProfileData> {
         let abilities = new Array<ProfileData>();
-        abilities = [...abilities, ...this.Profiles.filter(p=>p.Type==="Abilities")];
+        if(this.Count>0) {
+            abilities = [...this.Profiles.filter(p=>p.Type==="Abilities")];
+        }
         if(recursive) {
             Each<Selection>(this.SelectionValue, sv=>{
                 abilities = [...abilities, ...sv.GetAbilities()];
@@ -129,19 +142,19 @@ abstract class PrivateSelection {
         return this._getModelSelections().map(model=>model.getValidTypeCount()).reduce((sum, current)=> sum+current, 0);
     }
 
+    FindUnitProfile():ProfileData{
+        return this.Profiles.find(p=>p.Type==="Unit");
+    }
+
     GetModelsWithDifferentProfiles():Array<Selection>{
         function differentProfiles(model:Selection, index:number, models:Array<Selection>) {
             if(model.Profiles.length===0) return false;
             return models.findIndex(m=>
                 m.Profiles.length===1 && 
-                m.Profiles[0].Characteristics.map(c=>c.Value).toString() === model.Profiles[0].Characteristics.map(c=>c.Value).toString()) === index;
+                m.FindUnitProfile().Characteristics.map(c=>c.Value).toString() === model.FindUnitProfile().Characteristics.map(c=>c.Value).toString()) === index;
           }
           const filtered = this._getModelSelections().filter(differentProfiles);
         return filtered.length>0?filtered:this._getModelSelections();
-    }
-
-    protected _getWeapons():Array<Selection> {
-        return this.getSpecificSelections("upgrade").filter(s=>s.Parent.Type!=="upgrade" && s.Profiles.length>0 && /weapon/gi.test(s.Profiles[0].Type));
     }
 
     Valid(adding:number=0):boolean{
@@ -166,6 +179,8 @@ abstract class PrivateSelection {
         return pd;
     }
     DisplayStats():ProfilesDisplayData|Array<ProfilesDisplayData>{
+        console.log(this.Name)
+        console.log(this.Profiles)
         return new ProfilesDisplayData(this.Profiles.map(s=>this._mergeConstraints(s, this.Constraints)));
     }
 
@@ -179,7 +194,7 @@ abstract class PrivateSelection {
     }
 
     CanAdd():boolean{
-        return this._getMaxPossible()==undefined?this.Parent.Valid(1): this.GetValidTypeCount() < this._getMaxPossible();
+        return this._getMaxPossible()==undefined?this.Parent.Valid(1)||this.Parent.Valid(5): this.GetValidTypeCount() < this._getMaxPossible();
     }
     
     Changeable():boolean{
@@ -215,6 +230,7 @@ class SelectionID {
 
 export default class Selection extends PrivateSelection {
     Ancestor:Selection;
+    CustomName:string=null;
     private hidden:boolean;
     private secretSelection:Array<Selection>;
     private selectionMap:Array<SelectionID>;
@@ -243,7 +259,7 @@ export default class Selection extends PrivateSelection {
         let sel = new Selection(1, rse.GetSelectionFromId(entry.SelectionID), rse, null, null, entry.ExtraID, 0);
         //sel.Debug();
         sel.applySelectionIdTree(entry);
-        //sel.Debug();
+        sel.Debug();
         return sel;
     }
 
@@ -292,12 +308,16 @@ export default class Selection extends PrivateSelection {
     }
 
     private applySelectionIdTree(entry:SelectionTreeEntry) {
+        let same = true;
         try{
             this.Count = entry.Count;
-            let same = true;
-            Each<SelectionTreeEntry>(entry.Children, c=>{
-                if(c.SelectionID !== this.SelectionValue[c.Index].ID) same=false;
-            });
+            if(entry.Children.length!==this.SelectionValue.length) {
+                same=false;
+            } else {
+                Each<SelectionTreeEntry>(entry.Children, c=>{
+                    if(c.SelectionID !== this.SelectionValue[c.Index].ID) same=false;
+                });
+            }
             if(!same) {
                 let newSelectionValue = new Array<Selection>();
                 Each<SelectionTreeEntry>(entry.Children, c=>{
@@ -310,7 +330,7 @@ export default class Selection extends PrivateSelection {
             })
         } catch(e){
             console.error("Selection Tree Error");
-            console.error(entry.SelectionID);
+            console.error(entry.Children.map(c=>c.SelectionID));
             console.error(this.SelectionValue.map(sv=>sv.ID));
         }
     }
@@ -356,6 +376,7 @@ export default class Selection extends PrivateSelection {
                     break;
                 default:
                     console.error("IsHidden condition comparator not taken into account : " + condition.Comparator);
+                    console.error(condition);
                     break;
             }
             return hidden;
@@ -457,7 +478,7 @@ export default class Selection extends PrivateSelection {
                 data = newData;
             }
             let count = 1;
-            if(that.Type==="group"||that.Type==="unit"){
+            if(that.Type==="group" || that.Type==="unit"){
                 const cFound = data.Constraints.find(c=>c.Type==="min");
                 count=cFound?Number(cFound.Value):1;
                 if(!that.Valid()) {
@@ -466,10 +487,14 @@ export default class Selection extends PrivateSelection {
                     }
                 }
             } else {
-                count = Math.min(Number(that._getMin()?that._getMax():that.GetMinimumCount(data)), that.GetMaximumCount(data));
+                count = Math.min(Number(that.GetMinimumCount(data)), that.GetMaximumCount(data));
             }
             count = (defaultId?(isDefault?count:0):count);
             let sel = new Selection((defaultId?(isDefault?count:0):count), data, rse, that, that.Ancestor, null, index);
+            const extraProfile = rse.GetProfileByName(sel.Name);
+            if(sel.Profiles.length===0 && extraProfile) {
+                sel.Profiles.push(extraProfile);
+            }
             sel.Ancestor.selectionMap.push({ID:sel.ID, Selection:sel});
             if(sel.Name==="Warlord") {
                 count=sel._getMin();
@@ -513,10 +538,15 @@ export default class Selection extends PrivateSelection {
             newSelection(option, index, data.DefaultSelectionID);
         });
         current.SelectionValue = current.SelectionValue.sort((sv1:Selection, sv2:Selection)=> {
+            function getUpgradeProfile(s:Selection):ProfileData {
+                if(s.secretSelection.length>0) {
+                    return s.secretSelection[0].Profiles[0];
+                } return s.Profiles[0];
+            }
             function sortMelee(sv1:Selection, sv2:Selection) :number {
-                if (sv1.Profiles[0].Characteristics.length===1) return 1;
-                if (sv2.Profiles[0].Characteristics.length===1) return -1;
-                return sv1.Profiles[0].Characteristics[0].Value==="Melee" && sv2.Profiles[0].Characteristics[0].Value!=="Melee" ?-1:0;
+                if (getUpgradeProfile(sv1).Characteristics.length===1) return 1;
+                if (getUpgradeProfile(sv2).Characteristics.length===1) return -1;
+                return getUpgradeProfile(sv1).Characteristics[0].Value==="Melee" && getUpgradeProfile(sv2).Characteristics[0].Value!=="Melee" ?-1:0;
             }
             if(/Warlord/gi.test(sv1.Name)) return -1;
             if(/Enhancement/gi.test(sv1.Name)) return 1;
@@ -527,7 +557,7 @@ export default class Selection extends PrivateSelection {
             if(sv1.Type==="group") {
                 if(sv2.Type==="upgrade") {
                     if(sv1.Parent.ID!==sv1.Ancestor.ID) return -1;
-                    if(sv2.Profiles[0].Characteristics.length===1) return 1;
+                    if(getUpgradeProfile(sv2).Characteristics.length===1) return 1;
                     if(sv1.SelectionValue[0].Type==="upgrade") return sortMelee(sv1.SelectionValue[0], sv2);
                 } else if (sv2.Type==="group") {
                     if(sv1.SelectionValue[0].Type==="upgrade" && sv2.SelectionValue[0].Type==="upgrade") return sortMelee(sv1.SelectionValue[0], sv2.SelectionValue[0]);
@@ -536,7 +566,7 @@ export default class Selection extends PrivateSelection {
             if(sv2.Type==="group"){
                 if(sv1.Type==="upgrade") {
                     if(sv2.Parent.ID!==sv2.Ancestor.ID) return 1;
-                    if(sv1.Profiles[0].Characteristics.length===1) return -1;
+                    if(getUpgradeProfile(sv1).Characteristics.length===1) return -1;
                     if(sv2.SelectionValue[0].Type==="upgrade") return sortMelee(sv1, sv2.SelectionValue[0]);
                 }
             }
@@ -548,6 +578,17 @@ export default class Selection extends PrivateSelection {
         });
     }
 
+    protected _getWeapons():Array<Selection> {
+        return this._getSpecificSelections("upgrade").filter(s=>
+            (s.Profiles.length>0 && s.Profiles.findIndex(p=>/weapon/gi.test(p.Type))!==-1) ||
+            (s.secretSelection.length>0));
+    }
+
+    private getFirstModelParent():Selection {
+        if(this.Parent.Type==="model") return this.Parent;
+        return this.Parent.getFirstModelParent();
+    }
+
     GetUnitRaw(index:number):UnitRaw{
         let ur = new UnitRaw();
         function toCharacteristicRaw(characteristics:Array<Characteristic>):Array<DescriptorRaw> {
@@ -556,7 +597,7 @@ export default class Selection extends PrivateSelection {
         function toModelRaw(model:Selection, name?:string):ModelRaw {
             let mr = new ModelRaw();
             mr.Name=name?name:model.Name;
-            mr.Characteristics = toCharacteristicRaw(model.Profiles[0].Characteristics)
+            mr.Characteristics = toCharacteristicRaw(model.FindUnitProfile().Characteristics)
             return mr;
         }
         function toProfileRaw(data:ProfileData, nameToIgnore?:string):WeaponProfileRaw {
@@ -576,14 +617,19 @@ export default class Selection extends PrivateSelection {
         function toWeaponRaw(model:Selection, nameToIgnore?:string):WeaponRaw|Array<WeaponRaw> {
             if(model.secretSelection.length!==0) {
                 let subSelection = new Array<WeaponRaw>();
-                Each<Selection>(this.secretSelection, selection=>{
-                    const wr = toWeaponRaw(selection, model.Name);
-                    if(wr instanceof WeaponRaw) subSelection.push(wr);
+                Each<Selection>(model.secretSelection, selection=>{
+                    let wr = toWeaponRaw(selection, model.Name);
+                    if(wr instanceof WeaponRaw) {
+                        wr.Count= selection.Count * model.Count * model.getFirstModelParent().Count;
+                        subSelection.push(wr);
+                    } else {
+                        console.error("not supposed to");
+                    }
                 });
                 return subSelection;
             }
             let wr = new WeaponRaw();
-            wr.Count = model.Count;
+            wr.Count = model.Count * model.getFirstModelParent().Count;
             wr.Name = model.Name;
             wr.Profiles = model.Profiles.map(p=>toProfileRaw(p, nameToIgnore?nameToIgnore:model.Name));
             return wr;
@@ -594,8 +640,7 @@ export default class Selection extends PrivateSelection {
                 return [wrd]
             return wrd;
         }
-        const models = this.GetModelsWithDifferentProfiles();
-        let weapons = new Array<WeaponRaw>;
+        let weapons = new Array<WeaponRaw>();
         Each<Selection>(this._getWeapons(), weapon=>{
             weapons = [...weapons, ...exploreRawWeapons(toWeaponRaw(weapon))];
         });
@@ -608,14 +653,25 @@ export default class Selection extends PrivateSelection {
                 mergedWeapons.push(weapon);
             }
         });
+        ur.Weapons = mergedWeapons.filter(wpn=>wpn.Count!==0);
+        const models = this.GetModelsWithDifferentProfiles();
         ur.Models = models.length===1?[toModelRaw(models[0], this.Name)]:models.map(m=>toModelRaw(m));
         ur.Categories = this.Categories;
         ur.Cost = this.GetCost();
         ur.BaseName = this.Name;
-        //TODO: ur.CustomName = this.CustomName;
+        ur.CustomName = this.CustomName;
         ur.UniqueID = this.Name + index;
-        ur.Weapons = mergedWeapons.filter(wpn=>wpn.Count!==0);
-        ur.Abilities = this.GetAbilities(true).map(p=>{return{Name:p.Name, Value:p.Characteristics[0].Value}});
+        const abilities = this.GetAbilities(true);
+        ur.Abilities = [
+                ...abilities, 
+                ...this.GetAbilitiesContainers().filter(
+                    s=>s.Count===1 && 
+                    s.ID!==this.ID &&
+                    s instanceof Selection && !s.IsHidden() &&
+                    abilities.findIndex(a=>a.Name===s.Name)===-1 &&
+                    (!s.Parent || !s.Parent.IsHidden())
+                ).flatMap(s=>s.Profiles)
+            ].map(p=>{return{Name:p.Name, Value:p.Characteristics[0].Value}});
         ur.Rules = [...this.Rules];
         ur.Tree = this.getSelectionIdTree(false);
         return ur;
@@ -627,7 +683,7 @@ export default class Selection extends PrivateSelection {
     }
     private debugRec(space:string) {
         console.debug(space + this.Name + " - " + this.Type + " - " + this.Count + " - " + this.Profiles.length + " - " + this.ID);
-        Each(this.SelectionValue, val=>{
+        Each([...this.SelectionValue, ...this.secretSelection], val=>{
             val.debugRec(space+"  ");
         });
     }

@@ -17,7 +17,7 @@ export default class RosterSelectionExtractor {
             rse.operations[rse.progress].next(rse);
             rse.Progress(rse);
         } catch(e){
-            console.log(e);
+            console.error(e);
             rse.onError(e);
         }
     }
@@ -205,7 +205,7 @@ export default class RosterSelectionExtractor {
                                 if(maxConstraint && modifier._field === maxConstraint.ID) {
                                     selection.Modifiers.push({Type: ModifierType.MAX, Comparator:condition._type, Comparison:condition._value, Value:modifier._value, Field:""})
                                 }
-                                if(modifier.field="hidden") {
+                                if(modifier._field=="hidden") {
                                     selection.Modifiers.push({Type: ModifierType.HIDE, Comparator:condition._type, Comparison:condition._value, Value:modifier._value, Field:condition._childId});
                                 }
                             });
@@ -214,11 +214,11 @@ export default class RosterSelectionExtractor {
                             Each(modifier.conditionGroups.conditionGroup.conditions.condition, condition=>{
                                 conditions.push({Comparator:condition._type, Comparison:condition._value, Value:modifier._value, Field:condition._childId})
                             });
-                            if(modifier.field="hidden") {
+                            if(modifier._field=="hidden") {
                                 selection.Modifiers.push(new LogicalModifier(ModifierType.HIDE, modifier.conditionGroups.conditionGroup._type, conditions));
                             }
                         } else {
-                            console.log("modifier without condition?");
+                            console.error("modifier without condition?");
                         }
                     });
                 }
@@ -273,8 +273,8 @@ export default class RosterSelectionExtractor {
 
             this.Continue(this);
         } catch(e){
-            console.log("Catch")
-            console.log(e);
+            console.error("Catch")
+            console.error(e);
             onError(e);
         }
     }

@@ -62,19 +62,19 @@ export default class RosterRaw{
 }
 
 export function DebugRosterRaw(roster:RosterRaw) {
-    console.log(roster.Name);
-    console.log(roster.Cost + " pts");
-    console.log(roster.Units);
+    console.debug(roster.Name);
+    console.debug(roster.Cost + " pts");
+    console.debug(roster.Units);
     Each<UnitRaw>(roster.Units, unit=>{
-        console.log(" - " + unit.BaseName);
-        console.log(" -- Weapons");
-        console.log(unit.Weapons.map(w=>"    - " + w.Name + " - " + w.Count + " - " + w.Profiles.map(p=>" > " + p.Name + " " + p.Profile.map(c=>c.Name + ":" + c.Value).join(", ")).join("\n")));
-        console.log(" -- Models");
-        console.log(unit.Models.map(w=>"    - " + w.Name + " - " + w.Characteristics.map(c=>c.Name + ":" + c.Value)));
-        console.log(" -- Abilities");
-        console.log(unit.Abilities.map(c=>"    - " + c.Name + " : " + c.Value).join("\n"));
-        console.log(" -- Categories" + unit.Categories.join(", "))
+        console.debug(" - " + unit.BaseName);
+        console.debug(" -- Weapons");
+        console.debug(unit.Weapons.map(w=>"    - " + w.Name + " - " + w.Count + " - " + w.Profiles.map(p=>" > " + p.Name + " " + p.Profile.map(c=>c.Name + ":" + c.Value).join(", ")).join("\n")));
+        console.debug(" -- Models");
+        console.debug(unit.Models.map(w=>"    - " + w.Name + " - " + w.Characteristics.map(c=>c.Name + ":" + c.Value)));
+        console.debug(" -- Abilities");
+        console.debug(unit.Abilities.map(c=>"    - " + c.Name + " : " + c.Value).join("\n"));
+        console.debug(" -- Categories" + unit.Categories.join(", "))
     });
-    console.log("LeaderData");
-    console.log(roster.LeaderData.map(ld=>ld.BaseName + ld.Leading.join(", ")));
+    console.debug("LeaderData");
+    console.debug(roster.LeaderData.map(ld=>ld.BaseName + ld.Leading.join(", ")));
 }

@@ -49,9 +49,6 @@ class Menu extends React.Component{
     state = {
         Rosters: new Array<RosterRaw>(),
         EditingRoster:null,
-        Errors: {
-            rosterFile: null
-        },
         CurrentRoster: -1,
         fontsLoaded:false,
         storageLoaded:false,
@@ -84,15 +81,12 @@ class Menu extends React.Component{
         Menu.Instance = this;
 
         /*if(localSearchParams?.shareIntent && localSearchParams?.shareIntent) {
-            console.log(localSearchParams?.shareIntent);
+            console.debug(localSearchParams?.shareIntent);
         }*/
     };
 
     updateRosterList(newRosterList) {
-        this.setState({Rosters : newRosterList, Errors:{
-            rosterFile: null
-        }});
-        AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newRosterList));
+        this.DoSave(newRosterList);
     }
 
     jszipLoadAsync(that, file) {
@@ -103,7 +97,7 @@ class Menu extends React.Component{
                 });
             });
         }).catch((error)=>{
-           console.log(error);
+           console.error(error);
         });
     }
 
@@ -111,7 +105,7 @@ class Menu extends React.Component{
         expoFS.readAsStringAsync(uri, {encoding:"base64"}).then((file) => {
             that.jszipLoadAsync(that, file);
         }).catch((e)=>{
-            console.log(e);
+            console.error(e);
         });
     }
 
@@ -196,7 +190,7 @@ class Menu extends React.Component{
     }
 
     async loadData(that){
-        //await expoFS.readDirectoryAsync("file://data/net.battlescribe.mobile.rostereditor/files/rosters").then(dir=>console.log(dir));
+        //await expoFS.readDirectoryAsync("file://data/net.battlescribe.mobile.rostereditor/files/rosters").then(dir=>console.debug(dir));
         getData(ROSTERS_KEY).then((rostersJson) => {
             if (rostersJson) {
                 that.setState({
@@ -238,8 +232,7 @@ class Menu extends React.Component{
             const parser = new fastXMLParser.XMLParser({ignoreAttributes:false, attributeNamePrefix :"_"});
             valid = parser.parse(xml).roster._name;
         } catch(e) {
-            console.log(e);
-            this.setState({Errors:{rosterFile:"Please select a valid .ros or .rosz file"}});
+            console.error(e);
         }
         return valid;
     }
@@ -307,7 +300,12 @@ class Menu extends React.Component{
 
     OnSaveRoster(roster:RosterRaw){
         let rosters = Menu.Instance.state.Rosters;
-        const foundIndex = rosters.findIndex(r=>r.Name===roster.Name);
+        let foundIndex;
+        if(Menu.Instance.state.EditingRoster){
+            foundIndex = rosters.findIndex(r=>r.Name===Menu.Instance.state.EditingRoster.Name);
+        }else {
+            foundIndex = rosters.findIndex(r=>r.Name===roster.Name);
+        }
         if(foundIndex!==-1) {
             rosters[foundIndex]=roster;
         } else {
@@ -318,7 +316,7 @@ class Menu extends React.Component{
 
     private DoSave(rosters:Array<RosterRaw>) {
         AsyncStorage.setItem(ROSTERS_KEY, JSON.stringify(rosters));
-        this.setState({rosters:rosters});
+        Menu.Instance.setState({rosters:rosters});
     }
 
     render() {
@@ -344,7 +342,7 @@ class Menu extends React.Component{
                     <NavigationContainer theme={{...DefaultTheme, colors:{...DefaultTheme.colors, background:"transparent"}}} >
                         <Stack.Navigator initialRouteName="Home" screenOptions={{headerShown: false}}>
                             <Stack.Screen name="Home" options={{animation:"slide_from_left"}}>
-                                {(props)=> <MenuDisplay {...props} that={this}/>}
+                                {(props)=> <MenuDisplay {...props} that={this} Popup={this.CallPopup}/>}
                             </Stack.Screen>
                             <Stack.Screen name="Roster" options={{animation:"slide_from_right", animationTypeForReplace:"pop"}}>
                                 {(props)=> <Roster {...props} 
@@ -360,7 +358,15 @@ class Menu extends React.Component{
                                 {(props)=> <Options {...props} onColourChange={(colour:Colour, value:string)=>this.applyColourChangeGlobally(colour, value, this)} onCategoriesChange={this.saveUnitCategoriesChange} onReset={(colours)=>this.resetColours(colours, this)} onNameDisplayChange={(nd)=>this.saveNameDisplayChange(nd)}/>}
                             </Stack.Screen>
                             <Stack.Screen name="RosterBuilder" options={{animation:"fade"}}>
-                                {(props)=> <BuilderMenu {...props} Popup={this.CallPopup} NamesTaken={this.state.Rosters.map(r=>r.Name)} OnSaveRoster={this.OnSaveRoster} />}
+                                {(props)=> <BuilderMenu {...props} 
+                                    Popup={this.CallPopup} 
+                                    NamesTaken={this.state.Rosters.map(r=>r.Name)} 
+                                    OnSaveRoster={this.OnSaveRoster} 
+                                    EditingRoster={this.state.EditingRoster}
+                                    OnExit={()=>{
+                                        Menu.Instance.setState({EditingRoster:null});
+                                    }}
+                                    />}
                             </Stack.Screen>
                         </Stack.Navigator>
                     </NavigationContainer>
@@ -370,8 +376,9 @@ class Menu extends React.Component{
 };
 
 interface MenuDisplayProps{
-    that:Menu,
-    navigation:{navigate}
+    that:Menu;
+    navigation:{navigate};
+    Popup:(question:string, options:Array<PopupOption>,def:string)=>void;
 }
 class MenuDisplay extends Component<MenuDisplayProps> {
     static contextType = KameContext; 
@@ -382,6 +389,22 @@ class MenuDisplay extends Component<MenuDisplayProps> {
             CurrentRoster:index
         });
         this.props.navigation.navigate("Roster");
+    }
+
+    duplicateRoster(index) {
+        let newRosterList = Menu.Instance.state.Rosters;
+        const roster = newRosterList[index];
+
+        let duplicate = JSON.parse(JSON.stringify(roster));
+
+        let i=2;
+        while(newRosterList.findIndex(r=>r.Name===(roster.Name+i))!==-1) {
+            i++;
+        }
+        duplicate.Name = roster.Name+i;
+
+        newRosterList.push(duplicate);
+        Menu.Instance.updateRosterList(newRosterList);
     }
 
     deleteRoster(index) {
@@ -397,9 +420,37 @@ class MenuDisplay extends Component<MenuDisplayProps> {
             <View style={{flexDirection: 'row', flexWrap: 'wrap', width:"100%"}}>
                  {rosters.map((roster, index) => 
                     <View style={{flexBasis:"50%", flexDirection:"row"}} key={index}>
-                        <Button onPress={(e) => that.viewRoster(index)} style={{flex:1, height:60}} mergeRight>{roster.Name}{"\n"+roster.Faction}{("\n( "+roster.Cost+" pts )")}</Button>
-                        <Button onPress={(e) => {Menu.Instance.setState({EditingRoster:roster}); this.props.navigation.navigate("RosterBuilder");}} textStyle={{fontSize:20}} style={{width:44}} mergeLeft mergeRight>✎</Button>
-                        <Button onPress={(e) => that.deleteRoster(index)} textStyle={{fontSize:20}} style={{width:44}} mergeLeft>🗑</Button>
+                        <Button key="name" onPress={(e) => that.viewRoster(index)} style={{flex:1, height:60}} mergeRight>
+                            <Text style={{fontFamily:Variables.fonts.spaceMarine}}>{roster.Name}</Text>
+                            <Text style={{fontFamily:Variables.fonts.WHI}}>{"\n"+roster.Faction}</Text>
+                            <Text>{("\n( "+roster.Cost+" pts )")}</Text>
+                        </Button>
+                        <Button key="modify" onPress={(e) => {
+                            Menu.Instance.setState({EditingRoster:roster}); 
+                                this.props.navigation.navigate("RosterBuilder");
+                            }} 
+                            textStyle={{fontSize:20}} 
+                            style={{width:44}} 
+                            mergeLeft 
+                            mergeRight>✎</Button>
+                        <Button key="options" onPress={(e) => {
+                                that.props.Popup("How to modify this roster", 
+                                [{
+                                    option:"Duplicate (x2)",
+                                    callback:()=>{
+                                        that.duplicateRoster(index);
+                                    }
+                                },{
+                                    option:"Delete (🗑)",
+                                    callback:()=>{
+                                        that.deleteRoster(index);
+                                    }
+                                }], 
+                                "Cancel")
+                            }} 
+                            textStyle={{fontSize:20}} 
+                            style={{width:44}} 
+                            mergeLeft>☰</Button> 
                     </View>
                  )}
             </View>
@@ -407,7 +458,7 @@ class MenuDisplay extends Component<MenuDisplayProps> {
     }
  
     render(){
-        return <View style={{padding:10, width:Variables.width}}>
+        return [<View style={{padding:10, width:Variables.width}}>
             <View style={{flexDirection:"row", width:"100%", backgroundColor:this.context.Bg, borderRadius:4}}>
                 <Text style={{fontFamily:Variables.fonts.spaceMarine, verticalAlign:"middle", flex:1, textAlign:"center", textDecorationLine:"underline"}}>{Variables.username}'s Roster List</Text>
                 <Button onPress={(e)=>
@@ -426,7 +477,8 @@ class MenuDisplay extends Component<MenuDisplayProps> {
                 <Button onPress={(e)=>this.props.navigation.navigate('Options')} image={true}><Image style={{width:20, height:20, tintColor:this.context.Dark, marginLeft:3}} source={require("../assets/images/gear.png")}/></Button>
             </View>
             <View>{this.displayMenuItem(this.props.that.state.Rosters)}</View>
-        </View>
+        </View>,
+        <View style={{position:"absolute", right:20, bottom:0}}><Text>App Version : {require('../app.json').expo.version}</Text></View>]
     }
 }
 

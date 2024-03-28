@@ -143,6 +143,18 @@ export default class RosterSelectionData {
     Profiles:Array<ProfileData>;
     Categories:Array<{Name:string, ID:string}>;
 
+    GetProfileByName(profileName:string):ProfileData {
+        const found = this.Profiles.find(p=>p.Name === profileName);
+        if(!found) return null;
+        let profileData = new ProfileData();
+        profileData.Characteristics = [...found.Characteristics];
+        profileData.Constraints = [...found.Constraints];
+        profileData.ID = found.ID;
+        profileData.Name = found.Name;
+        profileData.Type = found.Type;
+        return profileData;
+    }
+
     GetProfile(info:InfoLink, ancestor:Selection):ProfileData{
         let profileData = new ProfileData();
         const found = this.Profiles.find(p=>p.ID === info.Target);
@@ -150,6 +162,7 @@ export default class RosterSelectionData {
         profileData.Constraints = [...found.Constraints];
         profileData.ID = found.ID;
         profileData.Name = found.Name;
+        profileData.Type = found.Type;
         Each<Modifier>(info.Modifiers.filter(m=>m.Type===ModifierType.CHARACTERISTIC), modifier=>{
             let characteristic = profileData.Characteristics.find(c=>c.ID===modifier.Field);
             switch(modifier.Comparator){
@@ -160,7 +173,7 @@ export default class RosterSelectionData {
                     if(ancestor.ID !== modifier.Comparison && ancestor.ExtraID !== modifier.Comparison) characteristic.Value = modifier.Value;
                     break;
                 default:
-                    if (modifier.Comparator !== null) console.log("Untreated modifier comparator : " + modifier.Comparator)
+                    if (modifier.Comparator !== null) console.error("Untreated modifier comparator : " + modifier.Comparator)
                     characteristic.Value = modifier.Value
                     break;
             }

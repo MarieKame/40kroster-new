@@ -84,7 +84,7 @@ class WeaponData {
         return this.Data[5].Value;
     }
     public Traits():Array<string> {
-        return this.Data.filter((trait, index)=>index>=6&&trait.Value!=="-").map(trait=>trait.Value);
+        return this.Data.filter((trait, index)=>index>=6&&trait.Value&&trait.Value.trim()!=="-").map(trait=>trait.Value);
     }
 
     public IsMelee():boolean {
@@ -234,7 +234,6 @@ class UnitData {
                 let r = rule;
                 const regex = new RegExp(rule, "gi");
                 if(regex.test(ability.Name)) {
-                    console.log("???")
                     r += " " + /D?[0-9]\+?/i.exec(ability.Value).toString().trim();
                     add=false;
                 } 
@@ -242,10 +241,21 @@ class UnitData {
             });
             if(/invulnerable/gi.test(ability.Name)) {
                 invuls.push(ability);
+            } else if (add && /(Scouts)/gi.test(ability.Name)){
+                this.Rules.push(ability.Name + " " + ability.Value)
             } else if (add) {
                 this.Abilities.push(ability);
             }
         });
+
+        if(this.Rules.length===0) {
+            Each<string>(this.Factions, faction => {
+                const find = Variables.factions.find(f=>f[0]==faction);
+                if (find) {
+                    this.Rules.push(find[1]);
+                }
+            });
+        }
 
         const extracted = ExtractWeaponData(unit.Weapons);
         this.MeleeWeapons = extracted.melee;
@@ -262,7 +272,7 @@ class UnitData {
                     invul=invuls[foundIndex];
                 }
             }
-            this.Models.push(new ModelData(model.Name, new StatsData(model.Characteristics, invul.Value)))
+            this.Models.push(new ModelData(model.Name, new StatsData(model.Characteristics, invul?invul.Value:"")))
         });
     }
 

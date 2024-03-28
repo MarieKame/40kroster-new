@@ -24,10 +24,12 @@ enum BuildPhase{
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 class props{
-    navigation:{goBack};
+    navigation:{goBack}
     NamesTaken:Array<string>;
+    EditingRoster?:RosterRaw;
     Popup:(question:string, options:Array<PopupOption>,def:string)=>void;
     OnSaveRoster:(roster:RosterRaw)=>void;
+    OnExit:CallableFunction;
 }
 const COLUMN_WIDTH = Variables.width * 0.50;
 export default class BuilderMenu extends Component<props> {
@@ -54,6 +56,21 @@ export default class BuilderMenu extends Component<props> {
         rosterName:""
     }
 
+    constructor(props) {
+        super(props);
+        
+        if(this.props.EditingRoster && this.state.phase === BuildPhase.FACTION){
+            const found = Variables.FactionFiles.find(ff=>ff.CatalogueID===this.props.EditingRoster.CatalogueID);
+            this.state.rosterName= this.props.EditingRoster.Name;
+            this.state.phase= BuildPhase.LOADING;
+            this.state.loadingText= "Downloading Latest Roster Selection File Version..."
+            this.state.progress= "0%";
+            this.state.catalogueId= found.CatalogueID;
+            this.state.factionName= found.Name;
+            this.LoadRosterSelectionFile(found.Name, found.URL);
+        } 
+    }
+
     ErrorLoadingRosterFile(that:BuilderMenu){
         that.setState({
             phase:BuildPhase.LOADING_ERROR
@@ -65,9 +82,8 @@ export default class BuilderMenu extends Component<props> {
         cont(rse);
     }
 
-    LoadRosterSelectionFile(name:string, url:string, catalogueId:string){
+    LoadRosterSelectionFile(name:string, url:string){
         const that = this;
-        this.setState({phase:BuildPhase.LOADING, loadingText:"Downloading Latest Roster Selection File Version...", progress:"0%", catalogueId:catalogueId, factionName:name});
         const DR = FileSystem.createDownloadResumable(
             url,
             FileSystem.documentDirectory + name + ".xml",
@@ -84,10 +100,20 @@ export default class BuilderMenu extends Component<props> {
                 if (contents) {
                     new RosterSelectionExtractor(contents, (progress:string, cont, rse:RosterSelectionData, data?:RosterSelectionData)=>{
                         if (data){
-                            if(Menu.Instance.state.EditingRoster) {
+                            if(this.props.EditingRoster) {
                                 let units = new Array<Selection>(); 
-                                Each<UnitRaw>(Menu.Instance.state.EditingRoster.Units, unit=>{
-                                    units.push(Selection.FromTree(unit.Tree, data));
+                                Each<UnitRaw>(this.props.EditingRoster.Units, unit=>{
+                                    const sel = Selection.FromTree(unit.Tree, data);
+                                    if(unit.CustomName) sel.CustomName = unit.CustomName;
+                                    let eeIDs = this.state.equipedEnhancementIDs;
+                                    Each<Selection>(sel.GetAbilitiesContainers(), ability=>{
+                                        if(ability.Parent && /enhancement/gi.test(ability.Parent.Name) && ability.Count===1) {
+                                            eeIDs.push(ability.ID);
+                                        }
+                                    });
+                                    if(sel.IsWarlord()) this.setState({warlord:sel, equipedEnhancementIDs:eeIDs});
+                                    else this.setState({equipedEnhancementIDs:eeIDs});
+                                    units.push(sel);
                                 });
                                 that.setState({phase:BuildPhase.ADD, rosterSelectionData:data, progress:progress, detachmentSelection:Selection.Init(data.DetachmentChoice, data), units:units})
                             } else {
@@ -149,12 +175,7 @@ export default class BuilderMenu extends Component<props> {
     }
 
     SaveRoster():RosterRaw {
-        let rr:RosterRaw;
-        if(Menu.Instance.state.EditingRoster !== null) {
-            rr = Menu.Instance.state.EditingRoster;
-        } else {
-            rr = new RosterRaw();
-        }
+        let rr = new RosterRaw();
         
         rr.CatalogueID = this.state.catalogueId;
         rr.Faction = this.state.factionName;
@@ -201,7 +222,9 @@ export default class BuilderMenu extends Component<props> {
 
     DisplayUpgrade(selection:Selection, index:number, disabled:boolean, enhancement:boolean):ReactNode{
         let option;
-        if((selection.Parent.ID !== selection.Ancestor.ID && !/Enhancement/gi.test(selection.Parent.Name)) || !selection.Changeable()) {
+        if(!selection) return null;
+        console.log(selection.Name)
+        if((selection.Parent.ID !== selection.Ancestor.ID && !/Enhancement/gi.test(selection.Parent.Name) && selection.Parent.Type !=="model") || !selection.Changeable()) {
             if(selection.Count===0) return;
             option= <Button 
                     small={true} 
@@ -218,8 +241,10 @@ export default class BuilderMenu extends Component<props> {
                     (this.state.warlord!==null && 
                     this.state.warlord.ID !== selection.Ancestor.ID)) ||
                 enhancement && 
-                    (selection.Parent.GetSelectionCount()===1 || 
-                    this.state.equipedEnhancementIDs.findIndex(eeID => eeID === selection.ID) !== -1);
+                    (selection.Count !== 1 && 
+                    selection.Parent.GetSelectionCount() !== 0 && 
+                    this.state.equipedEnhancementIDs.findIndex(eeID => eeID === selection.ID) === -1
+                    );
             option= <Checkbox 
                 Text={selection.Name} 
                 Style={{opacity:trulyDisabled?0.5:1}} 
@@ -335,24 +360,31 @@ export default class BuilderMenu extends Component<props> {
         const unitModels = unit.GetModelsWithDifferentProfiles();
         let unitModelsDisplay = new Array<ReactNode>();
 
-        function newUnitDisplay(name:string, data:ProfilesDisplayData|ProfilesDisplayData[], key) {
-            unitModelsDisplay.push(<View key={key} style={{flexDirection:"row"}}>
-                <Text key="name" style={{marginRight:4, alignSelf:"center", width:120, textAlign:"right", height:"auto", alignContent:"center"}}>{name}</Text>
+        function newUnitDisplay(name:string, data:ProfilesDisplayData|ProfilesDisplayData[], index) {
+            unitModelsDisplay.push(<View key={index} style={{flexDirection:"row", marginLeft:12}}>
+                {index===0&&<AutoExpandingTextInput style={{marginRight:4, alignSelf:"center", width:120, height:"auto", alignContent:"center"}} onSubmit={e=>{
+                        if (e && e !== "" && e !== undefined) unit.CustomName = e;
+                    }} hint={unit.Name}
+                    value={unit.CustomName} />}
+                {index!==0&&<Text key="name" style={{marginRight:4, alignSelf:"center", width:120, textAlign:"right", height:"auto", alignContent:"center"}}>{name}</Text>}
                 <ProfilesDisplay Data={data} DisplayName={false} OnlyDisplayFirst={true} />
             </View>);
         }
         if(unitModels.length===1){
-            newUnitDisplay(unit.Name, unitModels[0].DisplayStats(), "title")
+            newUnitDisplay(unit.Name, unitModels[0].DisplayStats(), 0)
         } else {
             Each<Selection>(unitModels, (unitModel, index)=>{
                 newUnitDisplay(unitModel.Name, unitModel.DisplayStats(), index);
             });
         }
 
-        return <View style={{height:"100%", backgroundColor:this.context.Bg, marginLeft:10}}>
+        return <View key={this.state.currentUnit} style={{height:"100%", backgroundColor:this.context.Bg, marginLeft:10}}>
             <ScrollView>
-                <View style={{height:48*unitModels.length+6}}>
-                    {unitModelsDisplay}
+                <View style={{flexDirection:"row"}}>
+                    
+                    <View style={{height:48*unitModels.length+6}}>
+                        {unitModelsDisplay}
+                    </View>
                 </View>
                 {this.ViewSelectionRecursive(unit)}
                 <Text key="rules" style={{padding:10}}><Text style={{fontFamily:Variables.fonts.WHB}}>Categories : </Text>{unit.Rules.join(", ")}</Text>
@@ -391,7 +423,7 @@ export default class BuilderMenu extends Component<props> {
             return this.rosterCategory;
         }
         if(this.state.units.length == 0) return null;
-        return <View key={render.item.Name+this.state.update}>
+        return <View key={render.item.Name}>
             {newCategory(render.item.GetFrameworkCategories())&&
                 <View style={{alignItems:"center", justifyContent:"center", backgroundColor:this.context.Accent, width:"100%"}}>
                     <Text>{getCategory()}</Text>
@@ -405,9 +437,9 @@ export default class BuilderMenu extends Component<props> {
                     } 
                     that.setState({phase:BuildPhase.EQUIP, currentUnit:render.index-1}); 
                     }}>
-                <View style={{flexDirection:"row", backgroundColor:render.index==this.state.currentUnit+1?this.context.LightAccent:this.context.Bg, borderBottomColor:this.context.LightAccent, borderWidth:1, height:40}}>
+                <View key={this.state.update} style={{flexDirection:"row", backgroundColor:render.index==this.state.currentUnit+1?this.context.LightAccent:this.context.Bg, borderBottomColor:this.context.LightAccent, borderWidth:1, height:40}}>
                     <View key="box" style={{alignSelf:"center", flexGrow:1, marginLeft:4}}>
-                        <Text>{render.item.Name}{render.item.HasEnhancement()&&<Text style={{color:this.context.Main}}> ★</Text>}</Text>
+                        <Text>{render.item.CustomName?render.item.CustomName:render.item.Name}{render.item.HasEnhancement()&&<Text style={{color:this.context.Main}}> ★</Text>}</Text>
                         <Text>
                             {render.item.GetFrameworkCost()>0&&render.item.GetCost()+" pts"}
                             {render.item.GetFrameworkCost()>0&&" — "+render.item.GetModelCount()+" model" + (render.item.GetModelCount()>1?"s":"")}
@@ -462,6 +494,13 @@ export default class BuilderMenu extends Component<props> {
 
     ShowMenu(){
         const that = this;
+        function ValidName():boolean{
+            return that.state.rosterName !== "" &&
+            ( 
+                that.props.NamesTaken.findIndex(name=>name===that.state.rosterName) === -1 || 
+                that.state.rosterName === that.props.EditingRoster.Name
+            )
+        }
         switch(this.state.phase){
             case BuildPhase.FACTION:
                 return <Button onPress={e=>this.props.navigation.goBack()}>Back</Button>;
@@ -469,15 +508,19 @@ export default class BuilderMenu extends Component<props> {
             case BuildPhase.EQUIP:
                 const totalCost =  this.state.units.map(u=>u.GetCost()).reduce((cost, total)=> cost+total, 0)
                 return <View style={{flexDirection:"row", height:38, marginBottom:4, gap:8, alignItems:"center"}}>
-                    <AutoExpandingTextInput key="rosterName" onSubmit={e=>{this.setState({rosterName:e===undefined?"":e})}} defaultValue="New Roster Name" style={{width:200}}/>
+                    <AutoExpandingTextInput 
+                        key="rosterName" 
+                        onSubmit={e=>{this.setState({rosterName:e===undefined?"":e})}} 
+                        value={this.state.rosterName}
+                        hint="Enter Roster Name"
+                        style={{width:200}}
+                        />
                     <Info key="nameError" 
                         MessageOnPress={
                             this.state.rosterName===""?
                                 "Enter a Name":
                                 "This name is already in use"} 
-                        Visible={
-                            this.state.rosterName===""||
-                            this.props.NamesTaken.findIndex(name=>name===this.state.rosterName)!==-1}/>
+                        Visible={!ValidName()}/>
                     <View key="info" style={{backgroundColor:this.context.Bg, height:38, alignItems:"center", paddingLeft:10, paddingRight:10, gap:5, flexDirection:"row"}}>
                         <Text key="wl">Warlord : {this.state.warlord?this.state.warlord.Name:"Not Selected"}</Text>
                         <Text key="sp">|</Text>
@@ -485,15 +528,13 @@ export default class BuilderMenu extends Component<props> {
                     </View>
                     <Info key="saveError" 
                         MessageOnPress={
-                            (this.state.rosterName==="" || 
-                            this.props.NamesTaken.findIndex(name=>name===this.state.rosterName)!==-1) ?
+                            (!ValidName()) ?
                                 "Enter a valid roster name" :
                                 ((this.state.warlord===null)?
                                     "Select a Warlord":
                                     "Validate all your units")} 
                         Visible={
-                            this.state.rosterName==="" || 
-                            this.props.NamesTaken.findIndex(name=>name===this.state.rosterName)!==-1 ||
+                            (!ValidName()) ||
                             this.state.warlord===null || 
                             !this.state.units.map(u=>u.ValidRecursive()).reduce((was, is)=>was&&is, true)}
                         Style={{position:"absolute", right:110}}/>
@@ -503,13 +544,9 @@ export default class BuilderMenu extends Component<props> {
                         onPress={e=> {
                             const roster = this.SaveRoster();
                             DebugRosterRaw(roster);
-                            this.props.navigation.goBack();
-                            if(Menu.Instance.state.EditingRoster===null){
-                                this.props.OnSaveRoster(roster)
-                            } else {
-                                Menu.Instance.state.EditingRoster = roster;
-                            }
-                            Menu.Instance.setState({EditingRoster:null});
+                            this.props.OnSaveRoster(roster);
+                            that.props.navigation.goBack();
+                            that.props.OnExit();
                             }}>Save</Button>
                     <Button key="exit" 
                         style={{position:"absolute", right:0}} 
@@ -519,7 +556,7 @@ export default class BuilderMenu extends Component<props> {
                                 [{
                                     option:"Yes",
                                     callback:()=>{
-                                        Menu.Instance.setState({EditingRoster:null});
+                                        that.props.OnExit();
                                         that.props.navigation.goBack();
                                     }
                                 }], 
@@ -532,15 +569,14 @@ export default class BuilderMenu extends Component<props> {
     }
 
     render(){
-        if(Menu.Instance.state.EditingRoster!==null && this.state.phase === BuildPhase.FACTION){
-            const found = Variables.FactionFiles.find(ff=>ff.CatalogueID===Menu.Instance.state.EditingRoster.CatalogueID);
-            this.LoadRosterSelectionFile(found.Name, found.URL, found.CatalogueID);
-        } 
         let contents;
         switch(this.state.phase) {
             case BuildPhase.FACTION:
                 contents= <FlatList numColumns={2} data={Variables.FactionFiles} renderItem={render=>{
-                    return <Button onPress={e=>this.LoadRosterSelectionFile(render.item.Name, render.item.URL, render.item.CatalogueID)}>{render.item.Name}</Button>;
+                    return <Button onPress={e=>{
+                        this.setState({phase:BuildPhase.LOADING, loadingText:"Downloading Latest Roster Selection File Version...", progress:"0%", catalogueId:render.item.CatalogueID, factionName:render.item.Name});
+                        this.LoadRosterSelectionFile(render.item.Name, render.item.URL);
+                    }}>{render.item.Name}</Button>;
                 }} />
                 break;
             case BuildPhase.LOADING:

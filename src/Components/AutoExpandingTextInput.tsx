@@ -1,10 +1,12 @@
-import { Component, Context } from "react";
-import { TextInput, TextInputProps } from "react-native";
+import { Component } from "react";
+import { TextInput, TextInputProps, View } from "react-native";
 import Variables from "../Variables";
 import { KameContext } from "../../Style/KameContext";
+import Text from "./Text";
 
 interface AEProps extends TextInputProps {
   onSubmit:CallableFunction
+  hint?:string
 }
 
 class AutoExpandingTextInput extends Component<AEProps> {
@@ -20,7 +22,7 @@ class AutoExpandingTextInput extends Component<AEProps> {
     }
 
     render() {
-      return (
+      let view = [
         <TextInput
             {...this.props}
             multiline={true}
@@ -33,7 +35,16 @@ class AutoExpandingTextInput extends Component<AEProps> {
             value={this.state.value}
             onChangeText={text=>this.setState({value:text})}
           />
-      );
+        ];
+        if(this.props.hint && (this.state.value===""||this.state.value===undefined||this.state.value===null)) {
+          view.push(
+            <View style={{position:"absolute", left:8, alignSelf:"center"}}>
+              <Text style={{color:"#888888"}}>
+                {this.props.hint}
+              </Text>
+            </View>);
+        }
+      return view;
     }
   }
 

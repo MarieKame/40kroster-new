@@ -97,7 +97,6 @@ class Unit extends React.Component<Props> {
 
         const leaders = this.props.Leaders.filter(leader=>leader.Leading.findIndex(lead=>lead.toLocaleLowerCase()==this.props.data.Name().toLocaleLowerCase()) !== -1);
         const selectedLeaders = leaders.filter((leader)=>leader.CurrentlyLeading == this.props.data.Key());
-        console.log(selectedLeaders)
         function Name(leader:LeaderDataRaw){
             return leader.CustomName?leader.CustomName+" ("+leader.BaseName+") ":leader.BaseName;
         }
@@ -159,7 +158,6 @@ class Unit extends React.Component<Props> {
                                         style={{marginRight:4}} 
                                         value={leader.CurrentlyLeading==this.props.data.Key()} 
                                         onValueChange={(value)=>{
-                                            console.log("leader change")
                                             leader.CurrentlyLeading=value?this.props.data.Key():null; 
                                             this.props.onUpdateLeader(leader)}}/>
                                     <Text key="name">{Name(leader)}</Text>
