@@ -203,6 +203,7 @@ export default class BuilderMenu extends Component<props> {
         rr.Units = this.state.units.map((u, i)=>u.GetUnitRaw(i));
         rr.Cost = this.state.units.map(u=>u.GetCost()).reduce((current, sum)=>current+sum, 0);
         rr.LeaderData = new Array<LeaderDataRaw>();
+        rr.Rules = [...this.state.rosterSelectionData.Rules];
         let id= 1;
         Each<UnitRaw>(rr.Units, unit=>{
             let leaderData:LeaderDataRaw;

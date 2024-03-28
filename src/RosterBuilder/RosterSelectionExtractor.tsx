@@ -1,6 +1,7 @@
 import fastXMLParser from 'fast-xml-parser';
 import RosterSelectionData, { Condition, Constraint, LogicalModifier, Modifier, ModifierType, ProfileData, SelectionData, SelectionEntry, TargetSelectionData } from './RosterSelectionData';
 import Each from '../Components/Each';
+import { RuleDataRaw } from '../Roster/RosterRaw';
 
 export default class RosterSelectionExtractor {
     private progress=0;
@@ -256,8 +257,18 @@ export default class RosterSelectionExtractor {
                 this.operations.push(generateSharedProfiles(profile, this));
             });
 
+            function TreatRuleEntry(rule):RuleDataRaw{
+                let ruleData = new RuleDataRaw();
+                ruleData.Name = rule._name;
+                ruleData.ID = rule._id;
+                ruleData.Description = rule.description;
+                return ruleData;
+            }
+            function* generateSharedRules(rule, rse:RosterSelectionExtractor){
+                rse.data.Rules.push(TreatRuleEntry(rule));
+            }
             Each(this.catalogue.sharedRules.rule, (rule)=>{
-                //this.Progress(this);
+                this.operations.push(generateSharedRules(rule, this));
             });
 
             function* sort(rse:RosterSelectionExtractor){

@@ -6,11 +6,11 @@ import Variables from "../Variables";
 import Button from "../Components/Button";
 import {Text} from "../Components/Text";
 import {KameContext} from "../../Style/KameContext";
-import { Stratagem } from "./Stratagems";
+import { STRATAGEMS, Stratagem } from "./Stratagems";
 import AutoExpandingTextInput from "../Components/AutoExpandingTextInput";
 import Checkbox from "expo-checkbox";
 import { GestureHandlerRootView, PanGestureHandler } from "react-native-gesture-handler";
-import RosterRaw, { DescriptorRaw, LeaderDataRaw, NoteRaw, UnitRaw } from "../Roster/RosterRaw";
+import RosterRaw, { DescriptorRaw, LeaderDataRaw, NoteRaw, RuleDataRaw, UnitRaw } from "../Roster/RosterRaw";
 import Each from "../Components/Each";
 
 class Reminder{
@@ -40,7 +40,7 @@ class Roster extends React.Component<Props> {
         CurrentUnit:0,
         Units: new Array<UnitData>(),
         UnitsToSkip: new Array<number>(),
-        Rules: new Array<DescriptorRaw>(),
+        Rules: new Array<RuleDataRaw>(),
         Reminders:new Array<Reminder>(),
         DetachmentStratagems: new Array<Stratagem>(),
 
@@ -64,7 +64,7 @@ class Roster extends React.Component<Props> {
         this.state.Units.sort(UnitData.CompareUnits);
 
         this.state.UnitsToSkip = new Array<number>();
-        this.state.Rules = new Array<DescriptorRaw>();
+        this.state.Rules = [...this.props.Data.Rules];
         this.state.Reminders = new Array<Reminder>();
         Each<UnitData>(this.state.Units, (unit, index)=>{
             this.state.Units.slice(index+1).forEach((unit2, index2)=>{
@@ -74,9 +74,30 @@ class Roster extends React.Component<Props> {
                 }
             });
             Each<DescriptorRaw>(unit.Abilities, ability=>{
-                
+                const r = this.checkAddReminder(ability, unit.Name());
+                if(r !== null && this.state.Reminders.findIndex(re=>re.UnitName===r.UnitName && re.Data.Name===r.Data.Name)===-1) {
+                    this.state.Reminders.push(r);
+                }
             });
         });
+        console.log(this.state.Reminders);
+
+        this.state.DetachmentStratagems = [...STRATAGEMS].filter(s=>s.Faction === this.props.Data.Faction);
+    }
+
+    private checkAddReminder(data:DescriptorRaw, unitName:string){
+        if (/(per battle)|(at the end of)|(each time)/gi.test(data.Value) && !/leading/gi.test(data.Value)){
+            let reminder = new Reminder();
+            reminder.UnitName=unitName;
+            const results = /(((Command)|(Movement)|(Shooting)|(Charge)|(Fighting)|(Any)) (phase))/gi.exec(data.Value)
+            if (results)
+                reminder.Phase = results[2][0].toLocaleUpperCase() + results[2].slice(1);
+            else
+                reminder.Phase=null;
+            reminder.Data = data;
+            return reminder;
+        }
+        return null;
     }
 
     Previous(){

@@ -1,4 +1,5 @@
 import Each from "../Components/Each";
+import { RuleDataRaw } from "../Roster/RosterRaw";
 import Variables from "../Variables";
 import Selection from './UnitSelection';
 
@@ -141,6 +142,7 @@ export default class RosterSelectionData {
     DetachmentChoice:SelectionEntry;
     Selections:Array<SelectionEntry>;
     Profiles:Array<ProfileData>;
+    Rules:Array<RuleDataRaw>;
     Categories:Array<{Name:string, ID:string}>;
 
     GetProfileByName(profileName:string):ProfileData {
@@ -224,5 +226,6 @@ export default class RosterSelectionData {
         this.Selections = new Array<SelectionEntry>();
         this.Profiles = new Array<ProfileData>();
         this.Categories = new Array<{Name:string, ID:string}>();
+        this.Rules = new Array<RuleDataRaw>();
     }
 }

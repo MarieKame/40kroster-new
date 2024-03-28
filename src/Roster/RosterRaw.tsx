@@ -51,11 +51,18 @@ export class UnitRaw {
     Tree:SelectionTreeEntry;
 }
 
+export class RuleDataRaw{
+    Name:string;
+    ID:string;
+    Description:string;
+}
+
 export default class RosterRaw{
     CatalogueID:string;
     Notes:Array<NoteRaw>;
     LeaderData:Array<LeaderDataRaw>;
     Units:Array<UnitRaw>;
+    Rules:Array<RuleDataRaw>;
     Name:string;
     Cost:number;
     Faction:string;

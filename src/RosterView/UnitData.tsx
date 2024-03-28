@@ -241,7 +241,7 @@ class UnitData {
             });
             if(/invulnerable/gi.test(ability.Name)) {
                 invuls.push(ability);
-            } else if (add && /(Scouts)/gi.test(ability.Name)){
+            } else if (add && /(Scouts)|(Deadly Demise)/gi.test(ability.Name)){
                 this.Rules.push(ability.Name + " " + ability.Value)
             } else if (add) {
                 this.Abilities.push(ability);

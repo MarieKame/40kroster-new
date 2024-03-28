@@ -9,7 +9,7 @@ import { Background } from "../../Style/svgs";
 import { CORE_STRATAGEMS, Stratagem } from "./Stratagems";
 import MasonryList from '@react-native-seoul/masonry-list';
 import { GestureHandlerRootView, PanGestureHandler } from "react-native-gesture-handler";
-import { DescriptorRaw } from "../Roster/RosterRaw";
+import { DescriptorRaw, RuleDataRaw } from "../Roster/RosterRaw";
 
 enum RosterMenuCategories {
     UNIT_LIST, RULES, REMINDERS, STRATAGEMS, CORE
@@ -131,10 +131,10 @@ class RosterMenu extends Component<Props> {
                 </View>;
     }
 
-    ShowRule(rule:DescriptorRaw, index:number):ReactNode{
+    ShowRule(rule:RuleDataRaw, index:number):ReactNode{
         return <View key={index} style={{marginBottom:10}}>
                     <Text style={{backgroundColor:this.context.Accent, fontFamily:Variables.fonts.spaceMarine, padding:5}}>{rule.Name}</Text>
-                    <ComplexText fontSize={Variables.fontSize.normal} style={{marginLeft:10, marginRight:10}}>{rule.Value}</ComplexText>
+                    <ComplexText fontSize={Variables.fontSize.normal} style={{marginLeft:10, marginRight:10}}>{rule.Description}</ComplexText>
                 </View>;
     }
 
