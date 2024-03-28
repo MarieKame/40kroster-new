@@ -95,23 +95,21 @@ abstract class PrivateSelection {
         return noOption;
     }
 
-    protected _getSpecificSelections(type:string):Array<Selection>{
+    protected _getSpecificSelections(type:Array<string>):Array<Selection>{
         let selections = new Array<Selection>();
-        if(this.Type===type){
-            if (this instanceof Selection) selections.push(this);
-        }
+        Each<string>(type, t=>{
+            if(this.Type===t){
+                if (this instanceof Selection) selections.push(this);
+            }
+        });
         Each<Selection>(this.SelectionValue, sv=>{
             selections = [...selections, ...sv._getSpecificSelections(type)];
         })
         return selections;
     }
 
-    protected _getModelSelections():Array<Selection>{
-        return this._getSpecificSelections("model");
-    }
-
     protected _getEnhancements():Array<PrivateSelection>{
-        return this._getSpecificSelections("upgrade").filter(s=>/Enhancement/gi.test(s.Parent.Name) && s.Count===1);
+        return this._getSpecificSelections(["upgrade"]).filter(s=>/Enhancement/gi.test(s.Parent.Name) && s.Count===1);
     }
 
     GetAbilitiesContainers():Array<PrivateSelection>{
@@ -139,7 +137,7 @@ abstract class PrivateSelection {
     }
 
     GetModelCount():number{
-        return this._getModelSelections().map(model=>model.getValidTypeCount()).reduce((sum, current)=> sum+current, 0);
+        return this._getSpecificSelections(["model"]).map(model=>model.getValidTypeCount()).reduce((sum, current)=> sum+current, 0);
     }
 
     FindUnitProfile():ProfileData{
@@ -148,13 +146,13 @@ abstract class PrivateSelection {
 
     GetModelsWithDifferentProfiles():Array<Selection>{
         function differentProfiles(model:Selection, index:number, models:Array<Selection>) {
-            if(model.Profiles.length===0) return false;
+            if(!model.FindUnitProfile()) return false;
             return models.findIndex(m=>
-                m.Profiles.length===1 && 
+                m.FindUnitProfile() && 
                 m.FindUnitProfile().Characteristics.map(c=>c.Value).toString() === model.FindUnitProfile().Characteristics.map(c=>c.Value).toString()) === index;
-          }
-          const filtered = this._getModelSelections().filter(differentProfiles);
-        return filtered.length>0?filtered:this._getModelSelections();
+        }
+        const filtered = this._getSpecificSelections(["model", "unit"]).filter(differentProfiles);
+        return filtered.length>0?filtered:this._getSpecificSelections(["model"]);
     }
 
     Valid(adding:number=0):boolean{
@@ -179,8 +177,6 @@ abstract class PrivateSelection {
         return pd;
     }
     DisplayStats():ProfilesDisplayData|Array<ProfilesDisplayData>{
-        console.log(this.Name)
-        console.log(this.Profiles)
         return new ProfilesDisplayData(this.Profiles.map(s=>this._mergeConstraints(s, this.Constraints)));
     }
 
@@ -291,6 +287,10 @@ export default class Selection extends PrivateSelection {
         Each<InfoLink>(this.data.ProfileInfoLinks, infoLink=>{
             this.Profiles.push(rse.GetProfile(infoLink, this.Ancestor));
         });
+        const extraProfile = rse.GetProfileByName(this.Name);
+        if(this.Profiles.length===0  && extraProfile) {
+            this.Profiles.push(extraProfile);
+        }
     }
 
     private getSelectionIdTree(duplicate:boolean=true, index:number=0):SelectionTreeEntry {
@@ -491,10 +491,6 @@ export default class Selection extends PrivateSelection {
             }
             count = (defaultId?(isDefault?count:0):count);
             let sel = new Selection((defaultId?(isDefault?count:0):count), data, rse, that, that.Ancestor, null, index);
-            const extraProfile = rse.GetProfileByName(sel.Name);
-            if(sel.Profiles.length===0 && extraProfile) {
-                sel.Profiles.push(extraProfile);
-            }
             sel.Ancestor.selectionMap.push({ID:sel.ID, Selection:sel});
             if(sel.Name==="Warlord") {
                 count=sel._getMin();
@@ -579,7 +575,7 @@ export default class Selection extends PrivateSelection {
     }
 
     protected _getWeapons():Array<Selection> {
-        return this._getSpecificSelections("upgrade").filter(s=>
+        return this._getSpecificSelections(["upgrade"]).filter(s=>
             (s.Profiles.length>0 && s.Profiles.findIndex(p=>/weapon/gi.test(p.Type))!==-1) ||
             (s.secretSelection.length>0));
     }

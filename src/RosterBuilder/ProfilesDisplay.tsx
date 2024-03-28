@@ -29,7 +29,6 @@ export default class ProfilesDisplay extends Component<Props>{
     declare context: React.ContextType<typeof KameContext>;
 
     DisplayProfile(data:ProfileData, index:number=0, prefix?:string):ReactNode {
-        console.log(data);
         const name = / - /gi.test(data.Name)?/(?<= - ).*/gi.exec(data.Name):data.Name;
         const amount = data.Constraints.find(c=>c.Type==="min")?.Value;
         const fontSize = this.props.Small?Variables.fontSize.small:Variables.fontSize.normal;

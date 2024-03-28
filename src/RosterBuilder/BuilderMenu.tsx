@@ -223,7 +223,6 @@ export default class BuilderMenu extends Component<props> {
     DisplayUpgrade(selection:Selection, index:number, disabled:boolean, enhancement:boolean):ReactNode{
         let option;
         if(!selection) return null;
-        console.log(selection.Name)
         if((selection.Parent.ID !== selection.Ancestor.ID && !/Enhancement/gi.test(selection.Parent.Name) && selection.Parent.Type !=="model") || !selection.Changeable()) {
             if(selection.Count===0) return;
             option= <Button 
@@ -358,6 +357,7 @@ export default class BuilderMenu extends Component<props> {
         const unit = this.state.units[this.state.currentUnit];
         const that = this;
         const unitModels = unit.GetModelsWithDifferentProfiles();
+        console.log(unitModels.map(u=>u.Name+" - "+u.Profiles.length).join(", "))
         let unitModelsDisplay = new Array<ReactNode>();
 
         function newUnitDisplay(name:string, data:ProfilesDisplayData|ProfilesDisplayData[], index) {
@@ -381,7 +381,6 @@ export default class BuilderMenu extends Component<props> {
         return <View key={this.state.currentUnit} style={{height:"100%", backgroundColor:this.context.Bg, marginLeft:10}}>
             <ScrollView>
                 <View style={{flexDirection:"row"}}>
-                    
                     <View style={{height:48*unitModels.length+6}}>
                         {unitModelsDisplay}
                     </View>
