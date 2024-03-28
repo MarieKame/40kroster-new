@@ -1,5 +1,5 @@
 import { Component } from "react";
-import { Animated, LayoutAnimation, Pressable, StyleProp, View, ViewStyle } from "react-native";
+import { Animated, Pressable, StyleProp, View, ViewStyle } from "react-native";
 import { KameContext } from "../../Style/KameContext";
 import Text from "./Text";
 import Variables from "../Variables";

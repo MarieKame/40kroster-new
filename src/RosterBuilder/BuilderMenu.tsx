@@ -1,5 +1,5 @@
 import { Component, ReactNode } from "react";
-import { LayoutAnimation, ListRenderItemInfo, Pressable, View } from "react-native";
+import { LayoutAnimation, ListRenderItemInfo, Pressable, View, Animated } from "react-native";
 import Variables from "../Variables";
 import { FlatList, GestureHandlerRootView, ScrollView } from "react-native-gesture-handler";
 import Text from '../Components/Text';
@@ -53,7 +53,8 @@ export default class BuilderMenu extends Component<props> {
         totalCost:0,
         warlord:null,
         equipedEnhancementIDs:new Array<string>(),
-        rosterName:""
+        rosterName:"",
+        pastedInfo:new Animated.Value(0)
     }
 
     constructor(props) {
@@ -213,8 +214,13 @@ export default class BuilderMenu extends Component<props> {
     }
 
     private printRoster():string {
-        return this.state.rosterName + " - " + this.state.totalCost + "pts \n" + 
-            this.state.units.map(unit=>unit.Print() + "\n").join("") + 
+        let cost = 0;
+        const units = this.state.units.map(unit=> {
+            cost += unit.GetCost();
+            return unit.Print() + "\n";
+        });
+        return this.state.rosterName + " - " + cost + "pts \n" + 
+            units.join("") + 
             "Made with Sammie's App";    
     }
 
@@ -546,7 +552,31 @@ export default class BuilderMenu extends Component<props> {
                         Style={{position:"absolute", right:110}}/>
                     {!toggle&&<Button key="copy"
                         style={{position:"absolute", right:100}} 
-                        onPress={e=>/*Clipboard.setStringAsync(this.printRoster())*/console.log(this.printRoster())}
+                        onPress={e=>{
+                            const clip = this.printRoster();
+                            console.debug(clip);
+                            Clipboard.setStringAsync(clip).then(()=>{
+                                Animated.timing(this.state.pastedInfo, {
+                                    toValue:1,
+                                    duration:300,
+                                    useNativeDriver:true
+                                }).start(()=>{
+                                    Animated.timing(this.state.pastedInfo, {
+                                        toValue:1,
+                                        duration:3000,
+                                        useNativeDriver:true
+                                    }).start(()=>{
+                                        Animated.timing(this.state.pastedInfo, {
+                                            toValue:0,
+                                            duration:300,
+                                            useNativeDriver:true
+                                        }).start(()=>{
+                                            this.setState({animating:false})
+                                        });
+                                    });
+                                });
+                            });
+                        }}
                         >📋</Button>}
                     <Button key="save" 
                         style={{position:"absolute", right:50}} 
@@ -640,6 +670,21 @@ export default class BuilderMenu extends Component<props> {
             </View>
         }
         return <GestureHandlerRootView>
+                <Animated.View key="info" style={{
+                        position:"absolute", 
+                        opacity:this.state.pastedInfo, 
+                        bottom:40, 
+                        width:600, 
+                        backgroundColor:this.context.Bg, 
+                        borderRadius:Variables.boxBorderRadius, 
+                        borderWidth:1, 
+                        borderColor:this.context.Main,
+                        zIndex:1000,
+                        alignSelf:"center",
+                        justifyContent:"center",
+                        height:50}}>
+                    <Text style={{textAlign:"center"}}>Roster copied to clipboard!</Text>
+                </Animated.View>
                 <View key="overlay">{overlay}</View>
                 <View style={{padding:8}}>{this.ShowMenu()}{contents}</View>
             </GestureHandlerRootView>;
