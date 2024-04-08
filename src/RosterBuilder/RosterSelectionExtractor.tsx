@@ -84,14 +84,14 @@ export default class RosterSelectionExtractor {
                 if(entry.modifiers){
                     Each(entry.modifiers.modifier, modifier=>{
                         if(modifier.conditions) {
-                            if(modifier.conditions.condition.length){Each(modifier.conditions.condition, condition=>{
+                            Each(modifier.conditions.condition, condition=>{
                                 if(modifier._value == 0){
                                     unitData.CheckMerge.push([unitData.Target, condition._childId]);
                                 }
                                 if(maxConstraint && modifier._field === maxConstraint.ID) {
                                     unitData.Modifiers.push({Type: ModifierType.MAX, Comparator:condition._type, Comparison:condition._value, Value:modifier._value, Field:""})
                                 }
-                            });}
+                            });
                         } else if (modifier.conditionGroups) {
                             //TODO: add group conditions here
                         } else {
