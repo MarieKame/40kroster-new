@@ -153,18 +153,18 @@ export function ExtractWeaponData(weapons:Array<WeaponRaw>):{melee:Array<WeaponD
             } else {
                 const mrw = new MultiRangeWeaponData(weapon.Profiles.map(p=>new WeaponData(p.Profile, 0, p.Name)), weapon.Count, weapon.Name);
                 function __formatName(wpnName, profileName){
-                    return "➤ " + wpnName + (profileName!==""?" - " + profileName:"");
+                    return "➤ " + wpnName + ((profileName && profileName!=="" && profileName !== undefined && profileName !== wpnName)?" - " + profileName:"");
                 }
                 if(mrw.MeleeProfiles.length > 1){
                     MeleeWeapons.push(new ProfileWeaponData(mrw.MeleeProfiles, weapon.Count, weapon.Name));
                 } else if (mrw.MeleeProfiles.length == 1 ){
-                    MeleeWeapons.push(new WeaponData(mrw.MeleeProfiles[0].Data, weapon.Count, __formatName(weapon.Name, mrw.MeleeProfiles[0].Name)));
+                    MeleeWeapons.push(new WeaponData(mrw.MeleeProfiles[0].Data, weapon.Count, __formatName(weapon.Name, mrw.MeleeProfiles[0].Name())));
                 }
 
                 if(mrw.RangedProfiles.length > 1){
                     RangedWeapons.push(new ProfileWeaponData(mrw.RangedProfiles, weapon.Count, weapon.Name));
                 } else if (mrw.RangedProfiles.length == 1 ){
-                    RangedWeapons.push(new WeaponData(mrw.RangedProfiles[0].Data, weapon.Count, __formatName(weapon.Name, mrw.RangedProfiles[0].Name)));
+                    RangedWeapons.push(new WeaponData(mrw.RangedProfiles[0].Data, weapon.Count, __formatName(weapon.Name, mrw.RangedProfiles[0].Name())));
                 }
             }
         }
@@ -225,6 +225,11 @@ class UnitData {
                 this.Keywords.push(categories);
             }
         });
+
+        const extracted = ExtractWeaponData(unit.Weapons);
+        this.MeleeWeapons = extracted.melee;
+        this.RangedWeapons = extracted.ranged;
+
         this.Rules = new Array<string>();
         this.Abilities = new Array<DescriptorRaw>();
         let invuls = new Array<DescriptorRaw>();
@@ -244,7 +249,12 @@ class UnitData {
             } else if (add && /(Scouts)|(Deadly Demise)/gi.test(ability.Name)){
                 this.Rules.push(ability.Name + " " + ability.Value)
             } else if (add) {
-                this.Abilities.push(ability);
+                const regex = new RegExp(ability.Name, "gi");
+                if (!regex.test(unit.BaseName) && 
+                    !this.Abilities.find(a=>regex.test(a.Name)) &&
+                    ![...this.MeleeWeapons, ...this.RangedWeapons].find(w=>regex.test(w.Name()))) {
+                        this.Abilities.push(ability);
+                }
             }
         });
 
@@ -257,9 +267,6 @@ class UnitData {
             });
         }
 
-        const extracted = ExtractWeaponData(unit.Weapons);
-        this.MeleeWeapons = extracted.melee;
-        this.RangedWeapons = extracted.ranged;
         
         this.Models = new Array<ModelData>();
         Each<ModelRaw>(unit.Models, (model, index)=>{

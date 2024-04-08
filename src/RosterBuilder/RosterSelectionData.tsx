@@ -13,6 +13,7 @@ export class SelectionData extends SelectionDataBase {
     Constraints:Array<Constraint>;
     Categories:Array<string>;
     Hidden:boolean;
+    CatalogueName:string;
     constructor(){
         super();
         this.Constraints = new Array<Constraint>();
@@ -107,7 +108,7 @@ export class SelectionEntry extends SelectionData {
         for(let cat of Variables.unitCategories){
             if (this.Categories.findIndex(c=>c==cat)!==-1) return cat;
         }
-        return "";
+        return "Options";
     }
 
     GetVariablesCategoryIndex():number{

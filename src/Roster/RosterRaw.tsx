@@ -30,7 +30,7 @@ export class LeaderDataRaw {
     BaseName:string;
     CustomName:string;
     Weapons:Array<WeaponRaw>;
-    UniqueId:number;
+    UniqueId:string;
 }
 
 export class ModelRaw {
@@ -66,6 +66,7 @@ export default class RosterRaw{
     Name:string;
     Cost:number;
     Faction:string;
+    NextNewUnitIndex:number;
 }
 
 export function DebugRosterRaw(roster:RosterRaw) {

@@ -80,7 +80,6 @@ class Roster extends React.Component<Props> {
                 }
             });
         });
-        console.log(this.state.Reminders);
 
         this.state.DetachmentStratagems = [...STRATAGEMS].filter(s=>s.Faction === this.props.Data.Faction);
     }

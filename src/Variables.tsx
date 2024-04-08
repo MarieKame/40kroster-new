@@ -100,6 +100,7 @@ const Variables = {
         ]
     },
     FactionFiles:[
+        /*************************** IMPERIUM ********************************/
         {
             Name:"Adepta Sororitas", 
             CatalogueID:"b39e-4401-8f3e-fdf7", 
@@ -125,22 +126,41 @@ const Variables = {
             URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Imperium%20-%20Astra%20Militarum.cat"
         },
         {
-            Name:"Imperial Agents", 
-            CatalogueID:"b0ae-12a5-c84-ea45", 
+            Name:"Imperial Knights", 
+            CatalogueID:"25dd-7aa0-6bf4-f2d5", 
             Category:"Imperium",
-            URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Imperium%20-%20Agents%20of%20the%20Imperium.cat"
+            URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Imperium%20-%20Imperial%20Knights.cat"
+        },
+        /*************************** XENOS ********************************/
+        {
+            Name:"Aeldari Craftworlds", 
+            CatalogueID:"34a5-8c7e-f468-82d1", 
+            Category:"Xenos",
+            URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Aeldari%20-%20Craftworlds.cat"
         },
         {
-            Name:"Aeldari", 
-            CatalogueID:"dfcf-1214-b57-2205", 
+            Name:"Aeldari Ynnari", 
+            CatalogueID:"1f1-47f9-a3a4-9bfb", 
             Category:"Xenos",
-            URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Aeldari%20-%20Aeldari%20Library.cat"
+            URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Aeldari%20-%20Ynnari.cat"
+        },
+        {
+            Name:"Drukhari", 
+            CatalogueID:"38de-521f-1ce0-44a0", 
+            Category:"Xenos",
+            URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Aeldari%20-%20Drukhari.cat"
         },
         {
             Name:"Genestealer Cults", 
             CatalogueID:"3bdf-a114-5035-c6ac", 
             Category:"Xenos",
             URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Genestealer%20Cults.cat"
+        },
+        {
+            Name:"Leagues of Votan", 
+            CatalogueID:"f616-3f08-ee8e-3349", 
+            Category:"Xenos",
+            URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Leagues%20of%20Votann.cat"
         },
         {
             Name:"Necrons", 
@@ -166,11 +186,18 @@ const Variables = {
             Category:"Xenos",
             URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Tyranids.cat"
         },
+        /*************************** FORCES OF CHAOS ********************************/
         {
             Name:"Chaos Daemons", 
-            CatalogueID:"b45c-af22-788a-dfd6", 
+            CatalogueID:"d265-877b-e03d-30ca", 
             Category:"Forces of Chaos",
-            URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Chaos%20-%20Chaos%20Daemons%20Library.cat"
+            URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Chaos%20-%20Chaos%20Daemons.cat"
+        },
+        {
+            Name:"Chaos Knights", 
+            CatalogueID:"46d8-abc8-ef3a-9f85", 
+            Category:"Forces of Chaos",
+            URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Chaos%20-%20Chaos%20Knights.cat"
         },
         {
             Name:"Chaos Space Marines", 
@@ -196,11 +223,146 @@ const Variables = {
             Category:"Forces of Chaos",
             URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Chaos%20-%20World%20Eaters.cat"
         },
+        /*************************** SPACE MARINES ********************************/
         {
             Name:"Space Marines", 
             CatalogueID:"e0af-67df-9d63-8fb7", 
             Category:"Space Marines",
             URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Imperium%20-%20Space%20Marines.cat"
+        },
+        {
+            Name:"Black Templars", 
+            CatalogueID:"36d3-36bc-68dd-40ac", 
+            Category:"Space Marines",
+            URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Imperium%20-%20Black%20Templars.cat"
+        },
+        {
+            Name:"Blood Angels", 
+            CatalogueID:"4ef9-15ce-e3e6-36de", 
+            Category:"Space Marines",
+            URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Imperium%20-%20Blood%20Angels.cat"
+        },
+        {
+            Name:"Dark Angels", 
+            CatalogueID:"470a-6daa-9014-12df", 
+            Category:"Space Marines",
+            URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Imperium%20-%20Dark%20Angels.cat"
+        },
+        {
+            Name:"Deathwatch", 
+            CatalogueID:"f89b-84e0-6e3b-f1e2", 
+            Category:"Space Marines",
+            URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Imperium%20-%20Deathwatch.cat"
+        },
+        {
+            Name:"Grey Knights", 
+            CatalogueID:"50c4-3e83-fe54-97c4", 
+            Category:"Space Marines",
+            URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Imperium%20-%20Grey%20Knights.cat"
+        },
+        {
+            Name:"Imperial Fists", 
+            CatalogueID:"5d6e-fd3-330a-11dd", 
+            Category:"Space Marines",
+            URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Imperium%20-%20Imperial%20Fists.cat"
+        },
+        {
+            Name:"Iron Hands", 
+            CatalogueID:"f27e-18c0-b73e-748e", 
+            Category:"Space Marines",
+            URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Imperium%20-%20Iron%20Hands.cat"
+        },
+        {
+            Name:"Raven Guard", 
+            CatalogueID:"6e59-e1ee-47ad-6ce5", 
+            Category:"Space Marines",
+            URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Imperium%20-%20Raven%20Guard.cat"
+        },
+        {
+            Name:"Salamanders", 
+            CatalogueID:"2261-79a5-19d9-1668", 
+            Category:"Space Marines",
+            URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Imperium%20-%20Salamanders.cat"
+        },
+        {
+            Name:"Space Wolves", 
+            CatalogueID:"94bb-3284-ee14-57a1", 
+            Category:"Space Marines",
+            URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Imperium%20-%20Space%20Wolves.cat"
+        },
+        {
+            Name:"Ultramarines", 
+            CatalogueID:"4029-9237-e8db-af55", 
+            Category:"Space Marines",
+            URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Imperium%20-%20Ultramarines.cat"
+        },
+        {
+            Name:"White Scars", 
+            CatalogueID:"67c1-fc13-f9a1-cbbf", 
+            Category:"Space Marines",
+            URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Imperium%20-%20White%20Scars.cat"
+        },
+        
+        /*************************** LIBRARIES ********************************/
+        {
+            Name:"Astartes Heresy Legends", 
+            CatalogueID:"ac3b-689c-4ad4-70cb", 
+            Category:"N/A",
+            URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Library%20-%20Astartes%20Heresy%20Legends.cat"
+        },
+        {
+            Name:"Space Marines", 
+            CatalogueID:"e0af-67df-9d63-8fb7", 
+            Category:"N/A",
+            URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Imperium%20-%20Space%20Marines.cat"
+        },
+        {
+            Name:"Aeldari", 
+            CatalogueID:"dfcf-1214-b57-2205", 
+            Category:"N/A",
+            URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Aeldari%20-%20Aeldari%20Library.cat"
+        },
+        {
+            Name:"Chaos Daemons", 
+            CatalogueID:"b45c-af22-788a-dfd6", 
+            Category:"N/A",
+            URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Chaos%20-%20Chaos%20Daemons%20Library.cat"
+        },
+        {
+            Name:"Imperial Knights", 
+            CatalogueID:"1b6d-dc06-5db9-c7d1", 
+            Category:"N/A",
+            URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Imperium%20-%20Imperial%20Knights%20-%20Library.cat"
+        },
+        {
+            Name:"Chaos Knights", 
+            CatalogueID:"8106-aad2-918a-9ac", 
+            Category:"N/A",
+            URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Chaos%20-%20Chaos%20Knights%20Library.cat"
+        },
+        {
+            Name:"Adeptus Titanicus", 
+            CatalogueID:"bdc0-c0d-72d7-87e2", 
+            Category:"N/A",
+            URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Imperium%20-%20Adeptus%20Titanicus.cat"
+        },
+        {
+            Name:"Titans", 
+            CatalogueID:"7481-280e-b55e-7867", 
+            Category:"N/A",
+            URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Library%20-%20Titans.cat"
+        },
+        {
+            Name:"Imperial Agents", 
+            CatalogueID:"b00-cd86-4b4c-97ba", 
+            Category:"N/A",
+            URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Imperium%20-%20Agents%20of%20the%20Imperium.cat"
+        },
+        {
+            Name:"Astra Militarum Library", 
+            CatalogueID:"5a44-f048-114b-e3ff", 
+            Category:"N/A",
+            URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Imperium%20-%20Astra%20Militarum%20-%20Library.cat"
         },
     ]
     

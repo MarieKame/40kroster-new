@@ -12,12 +12,12 @@ function Compare(modifier:Modifier, value:number):boolean{
 
 abstract class PrivateSelection {
     protected _modifiers:Array<Modifier>;
-    private cost:number;
-    private min:number;
-    private max:number;
+    protected cost:number;
+    protected min:number;
+    protected max:number;
 
     Profiles:Array<ProfileData>;
-    SelectionValue:Array<Selection>;
+    protected _selectionValue:Array<Selection>;
     Count:number;
     Parent?:Selection;
     Constraints:Array<Constraint>;
@@ -42,11 +42,15 @@ abstract class PrivateSelection {
         this.Type=data.Type;
         this.Count = count;
         this.Parent = parent;
-        this.SelectionValue = new Array<Selection>();
+        this._selectionValue = new Array<Selection>();
         this.Profiles = [...data.Profiles];
         this.Name = data.Name;
         this.Categories = data.Categories;
         this.Rules = data.Rules;
+    }
+
+    SelectionValue():Array<Selection>{
+        return this._selectionValue;
     }
 
     GetCost():number{
@@ -80,15 +84,15 @@ abstract class PrivateSelection {
     }
 
     GetSelectionCount():number{
-        return this.SelectionValue.map(sel=>sel.getValidTypeCount()).reduce((sum, current)=> sum+current, 0);
+        return this._selectionValue.map(sel=>sel.getValidTypeCount()).reduce((sum, current)=> sum+current, 0);
     }
     private getSelectionCountFor(specificId:string):number{
-        return this.SelectionValue.filter(sel=>sel.ID===specificId).map(sel=>sel.getValidTypeCount()).reduce((sum, current)=> sum+current, 0)
+        return this._selectionValue.filter(sel=>sel.ID===specificId).map(sel=>sel.getValidTypeCount()).reduce((sum, current)=> sum+current, 0)
     }
 
     NoOptions():boolean{
         let noOption = true;
-        Each(this.SelectionValue, sel=>{
+        Each(this._selectionValue, sel=>{
             noOption= noOption && sel.NoOptions();
             noOption= noOption && sel.GetValidTypeCount() !== 0;
         })
@@ -102,7 +106,7 @@ abstract class PrivateSelection {
                 if (this instanceof Selection) selections.push(this);
             }
         });
-        Each<Selection>(this.SelectionValue, sv=>{
+        Each<Selection>(this._selectionValue, sv=>{
             selections = [...selections, ...sv._getSpecificSelections(type)];
         })
         return selections;
@@ -117,7 +121,7 @@ abstract class PrivateSelection {
         if(this.Profiles.filter(p=>p.Type==="Abilities").length>0) {
             abilityContainers.push(this);
         }
-        Each<Selection>(this.SelectionValue, sv=>{
+        Each<Selection>(this._selectionValue, sv=>{
             abilityContainers = [...abilityContainers, ...sv.GetAbilitiesContainers()];
         });
         return abilityContainers;
@@ -129,7 +133,7 @@ abstract class PrivateSelection {
             abilities = [...this.Profiles.filter(p=>p.Type==="Abilities")];
         }
         if(recursive) {
-            Each<Selection>(this.SelectionValue, sv=>{
+            Each<Selection>(this._selectionValue, sv=>{
                 abilities = [...abilities, ...sv.GetAbilities()];
             });
         }
@@ -181,7 +185,7 @@ abstract class PrivateSelection {
     }
 
     IsWarlord():boolean {
-        const found = this.SelectionValue.find(sv=>sv.Name==="Warlord");
+        const found = this._selectionValue.find(sv=>sv.Name==="Warlord");
         return found&&found.Count==1;
     }
 
@@ -214,6 +218,7 @@ abstract class PrivateSelection {
 export class SelectionTreeEntry{
     SelectionID:string;
     ExtraID:string;
+    UniqueID:string;
     Count:number;
     Children:Array<SelectionTreeEntry>;
     Index:number;
@@ -227,6 +232,7 @@ class SelectionID {
 export default class Selection extends PrivateSelection {
     Ancestor:Selection;
     CustomName:string=null;
+    UniqueID:string;
     Temporary:number;
     private hidden:boolean;
     private secretSelection:Array<Selection>;
@@ -237,17 +243,16 @@ export default class Selection extends PrivateSelection {
     ExtraID:string;
 
     private static merging:Array<SelectionID> = new Array<SelectionID>();
-    static Duplicate(selection:Selection):Selection{
-        return new Selection(1, selection.data, selection.rse, selection.Parent, selection.Ancestor, selection.ExtraID, 0);
-    }
-    static DeepDuplicate(selection:Selection):Selection{
-        let sel = new Selection(1, selection.data, selection.rse, selection.Parent, selection.Ancestor, selection.ExtraID, 0);
+    static DeepDuplicate(selection:Selection, nextIndex:number):Selection{
+        let sel = selection.duplicate();
+        sel.UniqueID = sel.ID + nextIndex;
         sel.applySelectionIdTree(selection.getSelectionIdTree());
         return sel;
     }
-    static Init(data:SelectionEntry, rse:RosterSelectionData, extraId?:string) : Selection{
+    static Init(data:SelectionEntry, rse:RosterSelectionData, nextIndex:number, extraId?:string) : Selection{
         if (!data) return;
         let sel = new Selection(1, data, rse, null, null, extraId, 0);
+        sel.UniqueID = sel.ID + nextIndex;
         //sel.Debug();
         return sel;
     }
@@ -256,6 +261,7 @@ export default class Selection extends PrivateSelection {
         let sel = new Selection(1, rse.GetSelectionFromId(entry.SelectionID), rse, null, null, entry.ExtraID, 0);
         //sel.Debug();
         sel.applySelectionIdTree(entry);
+        sel.UniqueID = entry.UniqueID;
         sel.Debug();
         return sel;
     }
@@ -264,7 +270,7 @@ export default class Selection extends PrivateSelection {
         return this.Ancestor;
     }
 
-    private constructor(count:number, data:SelectionEntry, rse:RosterSelectionData, parent:Selection, ancestor:Selection, extraId:string, index:number){
+    protected constructor(count:number, data:SelectionEntry, rse:RosterSelectionData, parent:Selection, ancestor:Selection, extraId:string, index:number){
         super(count, data, parent);
         if(ancestor===null) {
             this.Ancestor=this;
@@ -281,9 +287,9 @@ export default class Selection extends PrivateSelection {
         }
         this.secretSelection = new Array<Selection>();
         if(this.Type !== "upgrade") {
-            this.getDefaultSelection(data, rse, {SelectionValue:this.SelectionValue});
+            this.getDefaultSelection(data, rse, {_selectionValue:this._selectionValue});
         } else {
-            this.getDefaultSelection(data, rse, {SelectionValue:this.secretSelection});
+            this.getDefaultSelection(data, rse, {_selectionValue:this.secretSelection});
         }
         Each<InfoLink>(this.data.ProfileInfoLinks, infoLink=>{
             this.Profiles.push(rse.GetProfile(infoLink, this.Ancestor));
@@ -293,6 +299,10 @@ export default class Selection extends PrivateSelection {
             this.Profiles.push(extraProfile);
         }
     }
+    
+    private duplicate():Selection{
+        return new Selection(1, this.data, this.rse, this.Parent, this.Ancestor, this.ExtraID, 0);
+    }
 
     private getSelectionIdTree(duplicate:boolean=true, index:number=0):SelectionTreeEntry {
         let entry = {
@@ -300,9 +310,10 @@ export default class Selection extends PrivateSelection {
             Count:(this.Parent!==null && duplicate && /Enhancement/gi.test(this.Parent.Name))?0:this.Count, 
             Children:new Array<SelectionTreeEntry>(), 
             ExtraID:this.ExtraID,
-            Index:index
+            Index:index,
+            UniqueID:this.UniqueID
         };
-        Each(this.SelectionValue, (sv, index)=>{
+        Each(this._selectionValue, (sv, index)=>{
             entry.Children.push(sv.getSelectionIdTree(duplicate, index));
         });
         return entry;
@@ -312,27 +323,27 @@ export default class Selection extends PrivateSelection {
         let same = true;
         try{
             this.Count = entry.Count;
-            if(entry.Children.length!==this.SelectionValue.length) {
+            if(entry.Children.length!==this._selectionValue.length) {
                 same=false;
             } else {
                 Each<SelectionTreeEntry>(entry.Children, c=>{
-                    if(c.SelectionID !== this.SelectionValue[c.Index].ID) same=false;
+                    if(c.SelectionID !== this._selectionValue[c.Index].ID) same=false;
                 });
             }
             if(!same) {
                 let newSelectionValue = new Array<Selection>();
                 Each<SelectionTreeEntry>(entry.Children, c=>{
-                    newSelectionValue.push(Selection.Duplicate(this.SelectionValue.find(sv=>sv.ID === c.SelectionID)))
+                    newSelectionValue.push(this._selectionValue.find(sv=>sv.ID === c.SelectionID).duplicate())
                 });
-                this.SelectionValue = newSelectionValue;
+                this._selectionValue = newSelectionValue;
             }
             Each<SelectionTreeEntry>(entry.Children, c=>{
-                this.SelectionValue[c.Index].applySelectionIdTree(c);
+                this._selectionValue[c.Index].applySelectionIdTree(c);
             })
         } catch(e){
             console.error("Selection Tree Error");
             console.error(entry.Children.map(c=>c.SelectionID));
-            console.error(this.SelectionValue.map(sv=>sv.ID));
+            console.error(this._selectionValue.map(sv=>sv.ID));
         }
     }
 
@@ -353,7 +364,7 @@ export default class Selection extends PrivateSelection {
 
     ReplaceWith(id:string){
         this.Count=0;
-        this.Parent.SelectionValue.find(sv=>sv.ID===id).Count=1;
+        this.Parent._selectionValue.find(sv=>sv.ID===id).Count=1;
     }
 
     DisplayCount():string{
@@ -420,7 +431,7 @@ export default class Selection extends PrivateSelection {
         if(selection.NoOptions() || selection.Count == 0){
             return true;
         } else {
-            this.SelectionValue.push(Selection.Duplicate(selection));
+            this._selectionValue.push(selection.duplicate());
             return false;
         }
     }
@@ -431,14 +442,14 @@ export default class Selection extends PrivateSelection {
         bm.setState({update:bm.state.update+1});
     }
     private checkRemove(selection:Selection):void {
-        if(this.SelectionValue.filter(sel=>sel.ID == selection.ID).length > 1){
-            this.SelectionValue.splice(this.SelectionValue.findIndex(sel=>sel.ID==selection.ID && sel.Count===0), 1);
+        if(this._selectionValue.filter(sel=>sel.ID == selection.ID).length > 1){
+            this._selectionValue.splice(this._selectionValue.findIndex(sel=>sel.ID==selection.ID && sel.Count===0), 1);
         }
     }
 
     ValidRecursive():boolean{
         let valid = this.Valid();
-        Each(this.SelectionValue, sel=>{
+        Each(this._selectionValue, sel=>{
             valid = valid && sel.ValidRecursive();
         });
         return valid;
@@ -456,7 +467,7 @@ export default class Selection extends PrivateSelection {
         return Number(min.Value);
     }
 
-    private getDefaultSelection(data:SelectionEntry, rse:RosterSelectionData, current:{SelectionValue:Array<Selection>}){
+    private getDefaultSelection(data:SelectionEntry, rse:RosterSelectionData, current:{_selectionValue:Array<Selection>}){
         let options = [...rse.GetChildren(data), ...data.SubEntries];
         const that = this;
         function newSelection(data:SelectionEntry|TargetSelectionData, index:number, defaultId?:string):Selection{
@@ -504,10 +515,10 @@ export default class Selection extends PrivateSelection {
 
             if (found !== -1) {
                 let otherSel = Selection.merging[found].Selection;
-                Each(sel.SelectionValue, val=>{
+                Each(sel._selectionValue, val=>{
                     val.Count = 0;
                 });
-                otherSel.SelectionValue = [...otherSel.SelectionValue, ...sel.SelectionValue];
+                otherSel._selectionValue = [...otherSel._selectionValue, ...sel._selectionValue];
                 Selection.merging.splice(found, 1);
                 otherSel.Type= "group";
                 otherSel.Name += " or " + data.Name;
@@ -517,16 +528,16 @@ export default class Selection extends PrivateSelection {
                     if(sel.Parent.Type === "group" && !sel.Parent.Valid(count) || (/Enhancement/gi.test(sel.Parent.Name) && !isDefault)) {
                         sel.Count=0;
                     }
-                    current.SelectionValue.push(sel);
+                    current._selectionValue.push(sel);
                 } else {
                     sel.Count=1;
                     if(sel.Parent.Type === "group" && !sel.Parent.Valid(count)) {
                         count=0;
                         sel.Count=0;
-                        current.SelectionValue.push(sel);
+                        current._selectionValue.push(sel);
                     }
                     for(let i= 0; i != count; i++){
-                        current.SelectionValue.push(Selection.Duplicate(sel)); 
+                        current._selectionValue.push(sel.duplicate()); 
                     }
                 }
             }
@@ -534,7 +545,7 @@ export default class Selection extends PrivateSelection {
         Each(options, (option, index)=>{
             newSelection(option, index, data.DefaultSelectionID);
         });
-        current.SelectionValue = current.SelectionValue.sort((sv1:Selection, sv2:Selection)=> {
+        current._selectionValue = current._selectionValue.sort((sv1:Selection, sv2:Selection)=> {
             function getUpgradeProfile(s:Selection):ProfileData {
                 if(s.secretSelection.length>0) {
                     return s.secretSelection[0].Profiles[0];
@@ -555,21 +566,21 @@ export default class Selection extends PrivateSelection {
                 if(sv2.Type==="upgrade") {
                     if(sv1.Parent.ID!==sv1.Ancestor.ID) return -1;
                     if(getUpgradeProfile(sv2).Characteristics.length===1) return 1;
-                    if(sv1.SelectionValue[0].Type==="upgrade") return sortMelee(sv1.SelectionValue[0], sv2);
+                    if(sv1._selectionValue[0].Type==="upgrade") return sortMelee(sv1._selectionValue[0], sv2);
                 } else if (sv2.Type==="group") {
-                    if(sv1.SelectionValue[0].Type==="upgrade" && sv2.SelectionValue[0].Type==="upgrade") return sortMelee(sv1.SelectionValue[0], sv2.SelectionValue[0]);
+                    if(sv1._selectionValue[0].Type==="upgrade" && sv2._selectionValue[0].Type==="upgrade") return sortMelee(sv1._selectionValue[0], sv2._selectionValue[0]);
                 }
             }
             if(sv2.Type==="group"){
                 if(sv1.Type==="upgrade") {
                     if(sv2.Parent.ID!==sv2.Ancestor.ID) return 1;
                     if(getUpgradeProfile(sv1).Characteristics.length===1) return -1;
-                    if(sv2.SelectionValue[0].Type==="upgrade") return sortMelee(sv1, sv2.SelectionValue[0]);
+                    if(sv2._selectionValue[0].Type==="upgrade") return sortMelee(sv1, sv2._selectionValue[0]);
                 }
             }
             if(sv1.Type==="upgrade"){
                 if(sv2.Type==="upgrade") return sortMelee(sv1, sv2);
-                if(sv2.Type==="group" && sv2.SelectionValue[0].Type==="upgrade") return sortMelee(sv1, sv2.SelectionValue[0]);
+                if(sv2.Type==="group" && sv2._selectionValue[0].Type==="upgrade") return sortMelee(sv1, sv2._selectionValue[0]);
             } 
             return 0;
         });
@@ -657,7 +668,6 @@ export default class Selection extends PrivateSelection {
         ur.Cost = this.GetCost();
         ur.BaseName = this.Name;
         ur.CustomName = this.CustomName;
-        ur.UniqueID = this.Name + index;
         const abilities = this.GetAbilities(true);
         ur.Abilities = [
                 ...abilities, 
@@ -671,6 +681,7 @@ export default class Selection extends PrivateSelection {
             ].map(p=>{return{Name:p.Name, Value:p.Characteristics[0].Value}});
         ur.Rules = [...this.Rules];
         ur.Tree = this.getSelectionIdTree(false);
+        ur.UniqueID = this.UniqueID;
         return ur;
     }
 
@@ -699,7 +710,7 @@ export default class Selection extends PrivateSelection {
             }
         }
         if(this.Type==="group" && !first) {
-            toString += doSelections(this.SelectionValue, space);
+            toString += doSelections(this._selectionValue, space);
         } else if(this.secretSelection.length>0) {
             if(this.Count>0) {
                 toString += doSelections(this.secretSelection, space);
@@ -710,7 +721,7 @@ export default class Selection extends PrivateSelection {
                     ((first && count <= 1)?"":(count>1)?" "+count+"x ":(first)?"":" ") + 
                     this.Name + 
                     (cost>0?" - "+(count>1?count+"x ":"")+cost+"pts\n":"\n");
-                toString += doSelections(this.SelectionValue, space+" .");
+                toString += doSelections(this._selectionValue, space+" .");
             }
         }
 
@@ -723,7 +734,7 @@ export default class Selection extends PrivateSelection {
     }
     private debugRec(space:string) {
         console.debug(space + this.Name + " - " + this.Type + " - " + this.Count + " - " + this.Profiles.length + " - " + this.ID);
-        Each([...this.SelectionValue, ...this.secretSelection], val=>{
+        Each([...this._selectionValue, ...this.secretSelection], val=>{
             val.debugRec(space+"  ");
         });
     }

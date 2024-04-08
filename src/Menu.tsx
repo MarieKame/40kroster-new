@@ -24,6 +24,7 @@ import Popup, { PopupOption } from "./Components/Popup";
 import RosterMenu from "./RosterView/RosterMenu";
 import BuilderMenu from "./RosterBuilder/BuilderMenu";
 import RosterRaw, { LeaderDataRaw, NoteRaw } from "./Roster/RosterRaw";
+import { FlatList, GestureHandlerRootView, ScrollView } from "react-native-gesture-handler";
 
 const STORAGE_KEY = "stored_rosters_40k_app";
 const COLOURS_KEY = "stored_colours_40k_app";
@@ -416,49 +417,45 @@ class MenuDisplay extends Component<MenuDisplayProps> {
     displayMenuItem(rosters: Array<RosterRaw>) {
         if (!rosters) return "";
         const that = this;
-        return (
-            <View style={{flexDirection: 'row', flexWrap: 'wrap', width:"100%"}}>
-                 {rosters.map((roster, index) => 
-                    <View style={{flexBasis:"50%", flexDirection:"row"}} key={index}>
-                        <Button key="name" onPress={(e) => that.viewRoster(index)} style={{flex:1, height:60}} mergeRight>
-                            <Text style={{fontFamily:Variables.fonts.spaceMarine}}>{roster.Name}</Text>
-                            <Text style={{fontFamily:Variables.fonts.WHI}}>{"\n"+roster.Faction}</Text>
-                            <Text>{("\n( "+roster.Cost+" pts )")}</Text>
-                        </Button>
-                        <Button key="modify" onPress={(e) => {
-                            Menu.Instance.setState({EditingRoster:roster}); 
-                                this.props.navigation.navigate("RosterBuilder");
-                            }} 
-                            textStyle={{fontSize:20}} 
-                            style={{width:44}} 
-                            mergeLeft 
-                            mergeRight>✎</Button>
-                        <Button key="options" onPress={(e) => {
-                                that.props.Popup("How to modify this roster", 
-                                [{
-                                    option:"Duplicate (x2)",
-                                    callback:()=>{
-                                        that.duplicateRoster(index);
-                                    }
-                                },{
-                                    option:"Delete (🗑)",
-                                    callback:()=>{
-                                        that.deleteRoster(index);
-                                    }
-                                }], 
-                                "Cancel")
-                            }} 
-                            textStyle={{fontSize:20}} 
-                            style={{width:44}} 
-                            mergeLeft>☰</Button> 
-                    </View>
-                 )}
+        return <FlatList numColumns={2} data={rosters} renderItem={render=>
+            <View style={{flexBasis:"50%", flexDirection:"row"}} key={render.index}>
+                <Button key="name" onPress={(e) => that.viewRoster(render.index)} style={{flex:1, height:60}} mergeRight>
+                    <Text style={{fontFamily:Variables.fonts.spaceMarine}}>{render.item.Name}</Text>
+                    <Text style={{fontFamily:Variables.fonts.WHI}}>{"\n"+render.item.Faction}</Text>
+                    <Text>{("\n( "+render.item.Cost+" pts )")}</Text>
+                </Button>
+                <Button key="modify" onPress={(e) => {
+                    Menu.Instance.setState({EditingRoster:render.item}); 
+                        this.props.navigation.navigate("RosterBuilder");
+                    }} 
+                    textStyle={{fontSize:20}} 
+                    style={{width:44}} 
+                    mergeLeft 
+                    mergeRight>✎</Button>
+                <Button key="options" onPress={(e) => {
+                        that.props.Popup("How to modify this roster", 
+                        [{
+                            option:"Duplicate (x2)",
+                            callback:()=>{
+                                that.duplicateRoster(render.index);
+                            }
+                        },{
+                            option:"Delete (🗑)",
+                            callback:()=>{
+                                that.deleteRoster(render.index);
+                            }
+                        }], 
+                        "Cancel")
+                    }} 
+                    textStyle={{fontSize:20}} 
+                    style={{width:44}} 
+                    mergeLeft>☰</Button> 
             </View>
-            );
+        } />;
     }
  
     render(){
-        return [<View style={{padding:10, width:Variables.width}}>
+        return [<GestureHandlerRootView key="rosters"><View style={{padding:10, width:Variables.width}}>
             <View style={{flexDirection:"row", width:"100%", backgroundColor:this.context.Bg, borderRadius:4}}>
                 <Text style={{fontFamily:Variables.fonts.spaceMarine, verticalAlign:"middle", flex:1, textAlign:"center", textDecorationLine:"underline"}}>{Variables.username}'s Roster List</Text>
                 <Button onPress={(e)=>
@@ -476,9 +473,9 @@ class MenuDisplay extends Component<MenuDisplayProps> {
                 }} textStyle={{fontSize:20}}>+</Button>
                 <Button onPress={(e)=>this.props.navigation.navigate('Options')} image={true}><Image style={{width:20, height:20, tintColor:this.context.Dark, marginLeft:3}} source={require("../assets/images/gear.png")}/></Button>
             </View>
-            <View>{this.displayMenuItem(this.props.that.state.Rosters)}</View>
-        </View>,
-        <View style={{position:"absolute", right:20, bottom:0}}><Text>App Version : {require('../app.json').expo.version}</Text></View>]
+            <View style={{height:Variables.height*0.8}}>{this.displayMenuItem(this.props.that.state.Rosters)}</View>
+        </View></GestureHandlerRootView>,
+        <View key="app version" style={{position:"absolute", right:20, bottom:0}}><Text>App Version : {require('../app.json').expo.version}</Text></View>]
     }
 }
 

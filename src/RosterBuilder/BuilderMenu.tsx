@@ -1,7 +1,7 @@
 import { Component, ReactNode } from "react";
 import { ListRenderItemInfo, Pressable, View, Animated } from "react-native";
 import Variables from "../Variables";
-import { FlatList, GestureHandlerRootView, ScrollView } from "react-native-gesture-handler";
+import { FlatList, GestureHandlerRootView, PanGestureHandler, ScrollView } from "react-native-gesture-handler";
 import Text from '../Components/Text';
 import Button from "../Components/Button";
 import { KameContext } from "../../Style/KameContext";
@@ -17,6 +17,8 @@ import { PopupOption } from "../Components/Popup";
 import RosterRaw, { DebugRosterRaw, DescriptorRaw, LeaderDataRaw, NoteRaw, UnitRaw } from "../Roster/RosterRaw";
 import Info from "../Components/Info";
 import * as Clipboard from "expo-clipboard";
+import fastXMLParser from 'fast-xml-parser';
+import OptionSelection from "./OptionSelection";
 
 enum BuildPhase{
     FACTION, LOADING, LOADING_ERROR, ADD, EQUIP
@@ -44,7 +46,8 @@ export default class BuilderMenu extends Component<props> {
         factionName:"",
         rosterSelectionData:new RosterSelectionData(),
         units:new Array<Selection>(),
-        detachmentSelection:Selection.Init(null, null),
+        detachmentSelection:Selection.Init(null, null, 0),
+        options: new OptionSelection(),
         addColumnWidth:new Animated.Value(1),
         currentUnit:-2,
         update:0,
@@ -57,7 +60,10 @@ export default class BuilderMenu extends Component<props> {
         pastedInfo:new Animated.Value(0),
         pastedInfoView:false,
         rosterScrollViewLayout:null,
-        newUnit: new Animated.Value(0)
+        newUnit: new Animated.Value(0),
+        catalogueNames: new Array<string>(),
+        displayCatalogue: new Array<string>(),
+        nextNewUnitIndex:0
     }
 
     constructor(props) {
@@ -66,6 +72,11 @@ export default class BuilderMenu extends Component<props> {
         if(this.props.EditingRoster && this.state.phase === BuildPhase.FACTION){
             const found = Variables.FactionFiles.find(ff=>ff.CatalogueID===this.props.EditingRoster.CatalogueID);
             this.state.rosterName= this.props.EditingRoster.Name;
+            if(this.props.EditingRoster.NextNewUnitIndex===undefined) {
+                this.state.nextNewUnitIndex = 0;
+            } else {
+                this.state.nextNewUnitIndex = this.props.EditingRoster.NextNewUnitIndex;
+            }
             this.state.phase= BuildPhase.LOADING;
             this.state.loadingText= "Downloading Latest Roster Selection File Version..."
             this.state.progress= "0%";
@@ -81,13 +92,11 @@ export default class BuilderMenu extends Component<props> {
         })
     }
 
-    async cont(rse:RosterSelectionData, cont){
+    async cont(rse:RosterSelectionExtractor, cont){
         await sleep(10);
         cont(rse);
     }
-
-    LoadRosterSelectionFile(name:string, url:string){
-        const that = this;
+    private async downloadFileThen(name:string, url:string, that:BuilderMenu, then:(contents)=>void) {
         const DR = FileSystem.createDownloadResumable(
             url,
             FileSystem.documentDirectory + name + ".xml",
@@ -97,58 +106,117 @@ export default class BuilderMenu extends Component<props> {
             }
           );
           DR.downloadAsync().then((file)=>{
-            that.setState({loadingText:"Interpreting Roster Selection File...", progress:"0%"})
             FileSystem.readAsStringAsync(file.uri).catch(()=>{
                 that.ErrorLoadingRosterFile(that);
             }).then((contents)=>{
                 if (contents) {
-                    new RosterSelectionExtractor(contents, (progress:string, cont, rse:RosterSelectionData, data?:RosterSelectionData)=>{
-                        if (data){
-                            if(this.props.EditingRoster) {
-                                let units = new Array<Selection>(); 
-                                Each<UnitRaw>(this.props.EditingRoster.Units, unit=>{
-                                    const sel = Selection.FromTree(unit.Tree, data);
-                                    if(unit.CustomName) sel.CustomName = unit.CustomName;
-                                    let eeIDs = this.state.equipedEnhancementIDs;
-                                    Each<Selection>(sel.GetAbilitiesContainers(), ability=>{
-                                        if(ability.Parent && /enhancement/gi.test(ability.Parent.Name) && ability.Count===1) {
-                                            eeIDs.push(ability.ID);
-                                        }
-                                    });
-                                    if(sel.IsWarlord()) this.setState({warlord:sel, equipedEnhancementIDs:eeIDs});
-                                    else this.setState({equipedEnhancementIDs:eeIDs});
-                                    units.push(sel);
-                                });
-                                that.setState({phase:BuildPhase.ADD, rosterSelectionData:data, progress:progress, detachmentSelection:Selection.Init(data.DetachmentChoice, data), units:units})
-                            } else {
-                                that.setState({phase:BuildPhase.ADD, rosterSelectionData:data, progress:progress, detachmentSelection:Selection.Init(data.DetachmentChoice, data)})
-                            }
-                        } else {
-                            that.setState({progress:progress}, ()=>this.cont(rse, cont));
-                        }
-                    }, ()=>{
-                        that.ErrorLoadingRosterFile(that);
-                    })
+                    then(contents);
                 } else {
                     that.ErrorLoadingRosterFile(that);
                 }
-            })
+            });
+        });
+    }
+
+    private async nextRoster(index:number, count:number, catalogue, catalogues, that:BuilderMenu, data:RosterSelectionData){
+        await sleep(10);
+        this.readRoster(index, count, catalogue, catalogues, that, data);
+    }
+    private async readRoster(index:number, count:number, catalogue, catalogues, that:BuilderMenu, data:RosterSelectionData) {
+        await sleep(10);
+        that.setState({loadingText:"Interpreting Roster Selection File ( "+index + "/" + count + " )...", progress:"0%"})
+        if(!that.state.catalogueNames.find(cn=>cn===catalogue.Name)) {
+            if(that.state.displayCatalogue.length===0) {
+                that.setState({catalogueNames:[...that.state.catalogueNames, catalogue.Name], displayCatalogue:[catalogue.Name]});
+            } else {
+                that.setState({catalogueNames:[...that.state.catalogueNames, catalogue.Name]});
+            }
+        }
+        new RosterSelectionExtractor(catalogue.toRead, data, catalogue.Name, (progress:string, cont, rse:RosterSelectionExtractor, data?:RosterSelectionData, options?:Array<TargetSelectionData>)=>{
+            if (data){
+                if(catalogues.length===0) {
+                    if(this.props.EditingRoster) {
+                        let units = new Array<Selection>(); 
+                        Each<UnitRaw>(this.props.EditingRoster.Units, unit=>{
+                            const sel = Selection.FromTree(unit.Tree, data);
+                            if(unit.CustomName) sel.CustomName = unit.CustomName;
+                            let eeIDs = this.state.equipedEnhancementIDs;
+                            Each<Selection>(sel.GetAbilitiesContainers(), ability=>{
+                                if(ability.Parent && /enhancement/gi.test(ability.Parent.Name) && ability.Count===1) {
+                                    eeIDs.push(ability.ID);
+                                }
+                            });
+                            if(sel.IsWarlord()) this.setState({warlord:sel, equipedEnhancementIDs:eeIDs});
+                            else this.setState({equipedEnhancementIDs:eeIDs});
+                            units.push(sel);
+                        });
+                        that.setState({phase:BuildPhase.ADD, rosterSelectionData:data, progress:progress, detachmentSelection:Selection.Init(data.DetachmentChoice, data, 0), units:units})
+                    } else {
+                        that.setState({phase:BuildPhase.ADD, rosterSelectionData:data, progress:progress, detachmentSelection:Selection.Init(data.DetachmentChoice, data, 0)})
+                    }
+                } else {
+                    const pop = catalogues.pop();
+                    that.nextRoster(index+1, count, pop, catalogues, that, data);
+                }
+                console.log("data")
+                console.log(options);
+                that.state.options.Set(options);
+            } else {
+                that.setState({progress:progress}, ()=>this.cont(rse, cont));
+            }
+        }, ()=>{
+            that.ErrorLoadingRosterFile(that);
         })
+    }
+
+    LoadRosterSelectionFile(name:string, url:string){
+        const that = this;
+        let catalogues = new Array<{toRead:any, Name:string}>();
+        let data = new RosterSelectionData();
+        this.downloadFileThen(name, url, that, (contents)=>{
+            const initialCatalogue = new fastXMLParser.XMLParser({ignoreAttributes:false, attributeNamePrefix :"_", textNodeName:"textValue"}).parse(contents).catalogue;
+            catalogues.push({toRead:initialCatalogue, Name:name});
+            if(initialCatalogue.catalogueLinks) {
+                that.setState({loadingText:"Downloading additional catalogues...", progress:"0%"});
+                let toDownload = new Array();
+                Each(initialCatalogue.catalogueLinks.catalogueLink, link=>{
+                    const found = Variables.FactionFiles.find(ff=>ff.CatalogueID === link._targetId);
+                    if(!found) console.error(link._targetId + " not found in FactionFiles");
+                    toDownload.push(found);
+                });
+                function cont(that:BuilderMenu) {
+                    if(toDownload.length===0) {
+                        catalogues.reverse();
+                        const pop = catalogues.pop();
+                        that.readRoster(1, catalogues.length+1, pop, catalogues, that, data);
+                    } else {
+                        const binding = toDownload.pop();
+                        that.downloadFileThen(binding.Name, binding.URL, that, (content)=>{
+                            catalogues.push({
+                                toRead:new fastXMLParser.XMLParser({ignoreAttributes:false, attributeNamePrefix :"_", textNodeName:"textValue"}).parse(content).catalogue,
+                                Name:binding.Name});
+                            cont(that);
+                        });
+                    }
+                }
+                cont(that);
+            }
+        });
     }
 
     lastAddedUnitTemporary=0;
     AddUnitToRoster(unit:TargetSelectionData, that:BuilderMenu){
         let units = [...that.state.units];
         const found = that.state.rosterSelectionData.Categories.find(c=>c.Name===unit.Name);
-        let sel = Selection.Init(that.state.rosterSelectionData.GetTarget(unit), that.state.rosterSelectionData, found?found.ID:null)
+        let sel = Selection.Init(that.state.rosterSelectionData.GetTarget(unit), that.state.rosterSelectionData, that.state.nextNewUnitIndex, found?found.ID:null)
         if(sel.IsWarlord()) {
-            if(that.state.warlord) that.state.warlord.SelectionValue.find(sv=>sv.Name==="Warlord").Count=0;
+            if(that.state.warlord) that.state.warlord.SelectionValue().find(sv=>sv.Name==="Warlord").Count=0;
             that.setState({warlord:sel});
         }
         that.lastAddedUnitTemporary++;
         sel.Temporary = that.lastAddedUnitTemporary;
         units.push(sel);
-        that.setState({units:units.sort((unit1, unit2)=>{
+        that.setState({nextNewUnitIndex: that.state.nextNewUnitIndex+1, units:units.sort((unit1, unit2)=>{
             const catdiff = unit1.GetVariablesCategoryIndex() - unit2.GetVariablesCategoryIndex();
             return catdiff!==0?catdiff:unit1.Name.localeCompare(unit2.Name);
         })}, ()=>{
@@ -178,8 +246,8 @@ export default class BuilderMenu extends Component<props> {
 
     DuplicateUnit(index:number, that:BuilderMenu) {
         let units = that.state.units;
-        units.push(Selection.DeepDuplicate(units[index]))
-        that.setState({units:units});
+        units.push(Selection.DeepDuplicate(units[index], that.state.nextNewUnitIndex))
+        that.setState({units:units, nextNewUnitIndex:that.state.nextNewUnitIndex+1});
     }
 
     DeleteUnit(index:number, that:BuilderMenu) {
@@ -199,13 +267,24 @@ export default class BuilderMenu extends Component<props> {
         rr.CatalogueID = this.state.catalogueId;
         rr.Faction = this.state.factionName;
         rr.Name= this.state.rosterName;
-        rr.Notes = new Array<NoteRaw>();
         rr.Units = this.state.units.map((u, i)=>u.GetUnitRaw(i));
         rr.Cost = this.state.units.map(u=>u.GetCost()).reduce((current, sum)=>current+sum, 0);
-        rr.LeaderData = new Array<LeaderDataRaw>();
+        if(this.props.EditingRoster && this.props.EditingRoster.NextNewUnitIndex !== undefined) {
+            rr.LeaderData = this.props.EditingRoster.LeaderData.filter(ld=>rr.Units.findIndex(u=>u.UniqueID===ld.UniqueId)!==-1);
+            Each<LeaderDataRaw>(rr.LeaderData, leader=>{
+                if(rr.Units.findIndex(u=>u.UniqueID===leader.CurrentlyLeading)===-1){
+                    leader.CurrentlyLeading=null;
+                }
+            })
+            rr.Notes = this.props.EditingRoster.Notes.filter(n=>rr.Units.findIndex(u=>u.UniqueID===n.AssociatedID)!==-1)
+        } else {
+            rr.LeaderData = new Array<LeaderDataRaw>();
+            rr.Notes = new Array<NoteRaw>();
+        }
         rr.Rules = [...this.state.rosterSelectionData.Rules];
-        let id= 1;
+        rr.NextNewUnitIndex = this.state.nextNewUnitIndex;
         Each<UnitRaw>(rr.Units, unit=>{
+            if(rr.LeaderData.findIndex(ld=>ld.UniqueId === unit.UniqueID)!==-1) return;
             let leaderData:LeaderDataRaw;
             Each<DescriptorRaw>(unit.Abilities, ability=>{
                 if(/Leader/gi.test(ability.Name)) {
@@ -213,7 +292,7 @@ export default class BuilderMenu extends Component<props> {
                     leaderData.BaseName = unit.BaseName;
                     leaderData.CustomName = unit.CustomName;
                     leaderData.CurrentlyLeading="";
-                    leaderData.UniqueId = id++;
+                    leaderData.UniqueId = unit.UniqueID;
                     leaderData.Leading = ability.Value.match(/(?<=[-■]).*/ig).map(item=>item.trim());
                     leaderData.Weapons = [...unit.Weapons];
                 }
@@ -221,12 +300,7 @@ export default class BuilderMenu extends Component<props> {
 
             if (!leaderData) return;
 
-            leaderData.Effects = new Array<DescriptorRaw>();
-            Each<DescriptorRaw>(unit.Abilities, ability=>{
-                if (ability.Value.match(/(leading)|(bearer[’'`]s unit)|(this model[’'`]s unit)/ig)) {
-                    leaderData.Effects.push(ability);
-                }
-            });
+            leaderData.Effects = [...unit.Abilities];
             rr.LeaderData.push(leaderData);
         });
         return rr;
@@ -242,7 +316,6 @@ export default class BuilderMenu extends Component<props> {
             if(foundIndex!==-1) {
                 units[foundIndex].count++;
             } else {
-                console.log(unit.Name);
                 units.push({val:print, sel:unit, count:1})
             }
         });
@@ -267,7 +340,7 @@ export default class BuilderMenu extends Component<props> {
             if(selection.Count===0) return;
             option= <Button 
                     small={true} 
-                    disabled={selection.Parent.GetSelectionCount()===selection.Parent.SelectionValue.length || disabled || !selection.Changeable()} 
+                    disabled={selection.Parent.GetSelectionCount()===selection.Parent.SelectionValue().length || disabled || !selection.Changeable()} 
                     style={{height:"auto"}} 
                     textStyle={{color:disabled?this.context.LightAccent:this.context.Dark}} 
                     onPress={e=>this.setState({editWeapon:true, editingWeapon:selection})}>
@@ -332,7 +405,7 @@ export default class BuilderMenu extends Component<props> {
             
             Each<Selection>(sv, s=>{
                 if(s.Type==="group"){
-                    result = [...result, ...extractGroups(s.SelectionValue)];
+                    result = [...result, ...extractGroups(s.SelectionValue())];
                 }
                 else result = [...result, s];
             });
@@ -342,7 +415,7 @@ export default class BuilderMenu extends Component<props> {
         let value=[];
         let skip = false;
         const colour = depth==1?this.context.Accent:(depth==2?this.context.LightAccent:null);
-        const sv = extractGroups(selection.SelectionValue);
+        const sv = extractGroups(selection.SelectionValue());
         
         Each<Selection>(sv, (child, index)=>{
             const valid = child.Valid();
@@ -393,8 +466,17 @@ export default class BuilderMenu extends Component<props> {
     }
     
     DisplayUnitSelections(){
-        if (this.state.currentUnit===-2) return null;
-        const unit = this.state.units[this.state.currentUnit];
+        let unit:Selection;
+        console.log(this.state.currentUnit)
+        if(this.state.currentUnit<0){
+            if(this.state.currentUnit===-1) {
+                unit = this.state.options;
+            } else {
+                return; // detachment
+            }
+        } else {
+            unit = this.state.units[this.state.currentUnit];
+        }
         const that = this;
         const unitModels = unit.GetModelsWithDifferentProfiles();
         let unitModelsDisplay = new Array<ReactNode>();
@@ -414,7 +496,7 @@ export default class BuilderMenu extends Component<props> {
         }
         if(unitModels.length===1){
             newUnitDisplay(unit.Name, unitModels[0].DisplayStats(), 0)
-        } else {
+        } else if(unitModels.length>1) {
             Each<Selection>(unitModels, (unitModel, index)=>{
                 newUnitDisplay(unitModel.Name, unitModel.DisplayStats(), index);
             });
@@ -428,9 +510,9 @@ export default class BuilderMenu extends Component<props> {
                     </View>
                 </View>
                 {this.ViewSelectionRecursive(unit)}
-                <Text key="rules" style={{padding:10}}><Text style={{fontFamily:Variables.fonts.WHB}}>Categories : </Text>{unit.Rules.join(", ")}</Text>
+                {unit.Rules&&<Text key="rules" style={{padding:10}}><Text style={{fontFamily:Variables.fonts.WHB}}>Rules : </Text>{unit.Rules.join(", ")}</Text>}
                 {this.ViewUnitAbilties(unit)}
-                <Text key="cats" style={{padding:10}}><Text style={{fontFamily:Variables.fonts.WHB}}>Categories : </Text>{unit.Categories.join(", ")}</Text>
+                {unit.Categories&&<Text key="cats" style={{padding:10}}><Text style={{fontFamily:Variables.fonts.WHB}}>Categories : </Text>{unit.Categories.join(", ")}</Text>}
             </ScrollView>
             <Button style={{position:"absolute", top:0, right:0}} onPress={e=>{
                 if(this.state.phase === BuildPhase.EQUIP) {
@@ -465,7 +547,6 @@ export default class BuilderMenu extends Component<props> {
         function getCategory(){
             return this.rosterCategory;
         }
-        if(this.state.units.length == 0) return null;
         return <View key={render.item.Name}>
             {newCategory(render.item.GetFrameworkCategories())&&
                 <View style={{alignItems:"center", justifyContent:"center", backgroundColor:this.context.Accent}}>
@@ -480,12 +561,12 @@ export default class BuilderMenu extends Component<props> {
                             useNativeDriver:true
                         }).start();
                     } 
-                    that.setState({phase:BuildPhase.EQUIP, currentUnit:render.index-1}); 
+                    that.setState({phase:BuildPhase.EQUIP, currentUnit:render.index-2}); 
                 }}>
                 <Animated.View style={{
                     flexDirection:"row", 
                     backgroundColor:
-                        (render.index==this.state.currentUnit + 1 ? 
+                        (render.index==this.state.currentUnit + 2 ? 
                             this.context.LightAccent : 
                             (this.lastAddedUnitTemporary===render.item.Temporary ?
                                 (this.state.newUnit.interpolate({
@@ -505,8 +586,8 @@ export default class BuilderMenu extends Component<props> {
                             {this.DisplayValidity(render.item, true)}
                         </Text>
                     </View>
-                    {(render.item.GetFrameworkCost()>0&&this.state.phase!==BuildPhase.EQUIP&&this.CanAddMore(render.item))&&<Button key="x2" onPress={e=>this.DuplicateUnit(render.index-1, this)} textStyle={{fontSize:10}} style={{width:40}} small weight="light">x2</Button>}
-                    {(render.item.GetFrameworkCost()>0&&this.state.phase!==BuildPhase.EQUIP)&&<Button key="-" onPress={e=>this.DeleteUnit(render.index-1, this)} textStyle={{fontSize:12}} style={{width:40}} small weight="light">🗑</Button>}
+                    {(render.item.GetFrameworkCost()>0&&this.state.phase!==BuildPhase.EQUIP&&this.CanAddMore(render.item))&&<Button key="x2" onPress={e=>this.DuplicateUnit(render.index-2, this)} textStyle={{fontSize:10}} style={{width:40}} small weight="light">x2</Button>}
+                    {(render.item.GetFrameworkCost()>0&&this.state.phase!==BuildPhase.EQUIP)&&<Button key="-" onPress={e=>this.DeleteUnit(render.index-2, this)} textStyle={{fontSize:12}} style={{width:40}} small weight="light">🗑</Button>}
                 </Animated.View>
             </Pressable>
         </View>;
@@ -518,6 +599,10 @@ export default class BuilderMenu extends Component<props> {
 
     selectionCategory;
     renderUnitSelection(render:ListRenderItemInfo<TargetSelectionData>, that:BuilderMenu){
+        const target = that.state.rosterSelectionData.GetTarget(render.item);
+        const modifiers = [...render.item.Modifiers, ...target.Modifiers];
+        const found = modifiers.find(m=>this.state.options.SelectionValue().findIndex(sv=>sv.ID===m.Field && sv.Count===0)!==-1);
+        if(found) return;
         function newCategory(entry:SelectionEntry):boolean{
             if (entry) {
                 const cat = entry.GetVariablesCategory();
@@ -532,7 +617,6 @@ export default class BuilderMenu extends Component<props> {
         function getCategory(){
             return this.selectionCategory;
         }
-        const target = that.state.rosterSelectionData.GetTarget(render.item);
         if(!target) return null;
         return <View>
             {newCategory(target)&&
@@ -541,7 +625,10 @@ export default class BuilderMenu extends Component<props> {
                 </View>
             }
             <View style={{flexDirection:"row", backgroundColor:this.context.Bg, borderBottomColor:this.context.LightAccent, borderWidth:1, height:40}}>
-                <Text style={{alignSelf:"center", flexGrow:1, marginLeft:4}}>{render.item.Name} ({target.Cost})</Text>
+                <View  style={{flexGrow:1, alignSelf:"center"}}>
+                    <Text style={{marginLeft:4}}>{render.item.Name} ({target.Cost})</Text>
+                    <Text style={{fontSize:Variables.fontSize.small, fontFamily:Variables.fonts.WHI, marginLeft:8}}>Catalogue : {render.item.CatalogueName}</Text>
+                </View>
                 {this.CanAddMore(render.item)&&<Button onPress={e=>that.AddUnitToRoster(render.item, that)}>+</Button>}
             </View>
         </View>;
@@ -658,16 +745,40 @@ export default class BuilderMenu extends Component<props> {
         return null;
     }
 
+    displayRosterChoice():ReactNode{
+        const that = this;
+        function displaySection(section:string):ReactNode{
+            return <View style={{alignItems:"center", width:"50%"}}>
+                <View style={{width:"90%", backgroundColor:that.context.Bg, height:50, justifyContent:"center"}}>
+                    <Text key="header" style={{fontFamily:Variables.fonts.spaceMarine, textAlign:"center"}}>{section}</Text>
+                </View>
+                {Variables.FactionFiles.filter(ff=>ff.Category===section).map((faction, index)=>
+                    <Button key={index} style={{width:"60%", height:40}} onPress={e=>{
+                            that.setState({phase:BuildPhase.LOADING, loadingText:"Downloading Latest Roster Catalogue Version...", progress:"0%", catalogueId:faction.CatalogueID, factionName:faction.Name});
+                            that.LoadRosterSelectionFile(faction.Name, faction.URL);
+                        }}>
+                        {faction.Name}
+                    </Button>
+                )}
+            </View>;
+        }
+        return <View style={{width:"100%", height:"88%"}}>
+            <ScrollView>
+                <View style={{flexWrap:"wrap", flexDirection:"row"}}>
+                {displaySection("Imperium")}
+                {displaySection("Forces of Chaos")}
+                {displaySection("Space Marines")}
+                {displaySection("Xenos")}
+                </View>
+            </ScrollView>
+        </View>
+    }
+
     render(){
         let contents;
         switch(this.state.phase) {
             case BuildPhase.FACTION:
-                contents= <FlatList numColumns={2} data={Variables.FactionFiles} renderItem={render=>{
-                    return <Button onPress={e=>{
-                        this.setState({phase:BuildPhase.LOADING, loadingText:"Downloading Latest Roster Selection File Version...", progress:"0%", catalogueId:render.item.CatalogueID, factionName:render.item.Name});
-                        this.LoadRosterSelectionFile(render.item.Name, render.item.URL);
-                    }}>{render.item.Name}</Button>;
-                }} />
+                contents= this.displayRosterChoice();
                 break;
             case BuildPhase.LOADING:
                 contents= <View style={{height:Variables.height, width:Variables.width, position:"absolute", backgroundColor:"rgba(0,0,0,0.6)", justifyContent: 'center', alignItems: 'center'}}>
@@ -713,7 +824,7 @@ export default class BuilderMenu extends Component<props> {
                             <FlatList onLayout={(event)=> this.setState({rosterScrollViewLayout:event.target})} 
                                 key={"roster"} 
                                 numColumns={1} 
-                                data={[this.state.detachmentSelection, ...this.state.units]} 
+                                data={[this.state.detachmentSelection, this.state.options, ...this.state.units]} 
                                 renderItem={render=>this.renderRoster(render, this)} />
                         </View>
                         <View style={{
@@ -733,7 +844,7 @@ export default class BuilderMenu extends Component<props> {
                 <View style={{backgroundColor:this.context.Bg, position:"absolute", padding:10, borderColor:this.context.Accent, borderWidth:1, borderRadius:Variables.boxBorderRadius, width:Variables.width*0.9, maxHeight:Variables.height*0.9}}>
                     <Button onPress={e=>this.setState({editWeapon:false})}>X</Button>
                     <ScrollView>
-                        {this.state.editingWeapon.Parent.SelectionValue.map((option, index)=>
+                        {this.state.editingWeapon.Parent.SelectionValue().map((option, index)=>
                             <View key={option.Name} style={{flexDirection:"row"}}>
                                 <Button onPress={e=>this.ReplaceWeapon(option.ID)} style={{width:"30%", height:"auto"}}>{option.Name}</Button>
                                 <ProfilesDisplay Data={option.DisplayStats()} key={index} Style={{width:"70%", height:"auto"}} />
@@ -743,7 +854,25 @@ export default class BuilderMenu extends Component<props> {
                 </View>
             </View>
         }
-        return <GestureHandlerRootView>
+        return <GestureHandlerRootView><PanGestureHandler minPointers={2} onGestureEvent={e=>
+            // @ts-ignore
+         {if(this.state.phase === BuildPhase.ADD && e.nativeEvent.translationX < -100){
+            Animated.timing(this.state.addColumnWidth, {
+                toValue:0,
+                duration:200,
+                useNativeDriver:true
+            }).start();
+            this.setState({phase:BuildPhase.EQUIP});
+            // @ts-ignore
+        } else if(this.state.phase === BuildPhase.EQUIP && e.nativeEvent.translationX > 100){
+            Animated.timing(this.state.addColumnWidth, {
+                toValue:1,
+                duration:200,
+                useNativeDriver:true
+            }).start();
+            this.setState({phase:BuildPhase.ADD});
+        }}}>
+            <View>
                 <View key="overlay">{overlay}</View>
                 <View style={{padding:8}}>{this.ShowMenu()}{contents}</View>
                 {this.state.pastedInfoView&&<Animated.View key="info" style={{
@@ -760,6 +889,6 @@ export default class BuilderMenu extends Component<props> {
                         height:50}}>
                     <Text style={{textAlign:"center"}}>Roster copied to clipboard!</Text>
                 </Animated.View>}
-            </GestureHandlerRootView>;
+            </View></PanGestureHandler></GestureHandlerRootView>;
     }
 }
