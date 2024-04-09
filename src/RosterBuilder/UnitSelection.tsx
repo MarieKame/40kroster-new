@@ -257,12 +257,15 @@ export default class Selection extends PrivateSelection {
         return sel;
     }
 
-    static FromTree(entry:SelectionTreeEntry, rse:RosterSelectionData):Selection {
+    static FromTree(entry:SelectionTreeEntry, rse:RosterSelectionData, nextIndex:number):Selection {
         let sel = new Selection(1, rse.GetSelectionFromId(entry.SelectionID), rse, null, null, entry.ExtraID, 0);
         //sel.Debug();
         sel.applySelectionIdTree(entry);
         sel.UniqueID = entry.UniqueID;
-        sel.Debug();
+        if(sel.UniqueID===undefined) {
+            sel.UniqueID = sel.ID + nextIndex;
+        }
+        //sel.Debug();
         return sel;
     }
 

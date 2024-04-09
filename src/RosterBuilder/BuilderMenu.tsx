@@ -77,6 +77,12 @@ export default class BuilderMenu extends Component<props> {
             } else {
                 this.state.nextNewUnitIndex = this.props.EditingRoster.NextNewUnitIndex;
             }
+            Each<UnitRaw>(this.props.EditingRoster.Units, unit=>{
+                if (unit.UniqueID===undefined) {
+                    unit.UniqueID = "generated" + this.state.nextNewUnitIndex;
+                    this.state.nextNewUnitIndex++;
+                }
+            });
             this.state.phase= BuildPhase.LOADING;
             this.state.loadingText= "Downloading Latest Roster Selection File Version..."
             this.state.progress= "0%";
@@ -138,7 +144,8 @@ export default class BuilderMenu extends Component<props> {
                     if(this.props.EditingRoster) {
                         let units = new Array<Selection>(); 
                         Each<UnitRaw>(this.props.EditingRoster.Units, unit=>{
-                            const sel = Selection.FromTree(unit.Tree, data);
+                            const sel = Selection.FromTree(unit.Tree, data, this.state.nextNewUnitIndex);
+                            that.setState({nextNewUnitIndex: that.state.nextNewUnitIndex+1});
                             if(unit.CustomName) sel.CustomName = unit.CustomName;
                             let eeIDs = this.state.equipedEnhancementIDs;
                             Each<Selection>(sel.GetAbilitiesContainers(), ability=>{
@@ -158,8 +165,6 @@ export default class BuilderMenu extends Component<props> {
                     const pop = catalogues.pop();
                     that.nextRoster(index+1, count, pop, catalogues, that, data);
                 }
-                console.log("data")
-                console.log(options);
                 that.state.options.Set(options);
             } else {
                 that.setState({progress:progress}, ()=>this.cont(rse, cont));
@@ -270,38 +275,43 @@ export default class BuilderMenu extends Component<props> {
         rr.Units = this.state.units.map((u, i)=>u.GetUnitRaw(i));
         rr.Cost = this.state.units.map(u=>u.GetCost()).reduce((current, sum)=>current+sum, 0);
         if(this.props.EditingRoster && this.props.EditingRoster.NextNewUnitIndex !== undefined) {
-            rr.LeaderData = this.props.EditingRoster.LeaderData.filter(ld=>rr.Units.findIndex(u=>u.UniqueID===ld.UniqueId)!==-1);
-            Each<LeaderDataRaw>(rr.LeaderData, leader=>{
-                if(rr.Units.findIndex(u=>u.UniqueID===leader.CurrentlyLeading)===-1){
-                    leader.CurrentlyLeading=null;
-                }
-            })
             rr.Notes = this.props.EditingRoster.Notes.filter(n=>rr.Units.findIndex(u=>u.UniqueID===n.AssociatedID)!==-1)
         } else {
-            rr.LeaderData = new Array<LeaderDataRaw>();
             rr.Notes = new Array<NoteRaw>();
         }
+        rr.LeaderData = new Array<LeaderDataRaw>();
         rr.Rules = [...this.state.rosterSelectionData.Rules];
         rr.NextNewUnitIndex = this.state.nextNewUnitIndex;
         Each<UnitRaw>(rr.Units, unit=>{
-            if(rr.LeaderData.findIndex(ld=>ld.UniqueId === unit.UniqueID)!==-1) return;
             let leaderData:LeaderDataRaw;
-            Each<DescriptorRaw>(unit.Abilities, ability=>{
-                if(/Leader/gi.test(ability.Name)) {
-                    leaderData= new LeaderDataRaw();
-                    leaderData.BaseName = unit.BaseName;
-                    leaderData.CustomName = unit.CustomName;
-                    leaderData.CurrentlyLeading="";
-                    leaderData.UniqueId = unit.UniqueID;
-                    leaderData.Leading = ability.Value.match(/(?<=[-■]).*/ig).map(item=>item.trim());
-                    leaderData.Weapons = [...unit.Weapons];
-                }
-            });
-
-            if (!leaderData) return;
-
-            leaderData.Effects = [...unit.Abilities];
-            rr.LeaderData.push(leaderData);
+            const found = unit.Abilities.find(ability=>/Leader/gi.test(ability.Name));
+            if(found){
+                leaderData= new LeaderDataRaw();
+                leaderData.BaseName = unit.BaseName;
+                leaderData.CustomName = unit.CustomName;
+                leaderData.CurrentlyLeading="";
+                leaderData.UniqueId = unit.UniqueID;
+                console.log("Unique : " + leaderData.UniqueId);
+                leaderData.Leading = found.Value.match(/(?<=[-■]).*/ig).map(item=>item.trim());
+                leaderData.Weapons = [...unit.Weapons];
+                leaderData.Effects = new Array<DescriptorRaw>();
+                Each<DescriptorRaw>(unit.Abilities, ability=>{
+                    let add = true;
+                    Each<string>(unit.Rules, rule=>{
+                        const regex = new RegExp(rule, "gi");
+                        if(regex.test(ability.Name)) {
+                            add=false;
+                        }
+                    });
+                    if(add && !/(invulnerable)|(Scouts)|(Deadly Demise)|(Leader)/gi.test(ability.Name)) {
+                        const regex = new RegExp(ability.Name, "gi");
+                        if (!regex.test(unit.BaseName) && leaderData.Effects.findIndex(e=>e.Name===ability.Name)===-1) {
+                            leaderData.Effects.push(ability);
+                        }
+                    }
+                });
+                rr.LeaderData.push(leaderData);
+            }
         });
         return rr;
     }
