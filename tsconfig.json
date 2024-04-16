@@ -1,5 +1,9 @@
 {
-  "compilerOptions": {},
+  "compilerOptions": {
+    "lib": ["ES2017", "DOM"],
+    "jsx": "react",
+    "allowSyntheticDefaultImports": true
+  },
   "extends": "expo/tsconfig.base",
   "include": [
     "**/*.ts",
