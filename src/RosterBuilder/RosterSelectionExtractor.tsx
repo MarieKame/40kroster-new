@@ -1,6 +1,7 @@
 import RosterSelectionData, { Condition, Constraint, LogicalModifier, Modifier, ModifierType, ProfileData, SelectionData, SelectionEntry, TargetSelectionData } from './RosterSelectionData';
 import Each from '../Components/Each';
 import { RuleDataRaw } from '../Roster/RosterRaw';
+import DetachmentSelection from './SpecificSelections/DetachmentSelection';
 
 export default class RosterSelectionExtractor {
     private progress=0;
@@ -104,10 +105,7 @@ export default class RosterSelectionExtractor {
                 return unitData;
             }
             function* generateLinkOperation(entry, rse:RosterSelectionExtractor){
-                if (entry._name=="Detachment Choice"){
-                    let detachment = new SelectionEntry();
-                    detachment.Name = entry._name;
-                    rse.data.DetachmentChoice = detachment;
+                if (/Detachment/gi.test(entry._name)){
                 } else if (/show[ /]/gi.test(entry._name)) {
                     if(entry.entryLinks) {
                         Each(entry.entryLinks.entryLink, link=>{
@@ -138,8 +136,17 @@ export default class RosterSelectionExtractor {
             if(this.catalogue.categoryEntries) Each(this.catalogue.categoryEntries.categoryEntry, (entry)=> {
                 this.operations.push(generateCategoryEntryOperations(entry, this));
             });
+
+            function TreatDetachment(entry, rse:RosterSelectionExtractor){
+                rse.data.DetachmentChoice = new DetachmentSelection();
+                //TODO figure out what to do here
+            }
             
             function TreatSelectionEntry(entry, rse:RosterSelectionExtractor, group:boolean, parent?:SelectionEntry){
+                if(/Detachment/gi.test(entry._name)) {
+                    TreatDetachment(entry, rse);
+                    return;
+                }
                 let selection = new SelectionEntry();
                 let costId;
                 if(entry.costs){

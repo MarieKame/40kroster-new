@@ -1,6 +1,7 @@
 import Each from "../Components/Each";
 import { RuleDataRaw } from "../Roster/RosterRaw";
 import Variables from "../Variables";
+import DetachmentSelection from "./SpecificSelections/DetachmentSelection";
 import Selection from './UnitSelection';
 
 class SelectionDataBase {
@@ -19,9 +20,6 @@ export class SelectionData extends SelectionDataBase {
         this.Constraints = new Array<Constraint>();
         this.Categories = new Array<string>();
     }
-}
-
-export class DetachmentSelectionData extends SelectionData {
 }
 
 export class TargetSelectionData extends SelectionData {
@@ -140,7 +138,7 @@ export class Constraint extends SelectionDataBase {
 
 export default class RosterSelectionData {
     Units:Array<TargetSelectionData>;
-    DetachmentChoice:SelectionEntry;
+    DetachmentChoice:DetachmentSelection;
     Selections:Array<SelectionEntry>;
     Profiles:Array<ProfileData>;
     Rules:Array<RuleDataRaw>;

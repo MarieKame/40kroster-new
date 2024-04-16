@@ -10,7 +10,7 @@ import Each from "../Components/Each";
 import { PopupOption } from "../Components/Popup";
 import RosterRaw, { DescriptorRaw, LeaderDataRaw, NoteRaw, UnitRaw } from "../Roster/RosterRaw";
 import fastXMLParser from 'fast-xml-parser';
-import OptionSelection from "./OptionSelection";
+import OptionSelection from "./SpecificSelections/OptionSelection";
 
 enum BuildPhase{
     FACTION, LOADING, LOADING_ERROR, ADD, EQUIP
@@ -142,9 +142,10 @@ export default class BuilderMenuBackend extends Component<props> {
                             else this.setState({equipedEnhancementIDs:eeIDs});
                             units.push(sel);
                         });
-                        that.setState({phase:BuildPhase.ADD, rosterSelectionData:data, progress:progress, detachmentSelection:Selection.Init(data.DetachmentChoice, data, 0), units:units})
+                        //TODO: select detachment from editingroster data
+                        that.setState({phase:BuildPhase.ADD, rosterSelectionData:data, progress:progress, detachmentSelection:data.DetachmentChoice, units:units})
                     } else {
-                        that.setState({phase:BuildPhase.ADD, rosterSelectionData:data, progress:progress, detachmentSelection:Selection.Init(data.DetachmentChoice, data, 0)})
+                        that.setState({phase:BuildPhase.ADD, rosterSelectionData:data, progress:progress, detachmentSelection:data.DetachmentChoice})
                     }
                 } else {
                     const pop = catalogues.pop();
