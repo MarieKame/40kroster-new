@@ -1,9 +1,9 @@
-import Each from "../Components/Each";
-import { ProfilesDisplayData } from "./ProfilesDisplay";
-import { Constraint, ProfileData, TargetSelectionData } from "./RosterSelectionData";
-import Selection from "./UnitSelection";
+import Each from "../../Components/Each";
+import { ProfilesDisplayData } from "../ProfilesDisplay";
+import { Constraint, ProfileData, TargetSelectionData } from "../RosterSelectionData";
+import Selection from "../UnitSelection";
 
-export default class OptionSelection extends Selection {
+export default class DetachmentSelection extends Selection {
     constructor(){
         super(0, null, null, null, null, "", 0);
         this.options = new Array<Selection>();
@@ -11,11 +11,9 @@ export default class OptionSelection extends Selection {
         this.Name="Show/Hide Options";
     }
 
-    private options:Array<Selection>;
-
     Set(options:Array<TargetSelectionData>){
         Each<TargetSelectionData>(options, option=>{
-            let o = new OptionSelection();
+            let o = new DetachmentSelection();
             o.max = 1;
             o.Count=0;
             o.Name = option.Target;
@@ -28,6 +26,9 @@ export default class OptionSelection extends Selection {
         });
         this.options = this.options.filter((o, index)=>this.options.findIndex(ot=>ot.UniqueID === o.UniqueID) === index);
     }
+
+    private options:Array<Selection>;
+
     GetFrameworkCost():number{
         return 0;
     }

@@ -133,6 +133,10 @@ class ProfileWeaponData extends WeaponData {
     }
 }
 
+function __formatName(wpnName, profileName){
+    return "➤ " + wpnName + ((profileName && profileName!=="" && profileName !== undefined && profileName !== wpnName)?" - " + profileName:"");
+}
+
 export function ExtractWeaponData(weapons:Array<WeaponRaw>):{melee:Array<WeaponData>, ranged:Array<WeaponData>} {
     let MeleeWeapons = new Array<WeaponData>();
     let RangedWeapons = new Array<WeaponData>();
@@ -152,9 +156,6 @@ export function ExtractWeaponData(weapons:Array<WeaponRaw>):{melee:Array<WeaponD
                 RangedWeapons.push(new ProfileWeaponData(weapon.Profiles.map(p=>new WeaponData(p.Profile, 0, p.Name)), weapon.Count, weapon.Name))
             } else {
                 const mrw = new MultiRangeWeaponData(weapon.Profiles.map(p=>new WeaponData(p.Profile, 0, p.Name)), weapon.Count, weapon.Name);
-                function __formatName(wpnName, profileName){
-                    return "➤ " + wpnName + ((profileName && profileName!=="" && profileName !== undefined && profileName !== wpnName)?" - " + profileName:"");
-                }
                 if(mrw.MeleeProfiles.length > 1){
                     MeleeWeapons.push(new ProfileWeaponData(mrw.MeleeProfiles, weapon.Count, weapon.Name));
                 } else if (mrw.MeleeProfiles.length == 1 ){
