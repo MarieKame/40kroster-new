@@ -92,6 +92,9 @@ export default class RosterSelectionExtractor {
                                 if(maxConstraint && modifier._field === maxConstraint.ID) {
                                     unitData.Modifiers.push({Type: ModifierType.MAX, Comparator:condition._type, Comparison:condition._value, Value:modifier._value, Field:""})
                                 }
+                                if(modifier._field="hidden") {
+                                    unitData.Modifiers.push({Type: ModifierType.HIDE, Comparator:"", Comparison:"", Value:"", Field:condition._childId})
+                                }
                             });
                         } else if (modifier.conditionGroups) {
                             //TODO: add group conditions here
@@ -99,6 +102,16 @@ export default class RosterSelectionExtractor {
                             if(maxConstraint && modifier._field === maxConstraint.ID) {
                                 unitData.Modifiers.push({Type: ModifierType.MAX, Comparator:null, Comparison:null, Value:modifier._value, Field:""})
                             }
+                        }
+                    });
+                } else if (entry.modifierGroups) {
+                    Each(entry.modifierGroups.modifierGroup.modifiers.modifier, (modifier)=>{
+                        if(modifier.conditions) {
+                            Each(modifier.conditions.condition, (condition)=>{
+                                if(condition._type==="notInstanceOf" && condition._scope==="primary-catalogue") {
+                                    unitData.Modifiers.push({Type: ModifierType.HIDE, Comparator:"", Comparison:"", Value:"", Field:condition._childId})
+                                }
+                            });
                         }
                     });
                 }

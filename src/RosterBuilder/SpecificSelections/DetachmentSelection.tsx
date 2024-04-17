@@ -8,7 +8,7 @@ export default class DetachmentSelection extends Selection {
         super(0, null, null, null, null, "", 0);
         this.options = new Array<Selection>();
         this.Ancestor = this;
-        this.Name="Show/Hide Options";
+        this.Name="Detachment Selection";
     }
 
     Set(options:Array<TargetSelectionData>){

@@ -382,8 +382,9 @@ export default class Selection extends PrivateSelection {
             let hidden = false;
             switch(condition.Comparator){
                 case "equalTo":
+                    const found = that.Ancestor.selectionMap.find(s=>s.ID === condition.Field);
                     hidden = hidden || 
-                        (that.Ancestor.selectionMap.find(s=>s.ID === condition.Field).Selection.GetValidTypeCount() === Number(condition.Comparison) 
+                        (found && found.Selection.GetValidTypeCount() === Number(condition.Comparison) 
                         && condition.Value==="true");
                     break;
                 case "notInstanceOf":

@@ -129,8 +129,10 @@ export default class BuilderMenuBackend extends Component<props> {
                 if(catalogues.length===0) {
                     if(this.props.EditingRoster) {
                         let units = new Array<Selection>(); 
+                        let index = this.state.nextNewUnitIndex;
                         Each<UnitRaw>(this.props.EditingRoster.Units, unit=>{
-                            const sel = Selection.FromTree(unit.Tree, data);
+                            const sel = Selection.FromTree(unit.Tree, data, index);
+                            index++;
                             if(unit.CustomName) sel.CustomName = unit.CustomName;
                             let eeIDs = this.state.equipedEnhancementIDs;
                             Each<Selection>(sel.GetAbilitiesContainers(), ability=>{
@@ -143,8 +145,9 @@ export default class BuilderMenuBackend extends Component<props> {
                             units.push(sel);
                         });
                         //TODO: select detachment from editingroster data
-                        that.setState({phase:BuildPhase.ADD, rosterSelectionData:data, progress:progress, detachmentSelection:data.DetachmentChoice, units:units})
+                        that.setState({phase:BuildPhase.ADD, rosterSelectionData:data, progress:progress, detachmentSelection:data.DetachmentChoice, units:units, nextNewUnitIndex:index})
                     } else {
+                        console.log(data.Units);
                         that.setState({phase:BuildPhase.ADD, rosterSelectionData:data, progress:progress, detachmentSelection:data.DetachmentChoice})
                     }
                 } else {

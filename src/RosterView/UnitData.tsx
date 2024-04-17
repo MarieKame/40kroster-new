@@ -237,9 +237,12 @@ class UnitData {
         Each<DescriptorRaw>(unit.Abilities, ability=>{
             let add = true;
             Each<string>(unit.Rules, rule=>{
+                if(rule === "Leader") return;
                 let r = rule;
                 const regex = new RegExp(rule, "gi");
                 if(regex.test(ability.Name)) {
+                    console.log(ability.Name)
+                    console.log(ability.Value)
                     r += " " + /D?[0-9]\+?/i.exec(ability.Value).toString().trim();
                     add=false;
                 } 

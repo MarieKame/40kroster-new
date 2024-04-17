@@ -4,7 +4,7 @@ import Variables from "../Variables";
 import { FlatList, GestureHandlerRootView, PanGestureHandler, ScrollView } from "react-native-gesture-handler";
 import Text from '../Components/Text';
 import Button from "../Components/Button";
-import { SelectionEntry, TargetSelectionData } from "./RosterSelectionData";
+import { LogicalModifier, Modifier, SelectionEntry, TargetSelectionData } from "./RosterSelectionData";
 import Selection from "./UnitSelection";
 import Each from "../Components/Each";
 import ProfilesDisplay, { ProfilesDisplayData } from "./ProfilesDisplay";
@@ -294,11 +294,16 @@ export default class BuilderMenu extends BuilderMenuBackend {
     selectionCategory;
     renderUnitSelection(render:ListRenderItemInfo<TargetSelectionData>, that:BuilderMenu){
         const target = that.state.rosterSelectionData.GetTarget(render.item);
-        const modifiers = [...render.item.Modifiers, ...target.Modifiers];
+        if(!target) return;
 
+        const modifiers = [...render.item.Modifiers, ...target.Modifiers];
         //TODO : test this better, seeing what actually goes in the state.options.SelectionValue(); should be 0 to not be displayed
-        const found = modifiers.find(m=>this.state.options.SelectionValue().findIndex(sv=>sv.ID===m.Field && sv.Count===0)!==-1);
+        const found = modifiers.find(m=>
+            (m instanceof LogicalModifier) ?
+            this.state.options.SelectionValue().findIndex(sv=>m.Conditions.findIndex(mc=>mc.Field===sv.ExtraID)!==-1 && sv.Count===0)!==-1:
+            this.state.options.SelectionValue().findIndex(sv=>sv.ExtraID===m.Field && sv.Count===0)!==-1);
         if(found) return;
+
         function newCategory(entry:SelectionEntry):boolean{
             if (entry) {
                 const cat = entry.GetVariablesCategory();
@@ -313,7 +318,6 @@ export default class BuilderMenu extends BuilderMenuBackend {
         function getCategory(){
             return this.selectionCategory;
         }
-        if(!target) return null;
         return <View>
             {newCategory(target)&&
                 <View style={{alignItems:"center", justifyContent:"center", backgroundColor:this.context.Accent, width:"100%"}}>
@@ -507,7 +511,7 @@ export default class BuilderMenu extends BuilderMenuBackend {
                                 overflow:"hidden", 
                                 marginRight:10, 
                                 height:Variables.height-60}}>
-                            <FlatList style={{minWidth:COLUMN_WIDTH}} 
+                            <FlatList style={{width:COLUMN_WIDTH}} 
                                 numColumns={1} 
                                 data={this.state.rosterSelectionData.Units} 
                                 renderItem={render=>this.renderUnitSelection(render, this)} />

@@ -364,6 +364,12 @@ const Variables = {
             Category:"N/A",
             URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Imperium%20-%20Astra%20Militarum%20-%20Library.cat"
         },
+        {
+            Name:"Unaligned Forces", 
+            CatalogueID:"581a-46b9-5b86-44b7", 
+            Category:"N/A",
+            URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Unaligned%20Forces.cat"
+        },
     ]
     
 }
