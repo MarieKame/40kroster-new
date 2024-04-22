@@ -3,6 +3,7 @@ import { TextInput, TextInputProps, View } from "react-native";
 import Variables from "../Variables";
 import { KameContext } from "../../Style/KameContext";
 import Text from "./Text";
+import React from "react";
 
 interface AEProps extends TextInputProps {
   onSubmit:CallableFunction
@@ -38,7 +39,7 @@ class AutoExpandingTextInput extends Component<AEProps> {
         ];
         if(this.props.hint && (this.state.value===""||this.state.value===undefined||this.state.value===null)) {
           view.push(
-            <View style={{position:"absolute", left:8, alignSelf:"center"}}>
+            <View style={{position:"absolute", left:8, alignSelf:"center"}} pointerEvents="none">
               <Text style={{color:"#888888"}}>
                 {this.props.hint}
               </Text>

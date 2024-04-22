@@ -3,6 +3,7 @@ import { Animated, Pressable, StyleProp, View, ViewStyle } from "react-native";
 import { KameContext } from "../../Style/KameContext";
 import Text from "./Text";
 import Variables from "../Variables";
+import React from "react";
 
 class Props {
     MessageOnPress:string
@@ -45,7 +46,7 @@ export default class Info extends Component<Props> {
         }} style={{borderRadius:1000, borderWidth:1, borderColor:this.context.Main, backgroundColor:this.context.Bg}}>
             <Text style={{color:this.context.Main, fontSize:Variables.fontSize.big, textAlign:"center"}}>i</Text>
         </Pressable>
-        <Animated.View style={{
+        <Animated.View pointerEvents="none" style={{
             opacity: this.state.opacity,
             position:"absolute",
             top:15,

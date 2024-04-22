@@ -1,5 +1,5 @@
 import React, { Component } from "react";
-import { Animated } from "react-native";
+import { Animated, Platform } from "react-native";
 import Variables from "../Variables";
 import { KameContext } from "../../Style/KameContext";
 import * as FileSystem from 'expo-file-system';
@@ -11,6 +11,7 @@ import { PopupOption } from "../Components/Popup";
 import RosterRaw, { DescriptorRaw, LeaderDataRaw, NoteRaw, UnitRaw } from "../Roster/RosterRaw";
 import fastXMLParser from 'fast-xml-parser';
 import OptionSelection from "./SpecificSelections/OptionSelection";
+import axios from "axios";
 
 enum BuildPhase{
     FACTION, LOADING, LOADING_ERROR, ADD, EQUIP
@@ -89,25 +90,32 @@ export default class BuilderMenuBackend extends Component<props> {
         cont(rse);
     }
     private async downloadFileThen(name:string, url:string, that:BuilderMenuBackend, then:(contents)=>void) {
-        const DR = FileSystem.createDownloadResumable(
-            url,
-            FileSystem.documentDirectory + name + ".xml",
-            {},
-            (data)=>{
-                that.setState({progress:(Math.min(Math.max(data.totalBytesWritten, 0) / (data.totalBytesExpectedToWrite + data.totalBytesWritten), 1) * 100) + "%"})
-            }
-          );
-          DR.downloadAsync().then((file)=>{
-            FileSystem.readAsStringAsync(file.uri).catch(()=>{
-                that.ErrorLoadingRosterFile(that);
-            }).then((contents)=>{
-                if (contents) {
-                    then(contents);
-                } else {
-                    that.ErrorLoadingRosterFile(that);
+        if(Platform.OS==="web") {
+            axios.get(url).then(async(res)=>{
+                then(res.data);
+            })
+        } else {
+            //TODO: add date to file, see if it already exists, and update only if too old (more than 1 day maybe even?)
+            const DR = FileSystem.createDownloadResumable(
+                url,
+                FileSystem.documentDirectory + name + ".xml",
+                {},
+                (data)=>{
+                    that.setState({progress:(Math.min(Math.max(data.totalBytesWritten, 0) / (data.totalBytesExpectedToWrite + data.totalBytesWritten), 1) * 100) + "%"})
                 }
+            );
+            DR.downloadAsync().then((file)=>{
+                FileSystem.readAsStringAsync(file.uri).catch(()=>{
+                    that.ErrorLoadingRosterFile(that);
+                }).then((contents)=>{
+                    if (contents) {
+                        then(contents);
+                    } else {
+                        that.ErrorLoadingRosterFile(that);
+                    }
+                });
             });
-        });
+        }
     }
 
     private async nextRoster(index:number, count:number, catalogue, catalogues, that:BuilderMenuBackend, data:RosterSelectionData){
@@ -127,6 +135,11 @@ export default class BuilderMenuBackend extends Component<props> {
         new RosterSelectionExtractor(catalogue.toRead, data, catalogue.Name, (progress:string, cont, rse:RosterSelectionExtractor, data?:RosterSelectionData, options?:Array<TargetSelectionData>)=>{
             if (data){
                 if(catalogues.length===0) {
+                    console.log(data.Selections)
+                    data.Units = data.Units.sort((unit1, unit2)=>{
+                        const catdiff = data.GetTarget(unit1).GetVariablesCategoryIndex() - data.GetTarget(unit2).GetVariablesCategoryIndex();
+                        return catdiff!==0?catdiff:unit1.Name.localeCompare(unit2.Name);
+                    })
                     if(this.props.EditingRoster) {
                         let units = new Array<Selection>(); 
                         let index = this.state.nextNewUnitIndex;
@@ -147,7 +160,6 @@ export default class BuilderMenuBackend extends Component<props> {
                         //TODO: select detachment from editingroster data
                         that.setState({phase:BuildPhase.ADD, rosterSelectionData:data, progress:progress, detachmentSelection:data.DetachmentChoice, units:units, nextNewUnitIndex:index})
                     } else {
-                        console.log(data.Units);
                         that.setState({phase:BuildPhase.ADD, rosterSelectionData:data, progress:progress, detachmentSelection:data.DetachmentChoice})
                     }
                 } else {

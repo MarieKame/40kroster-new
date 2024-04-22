@@ -316,64 +316,49 @@ class Roster extends React.Component<Props> {
 
     render(){
         Roster.Instance = this;
-        let key= 0;
-        if (Platform.OS=="web"){
-            return <View style={{width:Variables.width, alignSelf:"center", padding:10}}>{this.state.Units.map(unitData => (
-                <Unit data={unitData} 
-                    key={key++} 
-                    Leaders={this.props.Data.LeaderData}
-                    onUpdateLeader={(leader)=>this.UpdateLeader(leader,this)} 
-                    onNoteRemoved={index=>this.DeleteNote(index)}
-                    onAddNotePressed={e=>this.AddNote(this)} 
-                    Notes={this.GetCurrentNotes(this)}
-                    />
-            ))}</View>;
-        } else {
-            return <GestureHandlerRootView><PanGestureHandler minPointers={2} onEnded={e=>
-                // @ts-ignore
-            {if(e.nativeEvent.translationX > 100){this.Previous()} else if (e.nativeEvent.translationX<-100){this.Next()}else if (e.nativeEvent.translationY>100){this.props.navigation.navigate('RosterMenu')}}}>
-                <View key={this.state.CurrentUnit}>
-                <ScrollView>
-                    <View style={{width:Variables.width, alignSelf:"center", padding:10, height:"100%"}}>
-                        <Unit data={this.GetUnit()} 
-                            Leaders={this.props.Data.LeaderData} 
-                            onUpdateLeader={(leader)=>this.UpdateLeader(leader,this)} 
-                            onAddNotePressed={e=>this.AddNote(this)} 
-                            onNoteRemoved={index=>this.DeleteNote(index)}
-                            Notes={this.GetCurrentNotes(this)}
-                            />
-                    </View>
-                </ScrollView>
-                <View style={{position:"absolute", right:20, top:20, zIndex:100, backgroundColor:this.context.Bg, borderRadius:10}}>
-                    <View style={{flexDirection:"row"}}>
-                        <Button key="back" onPress={(e)=> this.Previous()} textStyle={{transform:[{rotate:'180deg'}], top:2}}>➤</Button>
-                        <View style={{flexDirection:"column"}}>
-                            <Button onPress={(e)=> this.props.navigation.navigate('RosterMenu')}style={{width:70}}>Menu</Button>
-                        </View>
-                        <Button key="for" onPress={(e)=> this.Next()}>➤</Button>
-                    </View>
-                    <Text style={{textAlign:"center"}}>{(this.GetDisplayIndex()) + " / " + (this.props.Data.Units.length  - this.state.UnitsToSkip.length) + (this.state.UnitsToSkip.length>0?" ( "+this.props.Data.Units.length+" )":"")}</Text>
+        return <GestureHandlerRootView><PanGestureHandler minPointers={2} onEnded={e=>
+            // @ts-ignore
+        {if(e.nativeEvent.translationX > 100){this.Previous()} else if (e.nativeEvent.translationX<-100){this.Next()}else if (e.nativeEvent.translationY>100){this.props.navigation.navigate('RosterMenu')}}}>
+            <View key={this.state.CurrentUnit}>
+            <ScrollView>
+                <View style={{width:Variables.width, alignSelf:"center", padding:10, height:"100%"}}>
+                    <Unit data={this.GetUnit()} 
+                        Leaders={this.props.Data.LeaderData} 
+                        onUpdateLeader={(leader)=>this.UpdateLeader(leader,this)} 
+                        onAddNotePressed={e=>this.AddNote(this)} 
+                        onNoteRemoved={index=>this.DeleteNote(index)}
+                        Notes={this.GetCurrentNotes(this)}
+                        />
                 </View>
-                {this.state.NoteState!==NoteState.CLOSED&&
-                <View style={{height:Variables.height, width:Variables.width, position:"absolute", backgroundColor:"rgba(0,0,0,0.6)", justifyContent: 'center', alignItems: 'center', zIndex:1000}}>
-                    <View style={{backgroundColor:this.context.Bg, position:"absolute", padding:10, borderColor:this.context.Accent, borderWidth:1, borderRadius:Variables.boxBorderRadius, width:"90%", height:"90%"}}>
-                        <View key="tabs" style={{flexDirection:"row"}}>
-                            <Button tab key="custom" weight={this.state.NoteState==NoteState.CUSTOM?"heavy":"normal"} onPress={e=>this.setState({NoteState:NoteState.CUSTOM})}>Custom</Button>
-                            {this.getCurrentTraitCategory()!==null&&<Button tab key="battleTrait" weight={this.state.NoteState==NoteState.TRAIT?"heavy":"normal"} onPress={e=>this.setState({NoteState:NoteState.TRAIT})}>Battle Trait</Button>}
-                            {!this.GetUnit().Keywords.find(keyword=> /(epic hero)/gi.test(keyword))&&<Button tab key="wpnMod" weight={this.state.NoteState==NoteState.WPN?"heavy":"normal"} onPress={e=>this.setState({NoteState:NoteState.WPN})}>Weapons Mod</Button>}
-                            {!this.GetUnit().Keywords.find(keyword=> /(epic hero)/gi.test(keyword))&&<Button tab key="battleScar" weight={this.state.NoteState==NoteState.SCAR?"heavy":"normal"} onPress={e=>this.setState({NoteState:NoteState.SCAR})}>Battle Scar</Button>}
-                        </View>
-                        <View key="content" style={{backgroundColor:this.context.Accent, top:-4, paddingTop:10, bottom:10, height:"74%", left:4, width:"99%"}}>
-                            {this.RenderAddNoteContent(this.state.NoteState)}
-                        </View>
-                        <Button key="cancel" onPress={e=>this.setState({NoteState:NoteState.CLOSED})}>Cancel</Button>
+            </ScrollView>
+            <View style={{position:"absolute", right:20, top:20, zIndex:100, backgroundColor:this.context.Bg, borderRadius:10}}>
+                <View style={{flexDirection:"row"}}>
+                    <Button key="back" onPress={(e)=> this.Previous()} textStyle={{transform:[{rotate:'180deg'}], top:2}}>➤</Button>
+                    <View style={{flexDirection:"column"}}>
+                        <Button onPress={(e)=> this.props.navigation.navigate('RosterMenu')}style={{width:70}}>Menu</Button>
                     </View>
+                    <Button key="for" onPress={(e)=> this.Next()}>➤</Button>
                 </View>
-                }
-            </View></PanGestureHandler></GestureHandlerRootView>;
-        }
+                <Text style={{textAlign:"center"}}>{(this.GetDisplayIndex()) + " / " + (this.props.Data.Units.length  - this.state.UnitsToSkip.length) + (this.state.UnitsToSkip.length>0?" ( "+this.props.Data.Units.length+" )":"")}</Text>
+            </View>
+            {this.state.NoteState!==NoteState.CLOSED&&
+            <View style={{height:Variables.height, width:Variables.width, position:"absolute", backgroundColor:"rgba(0,0,0,0.6)", justifyContent: 'center', alignItems: 'center', zIndex:1000}}>
+                <View style={{backgroundColor:this.context.Bg, position:"absolute", padding:10, borderColor:this.context.Accent, borderWidth:1, borderRadius:Variables.boxBorderRadius, width:"90%", height:"90%"}}>
+                    <View key="tabs" style={{flexDirection:"row"}}>
+                        <Button tab key="custom" weight={this.state.NoteState==NoteState.CUSTOM?"heavy":"normal"} onPress={e=>this.setState({NoteState:NoteState.CUSTOM})}>Custom</Button>
+                        {this.getCurrentTraitCategory()!==null&&<Button tab key="battleTrait" weight={this.state.NoteState==NoteState.TRAIT?"heavy":"normal"} onPress={e=>this.setState({NoteState:NoteState.TRAIT})}>Battle Trait</Button>}
+                        {!this.GetUnit().Keywords.find(keyword=> /(epic hero)/gi.test(keyword))&&<Button tab key="wpnMod" weight={this.state.NoteState==NoteState.WPN?"heavy":"normal"} onPress={e=>this.setState({NoteState:NoteState.WPN})}>Weapons Mod</Button>}
+                        {!this.GetUnit().Keywords.find(keyword=> /(epic hero)/gi.test(keyword))&&<Button tab key="battleScar" weight={this.state.NoteState==NoteState.SCAR?"heavy":"normal"} onPress={e=>this.setState({NoteState:NoteState.SCAR})}>Battle Scar</Button>}
+                    </View>
+                    <View key="content" style={{backgroundColor:this.context.Accent, top:-4, paddingTop:10, bottom:10, height:"74%", left:4, width:"99%"}}>
+                        {this.RenderAddNoteContent(this.state.NoteState)}
+                    </View>
+                    <Button key="cancel" onPress={e=>this.setState({NoteState:NoteState.CLOSED})}>Cancel</Button>
+                </View>
+            </View>
+            }
+        </View></PanGestureHandler></GestureHandlerRootView>;
     }
-    
 }
 
 export default Roster;

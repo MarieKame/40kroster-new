@@ -81,6 +81,7 @@ export class InfoLink{
     Modifiers:Array<Modifier>;
 }
 
+const ALL_CATS = [...Variables.unitCategories, "Epic Hero", "Character", "Battleline", "Infantry", "Mounted", "Dedicated Transport", "Vehicle", "Beast", "Monster"];
 export class SelectionEntry extends SelectionData {
     Cost:number;
     ChildrenIDs:Array<string>;
@@ -103,20 +104,20 @@ export class SelectionEntry extends SelectionData {
     }
 
     GetVariablesCategory():string{
-        for(let cat of Variables.unitCategories){
+        for(let cat of ALL_CATS){
             if (this.Categories.findIndex(c=>c==cat)!==-1) return cat;
         }
-        return "Options";
+        return "Other";
     }
 
     GetVariablesCategoryIndex():number{
-        for(let cat of Variables.unitCategories){
+        for(let cat of ALL_CATS){
             const index = this.Categories.findIndex(c=>c==cat);
             if (index!==-1) {
-                return Variables.unitCategories.findIndex(c=>c==cat);
+                return ALL_CATS.findIndex(c=>c==cat);
             }
         }
-        return -1;
+        return 1000;
     }
 }
 

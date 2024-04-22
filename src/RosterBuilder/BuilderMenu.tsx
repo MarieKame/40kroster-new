@@ -1,5 +1,5 @@
 import React, { ReactNode } from "react";
-import { ListRenderItemInfo, Pressable, View, Animated } from "react-native";
+import { ListRenderItemInfo, Pressable, View, Animated, Platform } from "react-native";
 import Variables from "../Variables";
 import { FlatList, GestureHandlerRootView, PanGestureHandler, ScrollView } from "react-native-gesture-handler";
 import Text from '../Components/Text';
@@ -48,8 +48,8 @@ export default class BuilderMenu extends BuilderMenuBackend {
                     this.state.warlord.ID !== selection.Ancestor.ID)) ||
                 enhancement && 
                     (selection.Count !== 1 && 
-                    selection.Parent.GetSelectionCount() !== 0 && 
-                    this.state.equipedEnhancementIDs.findIndex(eeID => eeID === selection.ID) === -1
+                    (selection.Parent.GetSelectionCount() !== 0 || 
+                    this.state.equipedEnhancementIDs.findIndex(eeID => eeID === selection.ID) !== -1)
                     );
             option= <Checkbox 
                 Text={selection.Name} 
@@ -208,7 +208,7 @@ export default class BuilderMenu extends BuilderMenuBackend {
                 {this.ViewUnitAbilties(unit)}
                 {unit.Categories&&<Text key="cats" style={{padding:10}}><Text style={{fontFamily:Variables.fonts.WHB}}>Categories : </Text>{unit.Categories.join(", ")}</Text>}
             </ScrollView>
-            <Button style={{position:"absolute", top:0, right:0}} onPress={e=>{
+            {Platform.OS!=="web"&&<Button style={{position:"absolute", top:0, right:0}} onPress={e=>{
                 if(this.state.phase === BuildPhase.EQUIP) {
                     Animated.timing(that.state.addColumnWidth, {
                         toValue:1,
@@ -217,7 +217,7 @@ export default class BuilderMenu extends BuilderMenuBackend {
                     }).start();
                 }
                 that.setState({phase:BuildPhase.ADD});
-            }} >X</Button>
+            }} >X</Button>}
         </View>;
         
         /*******************************/
@@ -280,8 +280,8 @@ export default class BuilderMenu extends BuilderMenuBackend {
                             {this.DisplayValidity(render.item, true)}
                         </Text>
                     </View>
-                    {(render.item.GetFrameworkCost()>0&&this.state.phase!==BuildPhase.EQUIP&&this.CanAddMore(render.item))&&<Button key="x2" onPress={e=>this.DuplicateUnit(render.index-2, this)} textStyle={{fontSize:10}} style={{width:40}} small weight="light">x2</Button>}
-                    {(render.item.GetFrameworkCost()>0&&this.state.phase!==BuildPhase.EQUIP)&&<Button key="-" onPress={e=>this.DeleteUnit(render.index-2, this)} textStyle={{fontSize:12}} style={{width:40}} small weight="light">🗑</Button>}
+                    {(render.item.GetFrameworkCost()>0&&(this.state.phase!==BuildPhase.EQUIP||Platform.OS==="web")&&this.CanAddMore(render.item))&&<Button key="x2" onPress={e=>this.DuplicateUnit(render.index-2, this)} textStyle={{fontSize:10}} style={{width:40}} small weight="light">x2</Button>}
+                    {(render.item.GetFrameworkCost()>0&&(this.state.phase!==BuildPhase.EQUIP||Platform.OS==="web"))&&<Button key="-" onPress={e=>this.DeleteUnit(render.index-2, this)} textStyle={{fontSize:12}} style={{width:40}} small weight="light">🗑</Button>}
                 </Animated.View>
             </Pressable>
         </View>;
@@ -297,13 +297,14 @@ export default class BuilderMenu extends BuilderMenuBackend {
         if(!target) return;
 
         const modifiers = [...render.item.Modifiers, ...target.Modifiers];
-        //TODO : test this better, seeing what actually goes in the state.options.SelectionValue(); should be 0 to not be displayed
-        const found = modifiers.find(m=>
+        const found = this.state.options.SelectionValue().find(sv=>
+            modifiers.findIndex(m=>
             (m instanceof LogicalModifier) ?
-            this.state.options.SelectionValue().findIndex(sv=>m.Conditions.findIndex(mc=>mc.Field===sv.ExtraID)!==-1 && sv.Count===0)!==-1:
-            this.state.options.SelectionValue().findIndex(sv=>sv.ExtraID===m.Field && sv.Count===0)!==-1);
-        if(found) return;
-
+            m.Conditions.findIndex(mc=>mc.Field===sv.ExtraID)!==-1:
+            sv.ExtraID===m.Field)!==-1);
+        if(found && found.Count===0) return;
+        if(render.item.CatalogueName!==this.state.factionName && !found) return;
+        
         function newCategory(entry:SelectionEntry):boolean{
             if (entry) {
                 const cat = entry.GetVariablesCategory();
@@ -327,7 +328,7 @@ export default class BuilderMenu extends BuilderMenuBackend {
             <View style={{flexDirection:"row", backgroundColor:this.context.Bg, borderBottomColor:this.context.LightAccent, borderWidth:1, height:40}}>
                 <View  style={{flexGrow:1, alignSelf:"center"}}>
                     <Text style={{marginLeft:4}}>{render.item.Name} ({target.Cost})</Text>
-                    <Text style={{fontSize:Variables.fontSize.small, fontFamily:Variables.fonts.WHI, marginLeft:8}}>Catalogue : {render.item.CatalogueName}</Text>
+                    <Text style={{fontSize:Variables.fontSize.small, fontFamily:Variables.fonts.WHI, marginLeft:8, color:(render.item.CatalogueName===this.state.factionName?this.context.Dark:this.context.Accent)}}>Catalogue : {render.item.CatalogueName}</Text>
                 </View>
                 {this.CanAddMore(render.item)&&<Button onPress={e=>that.AddUnitToRoster(render.item, that)}>+</Button>}
             </View>
@@ -385,9 +386,9 @@ export default class BuilderMenu extends BuilderMenuBackend {
                         Visible={
                             toggle
                             }
-                        Style={{position:"absolute", right:110}}/>
+                        Style={{position:"absolute", right:110*Variables.zoom}}/>
                     {!toggle&&<Button key="copy"
-                        style={{position:"absolute", right:100}} 
+                        style={{position:"absolute", right:100*Variables.zoom}} 
                         onPress={e=>{
                             const clip = this.printRoster();
                             console.debug(clip);
@@ -416,7 +417,7 @@ export default class BuilderMenu extends BuilderMenuBackend {
                         }}
                         >📋</Button>}
                     <Button key="save" 
-                        style={{position:"absolute", right:50}} 
+                        style={{position:"absolute", right:50*Variables.zoom}} 
                         disabled={this.state.rosterName==="" || this.state.warlord===null || !this.state.units.map(u=>u.ValidRecursive()).reduce((was, is)=>was&&is, true)} 
                         onPress={e=> {
                             const roster = this.SaveRoster();
@@ -498,7 +499,37 @@ export default class BuilderMenu extends BuilderMenuBackend {
                 break;
             case BuildPhase.ADD:
             case BuildPhase.EQUIP:
-                contents= <View>
+                if(Platform.OS==="web") {
+                    contents= <View style={{flexDirection:"row"}}>
+                        <View style={{
+                                overflow:"hidden", 
+                                marginRight:10, 
+                                height:Variables.height-60}}>
+                            <FlatList style={{width:Variables.width*0.3}} 
+                                numColumns={1} 
+                                data={this.state.rosterSelectionData.Units} 
+                                renderItem={render=>this.renderUnitSelection(render, this)} />
+                        </View>
+                        <View style={{
+                                width: Variables.width*0.3,
+                                overflow:"hidden", 
+                                height:Variables.height-60, 
+                                flexGrow:1}}>
+                            <FlatList onLayout={(event)=> this.setState({rosterScrollViewLayout:event.target})} 
+                                key={"roster"} 
+                                numColumns={1} 
+                                data={[this.state.detachmentSelection, this.state.options, ...this.state.units]} 
+                                renderItem={render=>this.renderRoster(render, this)} />
+                        </View>
+                        <View style={{
+                                width: Variables.width*0.36,
+                                overflow:"hidden", 
+                                height:Variables.height-60}}>
+                            {this.DisplayUnitSelections()}
+                        </View>
+                </View>
+                } else {
+                    contents= <View>
                     <Animated.View style={{
                             flexDirection:"row",
                             transform:[{
@@ -535,6 +566,8 @@ export default class BuilderMenu extends BuilderMenuBackend {
                         </View>
                     </Animated.View>
                 </View>
+                }
+                
                 break;
         }
         let overlay;
@@ -573,7 +606,7 @@ export default class BuilderMenu extends BuilderMenuBackend {
             this.setState({phase:BuildPhase.ADD});
         }}}>
             <View>
-                <View key="overlay">{overlay}</View>
+                <View key="overlay" style={{zIndex:1000}}>{overlay}</View>
                 <View style={{padding:8}}>{this.ShowMenu()}{contents}</View>
                 {this.state.pastedInfoView&&<Animated.View key="info" style={{
                         position:"absolute", 

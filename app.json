@@ -2,6 +2,7 @@
   "expo": {
     "name": "BattleCards",
     "slug": "40kroster-new",
+    "scheme": "BattleCards",
     "version": "beta 2.3.2",
     "orientation": "landscape",
     "icon": "./assets/icon.png",

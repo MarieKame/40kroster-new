@@ -2,6 +2,7 @@ import {Text as RNText, TextProps, View} from 'react-native';
 import {Component, ReactNode} from 'react';
 import Variables from '../Variables';
 import {KameContext} from '../../Style/KameContext';
+import React from 'react';
 
 export class Text extends Component<TextProps>  {
     static contextType = KameContext; 

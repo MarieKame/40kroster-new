@@ -5,6 +5,7 @@ import Each from "../Components/Each";
 import Text from "../Components/Text";
 import { KameContext } from "../../Style/KameContext";
 import Variables from "../Variables";
+import React from "react";
 
 interface Props{
     Data:ProfilesDisplayData|Array<ProfilesDisplayData>
@@ -32,11 +33,11 @@ export default class ProfilesDisplay extends Component<Props>{
         const name = / - /gi.test(data.Name)?/(?<= - ).*/gi.exec(data.Name):data.Name;
         const amount = data.Constraints.find(c=>c.Type==="min")?.Value;
         const fontSize = this.props.Small?Variables.fontSize.small:Variables.fontSize.normal;
-        const imageSize = this.props.Small?12:16;
-        const spacing = this.props.Small?6:8;
+        const imageSize = (this.props.Small?12:16) * Variables.zoom;
+        const spacing = (this.props.Small?6:8) * Variables.zoom;
         const boxStyle={
-            width:this.props.Small?25:30, 
-            height:this.props.Small?20:30, 
+            width:(this.props.Small?26:30) * Variables.zoom, 
+            height:(this.props.Small?20:30) * Variables.zoom, 
             marginTop:4,
             marginBottom:4,
             backgroundColor:this.props.Small?null:this.context.LightAccent
@@ -60,7 +61,7 @@ export default class ProfilesDisplay extends Component<Props>{
         let weaponKeywords = characteristics.splice(6).filter(c=>!c.Value||c.Value.trim() !== "-");
 
         profile.push(<View key="name" style={[boxStyle, {width:"auto", justifyContent:"center", height:"auto"}]}>
-            <Text style={{width:this.props.OnlyDisplayFirst?0:((this.props.Small||!this.props.DisplayName)?30:150), textAlign:"right", fontSize:fontSize, paddingRight:spacing}} >
+            <Text style={{width:this.props.OnlyDisplayFirst?0:((this.props.Small||!this.props.DisplayName)?30:150)*Variables.zoom, textAlign:"right", fontSize:fontSize, paddingRight:spacing}} >
                 {prefix&&prefix}{(this.props.DisplayName&&!this.props.Small)&&" "+name}{(amount&&Number(amount)>1)&&amount+"x"}
             </Text>
         </View>);
@@ -79,7 +80,7 @@ export default class ProfilesDisplay extends Component<Props>{
                             position:"absolute", 
                             top:-10, 
                             backgroundColor:this.context.LightAccent, 
-                            width:20, 
+                            width:20*Variables.zoom, 
                             borderRadius:Variables.boxBorderRadius,
                             textAlign:"center"}}>
                                 {characteristic.Name}

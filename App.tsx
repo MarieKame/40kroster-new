@@ -8,7 +8,7 @@ import { useShareIntent } from "expo-share-intent";
 export default function App() {
   return (
     <View style={{flex:1}}>
-      <ImageBackground source={require('./assets/images/background.jpg')} resizeMode="cover" style={{justifyContent:"center", flex:1}}>
+      <ImageBackground source={require('./assets/images/background.jpg')} resizeMode="cover" style={{justifyContent:"center", flex:1, width:"100%", height:"100%"}} imageStyle={{resizeMode: 'repeat'}}>
         <Menu/>
         <StatusBar hidden={true} />
       </ImageBackground>
