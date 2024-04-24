@@ -69,7 +69,7 @@ export default class ProfilesDisplay extends Component<Props>{
         Each<Characteristic>(characteristics, (characteristic, index)=>{
             let item;
             if(/^melee$/gi.test(characteristic.Value)) {
-                item= <Image style={{tintColor:this.context.Dark, height:imageSize, width:imageSize, alignSelf:"center"}} source={require("../../assets/images/melee.png")}/>;
+                item= <Image tintColor={this.context.Dark} style={{height:imageSize, width:imageSize, alignSelf:"center"}} source={require("../../assets/images/melee.png")}/>;
             } else {
                 item = <Text style={{fontSize:fontSize}}>{characteristic.Value}</Text>;
             }

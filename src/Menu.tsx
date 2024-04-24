@@ -324,7 +324,7 @@ class Menu extends React.Component{
         if (!(this.state.fontsLoaded && this.state.coloursLoaded && this.state.storageLoaded)){
             return (<View />);
         }
-        NavigationBar.setVisibilityAsync("hidden");
+        if(Platform.OS==="android") NavigationBar.setVisibilityAsync("hidden");
         let that = this;
 
         const config = {
@@ -471,7 +471,7 @@ class MenuDisplay extends Component<MenuDisplayProps> {
                         ],
                         "Cancel")
                 }} textStyle={{fontSize:20}}>+</Button>
-                <Button onPress={(e)=>this.props.navigation.navigate('Options')} image={true}><Image style={{width:20, height:20, tintColor:this.context.Dark, marginLeft:3}} source={require("../assets/images/gear.png")}/></Button>
+                <Button onPress={(e)=>this.props.navigation.navigate('Options')} image={true}><Image style={{width:20, height:20, marginLeft:3}} tintColor={this.context.Dark} source={require("../assets/images/gear.png")}/></Button>
             </View>
             <View style={{height:Variables.height*0.8}}>{this.displayMenuItem(this.props.that.state.Rosters)}</View>
         </View></GestureHandlerRootView>,

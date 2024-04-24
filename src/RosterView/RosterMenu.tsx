@@ -62,25 +62,25 @@ class RosterMenu extends Component<Props> {
                     {// @ts-ignore
                         getPhases(stratagem.item).map((phase, index)=> {
                             let content;
-                            const imageStyle={width:24, height:24, tintColor:this.context.Dark, top:2, left:-5};
+                            const imageStyle={width:24, height:24, top:2, left:-5};
                             switch(phase) {
                                 case "Any":
-                                    content = <Image style={imageStyle} source={require("../../assets/images/stratAny.png")}/>;
+                                    content = <Image style={imageStyle} tintColor={this.context.Dark} source={require("../../assets/images/stratAny.png")}/>;
                                     break;
                                 case "Command":
-                                    content = <Image style={imageStyle} source={require("../../assets/images/stratCommand.png")}/>;
+                                    content = <Image style={imageStyle} tintColor={this.context.Dark} source={require("../../assets/images/stratCommand.png")}/>;
                                     break;
                                 case "Movement":
-                                    content = <Image style={imageStyle} source={require("../../assets/images/stratMovement.png")}/>;
+                                    content = <Image style={imageStyle} tintColor={this.context.Dark} source={require("../../assets/images/stratMovement.png")}/>;
                                     break;
                                 case "Shooting":
-                                    content = <Image style={imageStyle} source={require("../../assets/images/stratShooting.png")}/>;
+                                    content = <Image style={imageStyle} tintColor={this.context.Dark} source={require("../../assets/images/stratShooting.png")}/>;
                                     break;
                                 case "Charge":
-                                    content = <Image style={imageStyle} source={require("../../assets/images/stratCharge.png")}/>;
+                                    content = <Image style={imageStyle} tintColor={this.context.Dark} source={require("../../assets/images/stratCharge.png")}/>;
                                     break;
                                 case "Fight":
-                                    content = <Image style={imageStyle} source={require("../../assets/images/stratFight.png")}/>;
+                                    content = <Image style={imageStyle} tintColor={this.context.Dark} source={require("../../assets/images/stratFight.png")}/>;
                                     break;
                                 default:
                                     content=<Text key="value" style={{position:"absolute", width:40, left:-13, top:(8+ (30*index)), textAlign:"center"}}>{phase} CP</Text>

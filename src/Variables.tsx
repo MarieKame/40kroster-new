@@ -225,12 +225,6 @@ const Variables = {
         },
         /*************************** SPACE MARINES ********************************/
         {
-            Name:"Space Marines", 
-            CatalogueID:"e0af-67df-9d63-8fb7", 
-            Category:"Space Marines",
-            URL:"https://raw.githubusercontent.com/BSData/wh40k-10e/main/Imperium%20-%20Space%20Marines.cat"
-        },
-        {
             Name:"Black Templars", 
             CatalogueID:"36d3-36bc-68dd-40ac", 
             Category:"Space Marines",

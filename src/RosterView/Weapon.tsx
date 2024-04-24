@@ -29,7 +29,7 @@ class Weapon extends React.Component<Props> {
             <View style={Style.stats}>
                 {data.Range()=="Melee"?
                     <View style={Style.statData}>
-                        <Image style={[Style.melee, {tintColor:this.context.Dark}]} source={require("../../assets/images/melee.png")}/>
+                        <Image tintColor={this.context.Dark} style={[Style.melee]} source={require("../../assets/images/melee.png")}/>
                     </View> :
                     <Text style={Style.statData}>{data.Range()}</Text>
                 }

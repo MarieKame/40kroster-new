@@ -12,6 +12,7 @@ import RosterRaw, { DescriptorRaw, LeaderDataRaw, NoteRaw, UnitRaw } from "../Ro
 import fastXMLParser from 'fast-xml-parser';
 import OptionSelection from "./SpecificSelections/OptionSelection";
 import axios from "axios";
+import DetachmentSelection from "./SpecificSelections/DetachmentSelection";
 
 enum BuildPhase{
     FACTION, LOADING, LOADING_ERROR, ADD, EQUIP
@@ -39,7 +40,7 @@ export default class BuilderMenuBackend extends Component<props> {
         factionName:"",
         rosterSelectionData:new RosterSelectionData(),
         units:new Array<Selection>(),
-        detachmentSelection:Selection.Init(null, null, 0),
+        detachmentSelection:new DetachmentSelection(),
         options: new OptionSelection(),
         addColumnWidth:new Animated.Value(1),
         currentUnit:-2,
@@ -132,12 +133,15 @@ export default class BuilderMenuBackend extends Component<props> {
                 that.setState({catalogueNames:[...that.state.catalogueNames, catalogue.Name]});
             }
         }
-        new RosterSelectionExtractor(catalogue.toRead, data, catalogue.Name, (progress:string, cont, rse:RosterSelectionExtractor, data?:RosterSelectionData, options?:Array<TargetSelectionData>)=>{
+        new RosterSelectionExtractor(catalogue.toRead, data, catalogue.Name, index===1, (progress:string, cont, rse:RosterSelectionExtractor, data?:RosterSelectionData, options?:Array<TargetSelectionData>)=>{
             if (data){
                 if(catalogues.length===0) {
                     console.log(data.Selections)
                     data.Units = data.Units.sort((unit1, unit2)=>{
-                        const catdiff = data.GetTarget(unit1).GetVariablesCategoryIndex() - data.GetTarget(unit2).GetVariablesCategoryIndex();
+                        const target1 = data.GetTarget(unit1);
+                        const target2 = data.GetTarget(unit2);
+                        if(!target1 || !target2) return -1;
+                        const catdiff = target1.GetVariablesCategoryIndex() - target2.GetVariablesCategoryIndex();
                         return catdiff!==0?catdiff:unit1.Name.localeCompare(unit2.Name);
                     })
                     if(this.props.EditingRoster) {

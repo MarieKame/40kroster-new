@@ -1,6 +1,6 @@
 import RosterSelectionData, { Condition, Constraint, LogicalModifier, Modifier, ModifierType, ProfileData, SelectionData, SelectionEntry, TargetSelectionData } from './RosterSelectionData';
 import Each from '../Components/Each';
-import { RuleDataRaw } from '../Roster/RosterRaw';
+import { DescriptorRaw, RuleDataRaw } from '../Roster/RosterRaw';
 import DetachmentSelection from './SpecificSelections/DetachmentSelection';
 
 export default class RosterSelectionExtractor {
@@ -37,7 +37,7 @@ export default class RosterSelectionExtractor {
         }
     }
 
-    constructor(catalogue:string, data:RosterSelectionData, catalogueName:string, onProgress:CallableFunction, onError:CallableFunction){
+    constructor(catalogue:string, data:RosterSelectionData, catalogueName:string, mainCatalogue:boolean, onProgress:CallableFunction, onError:CallableFunction){
         try{
             this.data = data;
             this.catalogue = catalogue;
@@ -143,6 +143,20 @@ export default class RosterSelectionExtractor {
                 this.operations.push(generateLinkOperation(entry, this));
             });
 
+            function TreatRuleEntry(rule):RuleDataRaw{
+                let ruleData = new RuleDataRaw();
+                ruleData.Name = rule._name;
+                ruleData.ID = rule._id;
+                ruleData.Description = rule.description;
+                return ruleData;
+            }
+            function* generateSharedRules(rule, rse:RosterSelectionExtractor){
+                rse.data.Rules.push(TreatRuleEntry(rule));
+            }
+            if(this.catalogue.sharedRules) {Each(this.catalogue.sharedRules.rule, (rule)=>{
+                this.operations.push(generateSharedRules(rule, this));
+            });}
+
             function* generateCategoryEntryOperations(entry, rse:RosterSelectionExtractor) {
                 rse.data.Categories.push({Name: entry._name, ID: entry._id})
             }
@@ -150,11 +164,51 @@ export default class RosterSelectionExtractor {
                 this.operations.push(generateCategoryEntryOperations(entry, this));
             });
 
-            function TreatDetachment(entry, rse:RosterSelectionExtractor){
-                rse.data.DetachmentChoice = new DetachmentSelection();
-                //TODO figure out what to do here
+            function FindDetachmentProfiles(detachment, rse:RosterSelectionExtractor):Array<DescriptorRaw>{
+                let profiles = new Array<DescriptorRaw>();
+                if(detachment.profiles) {
+                    Each(detachment.profiles.profile, profile=>{
+                        let description = "";
+                        Each(profile.characteristics.characteristic, (characteristic, index, length)=>{
+                            if(length !== 0) {
+                                description += characteristic._name + ": " + characteristic.textValue +"\n";
+                            } else {
+                                description += characteristic.textValue;
+                            }
+                        });
+                        if(profile.characteristics.characteristic.length) {
+                        } else {
+                            description= profile.characteristics.characteristic.textValue;
+                        }
+                        profiles.push({Name:profile._name, Value:description})
+                    });
+                }
+                if(detachment.infoLinks) {
+                    Each(detachment.infoLinks.infoLink, infoLink=>{
+                        const found = rse.data.Rules.find(r=>r.ID === infoLink._targetId);
+                        if(found)profiles.push({Name:found.Name, Value:found.Description})
+                    });
+                }
+                if(detachment.rules) {
+                    Each(detachment.rules.rule, rule=>{
+                        profiles.push({Name:rule._name, Value:rule.description})
+                    });
+                }
+                return profiles;
             }
-            
+            function TreatDetachment(entry, rse:RosterSelectionExtractor){
+                if(!mainCatalogue && catalogueName!=="Space Marines") return;
+                if(rse.data.DetachmentChoice === undefined) {
+                    rse.data.DetachmentChoice = new DetachmentSelection();
+                }
+                if(entry._name === "Detachment" && entry.selectionEntries){
+                    Each(entry.selectionEntries.selectionEntry, detachment=>{
+                        rse.data.DetachmentChoice.AddDetachment(detachment._name, FindDetachmentProfiles(detachment, rse));
+                    });
+                } else if (entry.selectionEntryGroups){
+                    TreatDetachment(entry.selectionEntryGroups.selectionEntryGroup, rse);
+                }
+            }
             function TreatSelectionEntry(entry, rse:RosterSelectionExtractor, group:boolean, parent?:SelectionEntry){
                 if(/Detachment/gi.test(entry._name)) {
                     TreatDetachment(entry, rse);
@@ -310,20 +364,6 @@ export default class RosterSelectionExtractor {
             if(this.catalogue.sharedProfiles)Each(this.catalogue.sharedProfiles.profile, (profile)=>{
                 this.operations.push(generateSharedProfiles(profile, this));
             });
-
-            function TreatRuleEntry(rule):RuleDataRaw{
-                let ruleData = new RuleDataRaw();
-                ruleData.Name = rule._name;
-                ruleData.ID = rule._id;
-                ruleData.Description = rule.description;
-                return ruleData;
-            }
-            function* generateSharedRules(rule, rse:RosterSelectionExtractor){
-                rse.data.Rules.push(TreatRuleEntry(rule));
-            }
-            if(this.catalogue.sharedRules) {Each(this.catalogue.sharedRules.rule, (rule)=>{
-                this.operations.push(generateSharedRules(rule, this));
-            });}
 
             function* sort(rse:RosterSelectionExtractor){
                 rse.data.Units = rse.data.Units.sort((unit1, unit2)=>{

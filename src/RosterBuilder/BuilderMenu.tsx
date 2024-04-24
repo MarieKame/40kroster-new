@@ -14,6 +14,8 @@ import { DebugRosterRaw } from "../Roster/RosterRaw";
 import Info from "../Components/Info";
 import * as Clipboard from "expo-clipboard";
 import BuilderMenuBackend from "./BuilderMenuBackend";
+import DetachmentSelection from "./SpecificSelections/DetachmentSelection";
+import { RadioButton } from 'react-native-paper';
 
 enum BuildPhase{
     FACTION, LOADING, LOADING_ERROR, ADD, EQUIP
@@ -30,7 +32,15 @@ export default class BuilderMenu extends BuilderMenuBackend {
     DisplayUpgrade(selection:Selection, index:number, disabled:boolean, enhancement:boolean):ReactNode{
         let option;
         if(!selection) return null;
-        if((selection.Parent.ID !== selection.Ancestor.ID && !/Enhancement/gi.test(selection.Parent.Name) && selection.Parent.Type !=="model") || !selection.Changeable()) {
+        if(selection instanceof DetachmentSelection) {
+            return <View style={{width:"100%", paddingBottom:10}} key={index}>
+                <View style={{flexDirection:"row", backgroundColor:this.context.LightAccent}}>
+                    <RadioButton value={selection.Name} />
+                    <Text style={{justifyContent:"center", alignSelf:"center"}}>{selection.Name}</Text>
+                </View>
+                {selection.DetachmentProfiles.map(dp=><Text><Text style={{fontFamily:Variables.fonts.WHBI}}>{dp.Name} : </Text> {dp.Value}</Text>)}
+            </View>
+        } else if((selection.Parent.ID !== selection.Ancestor.ID && !/Enhancement/gi.test(selection.Parent.Name) && selection.Parent.Type !=="model") || !selection.Changeable()) {
             if(selection.Count===0) return;
             option= <Button 
                     small={true} 
@@ -161,12 +171,11 @@ export default class BuilderMenu extends BuilderMenuBackend {
     
     DisplayUnitSelections(){
         let unit:Selection;
-        console.log(this.state.currentUnit)
         if(this.state.currentUnit<0){
             if(this.state.currentUnit===-1) {
                 unit = this.state.options;
             } else {
-                return; // detachment
+                unit = this.state.detachmentSelection;
             }
         } else {
             unit = this.state.units[this.state.currentUnit];
@@ -203,7 +212,7 @@ export default class BuilderMenu extends BuilderMenuBackend {
                         {unitModelsDisplay}
                     </View>
                 </View>
-                {this.ViewSelectionRecursive(unit)}
+                <RadioButton.Group onValueChange={(value)=>{this.state.detachmentSelection.SetValue(value);this.setState({update:this.state.update+1})}} value={this.state.detachmentSelection.Value()}> {this.ViewSelectionRecursive(unit)}</RadioButton.Group>
                 {unit.Rules&&<Text key="rules" style={{padding:10}}><Text style={{fontFamily:Variables.fonts.WHB}}>Rules : </Text>{unit.Rules.join(", ")}</Text>}
                 {this.ViewUnitAbilties(unit)}
                 {unit.Categories&&<Text key="cats" style={{padding:10}}><Text style={{fontFamily:Variables.fonts.WHB}}>Categories : </Text>{unit.Categories.join(", ")}</Text>}
@@ -241,7 +250,7 @@ export default class BuilderMenu extends BuilderMenuBackend {
         function getCategory(){
             return this.rosterCategory;
         }
-        return <View key={render.item.Name}>
+        return <View key={render.item.Name + render.index}>
             {newCategory(render.item.GetFrameworkCategories())&&
                 <View style={{alignItems:"center", justifyContent:"center", backgroundColor:this.context.Accent}}>
                     <Text>{getCategory()}</Text>
@@ -303,7 +312,7 @@ export default class BuilderMenu extends BuilderMenuBackend {
             m.Conditions.findIndex(mc=>mc.Field===sv.ExtraID)!==-1:
             sv.ExtraID===m.Field)!==-1);
         if(found && found.Count===0) return;
-        if(render.item.CatalogueName!==this.state.factionName && !found) return;
+        if(render.item.CatalogueName!==this.state.factionName && !found && render.item.CatalogueName !== "Space Marines") return;
         
         function newCategory(entry:SelectionEntry):boolean{
             if (entry) {
@@ -319,7 +328,7 @@ export default class BuilderMenu extends BuilderMenuBackend {
         function getCategory(){
             return this.selectionCategory;
         }
-        return <View>
+        return <View key={render.index}>
             {newCategory(target)&&
                 <View style={{alignItems:"center", justifyContent:"center", backgroundColor:this.context.Accent, width:"100%"}}>
                     <Text>{getCategory()}</Text>

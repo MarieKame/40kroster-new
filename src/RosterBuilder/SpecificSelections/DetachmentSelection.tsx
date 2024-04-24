@@ -1,4 +1,5 @@
 import Each from "../../Components/Each";
+import { DescriptorRaw } from "../../Roster/RosterRaw";
 import { ProfilesDisplayData } from "../ProfilesDisplay";
 import { Constraint, ProfileData, TargetSelectionData } from "../RosterSelectionData";
 import Selection from "../UnitSelection";
@@ -6,28 +7,38 @@ import Selection from "../UnitSelection";
 export default class DetachmentSelection extends Selection {
     constructor(){
         super(0, null, null, null, null, "", 0);
-        this.options = new Array<Selection>();
+        this.options = new Array<DetachmentSelection>();
         this.Ancestor = this;
         this.Name="Detachment Selection";
     }
 
-    Set(options:Array<TargetSelectionData>){
-        Each<TargetSelectionData>(options, option=>{
-            let o = new DetachmentSelection();
-            o.max = 1;
-            o.Count=0;
-            o.Name = option.Target;
-            o.ExtraID = option.Target;
-            o.UniqueID = option.Name;
-            o.Type="upgrade";
-            o.Ancestor = this;
-            o.Parent = this;
-            this.options.push(o);
-        });
-        this.options = this.options.filter((o, index)=>this.options.findIndex(ot=>ot.UniqueID === o.UniqueID) === index);
+    DetachmentProfiles:Array<DescriptorRaw>;
+    private value:DetachmentSelection;
+
+    SetValue(value:string) {
+        this.value = this.options.find(o=>o.Name===value);
     }
 
-    private options:Array<Selection>;
+    Value():string{
+        return this.value.Name;
+    }
+
+    AddDetachment(name:string, profiles:Array<DescriptorRaw>) {
+        let o = new DetachmentSelection();
+        o.max = 1;
+        o.Count=0;
+        o.Name = name;
+        o.DetachmentProfiles = profiles;
+        o.Type="upgrade";
+        o.Ancestor = this;
+        o.Parent = this;
+        this.options.push(o);
+        if(this.options.length===1) {
+            this.value = o;
+        }
+    }
+
+    private options:Array<DetachmentSelection>;
 
     GetFrameworkCost():number{
         return 0;
