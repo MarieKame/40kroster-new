@@ -51,6 +51,7 @@ export default class BuilderMenu extends BuilderMenuBackend {
                         {selection.Name}{this.DisplayValidity(selection)}
                     </Button>;
         } else {
+            if(enhancement && !selection.CorrectDetachment(this.state.detachmentSelection.Value())) return;
             const trulyDisabled = 
                 disabled || 
                 (selection.Name==="Warlord" && 
@@ -282,9 +283,9 @@ export default class BuilderMenu extends BuilderMenuBackend {
                     borderWidth:1, 
                     height:40}}>
                     <View key="box" style={{alignSelf:"center", flexGrow:1, marginLeft:4}}>
-                        <Text key={render.index + this.state.update}>{render.item.CustomName?render.item.CustomName:render.item.Name}{render.item.HasEnhancement()&&<Text style={{color:this.context.Main}}> ★</Text>}</Text>
+                        <Text key={render.index + this.state.update}>{render.item.CustomName?render.item.CustomName:render.item.Name}{render.item.HasEnhancement(this.state.detachmentSelection.Value())&&<Text style={{color:this.context.Main}}> ★</Text>}</Text>
                         <Text>
-                            {render.item.GetFrameworkCost()>0&&render.item.GetCost()+" pts"}
+                            {render.item.GetFrameworkCost()>0&&render.item.GetCost(this.state.detachmentSelection.Value())+" pts"}
                             {render.item.GetFrameworkCost()>0&&" — "+render.item.GetModelCount()+" model" + (render.item.GetModelCount()>1?"s":"")}
                             {this.DisplayValidity(render.item, true)}
                         </Text>
@@ -362,7 +363,7 @@ export default class BuilderMenu extends BuilderMenuBackend {
                 return <Button onPress={e=>this.props.navigation.goBack()}>Back</Button>;
             case BuildPhase.ADD:
             case BuildPhase.EQUIP:
-                const totalCost =  this.state.units.map(u=>u.GetCost()).reduce((cost, total)=> cost+total, 0);
+                const totalCost =  this.state.units.map(u=>u.GetCost(this.state.detachmentSelection.Value())).reduce((cost, total)=> cost+total, 0);
                 const toggle = (!ValidName()) ||
                 this.state.warlord===null || 
                 !this.state.units.map(u=>u.ValidRecursive()).reduce((was, is)=>was&&is, true);

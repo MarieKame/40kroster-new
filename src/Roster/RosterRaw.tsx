@@ -67,6 +67,7 @@ export default class RosterRaw{
     Cost:number;
     Faction:string;
     NextNewUnitIndex:number;
+    Detachment:string;
 }
 
 export function DebugRosterRaw(roster:RosterRaw) {

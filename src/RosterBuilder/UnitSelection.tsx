@@ -53,7 +53,7 @@ abstract class PrivateSelection {
         return this._selectionValue;
     }
 
-    GetCost():number{
+    GetCost(detachmentName:string):number{
         let modifiedValue;
         let modelCount = this.GetModelCount();
         Each(this._modifiers, modifier=>{
@@ -67,7 +67,7 @@ abstract class PrivateSelection {
             }
         });
         let cost = modifiedValue?modifiedValue:this.cost;
-        const en = this._getEnhancements();
+        const en = this._getEnhancements(detachmentName);
         return Number(cost) + Number(en.length>0?en[0].cost:0);
     }
 
@@ -112,8 +112,8 @@ abstract class PrivateSelection {
         return selections;
     }
 
-    protected _getEnhancements():Array<PrivateSelection>{
-        return this._getSpecificSelections(["upgrade"]).filter(s=>/Enhancement/gi.test(s.Parent.Name) && s.Count===1);
+    protected _getEnhancements(detachmentName:string):Array<PrivateSelection>{
+        return this._getSpecificSelections(["upgrade"]).filter(s=>/Enhancement/gi.test(s.Parent.Name) && s.Count===1 && s.CorrectDetachment(detachmentName));
     }
 
     GetAbilitiesContainers():Array<PrivateSelection>{
@@ -285,7 +285,7 @@ export default class Selection extends PrivateSelection {
         if(!data) return;
         this.rse = rse;
         this.data = data;
-        if(/(w\/)|(with)/gi.test(this.Name)){
+        if(/(w\/)|(with) /gi.test(this.Name)){
             this.Name = /(?<=(w\/)|(with) ).*/gi.exec(this.Name)[0].trim();
         }
         this.secretSelection = new Array<Selection>();
@@ -301,6 +301,7 @@ export default class Selection extends PrivateSelection {
         if(this.Profiles.length===0  && extraProfile) {
             this.Profiles.push(extraProfile);
         }
+        this.hidden = data.Hidden;
     }
     
     private duplicate():Selection{
@@ -361,8 +362,8 @@ export default class Selection extends PrivateSelection {
         return this.data.Cost;
     }
 
-    HasEnhancement():boolean{
-        return this._getEnhancements().length>0;
+    HasEnhancement(detachmentName:string):boolean{
+        return this._getEnhancements(detachmentName).length>0;
     }
 
     ReplaceWith(id:string){
@@ -376,47 +377,65 @@ export default class Selection extends PrivateSelection {
         return ((this.Type==="group" || this.Changeable())? " - " + this.GetValidTypeCount() + (this._getMax()!==undefined?(" [ " + (min!==null?(min+" ~ "):"") + this._getMax() +  " ]"):""):"");
     }
 
+    CorrectDetachment(detachmentName:string):boolean {
+        function Extract(name:string):string{
+            if(/Enhancements - /gi.test(name)) return /(Enhancements - ).*([a-z0-9]*)/gi.exec(name)[2];
+            if(/Enhancements/gi.test(name)) return /([a-z0-9]*).*(Enhancements)/gi.exec(name)[1];
+            return /[a-z0-9]*/gi.exec(name)[0];
+        }
+        console.log(this.Parent.Name+" _ " + Extract(this.Parent.Name) + " >> " + /([a-z0-9]*)(Enhancements)/gi.exec(this.Parent.Name));
+        console.log(detachmentName+" > " + Extract(detachmentName));
+        return Extract(this.Parent.Name) === Extract(detachmentName);
+    }
+
     IsHidden():boolean{
         let that = this;
         function TreatCondition(condition:Condition):boolean{
-            let hidden = false;
             switch(condition.Comparator){
                 case "equalTo":
                     const found = that.Ancestor.selectionMap.find(s=>s.ID === condition.Field);
-                    hidden = hidden || 
-                        (found && found.Selection.GetValidTypeCount() === Number(condition.Comparison) 
+                    return (found 
+                        && found.Selection.GetValidTypeCount() === Number(condition.Comparison) 
                         && condition.Value==="true");
-                    break;
                 case "notInstanceOf":
-                    hidden = hidden || (that.Ancestor.ID !== condition.Field && that.Ancestor.ExtraID !== condition.Field);
-                    break;
+                    return that.Ancestor.ID !== condition.Field && that.Ancestor.ExtraID !== condition.Field;
+                case "instanceOf":
+                    console.log(that.Ancestor.ID + " - " + that.Ancestor.ExtraID  + " : " + condition.Field)
+                    return that.Ancestor.ID === condition.Field || that.Ancestor.ExtraID === condition.Field;
                 default:
                     console.error("IsHidden condition comparator not taken into account : " + condition.Comparator);
                     console.error(condition);
-                    break;
+                    return false;
             }
-            return hidden;
         }
 
         let hidden = this.hidden;
+        console.log(this.hidden);
         Each<Modifier>(this._modifiers.filter(m=>m.Type===ModifierType.HIDE), modifier=>{
+            const setTo = modifier.Value === "true";
+            let newCondition;
             if(modifier instanceof LogicalModifier) {
                 if(modifier.Logic==="or") {
+                    newCondition = false;
                     Each(modifier.Conditions, condition=>{
-                        hidden = hidden || TreatCondition(condition);
+                        newCondition = newCondition || TreatCondition(condition);
                     })
                 } else if (modifier.Logic==="and") {
-                    let and = true;
+                    newCondition = true;
                     Each(modifier.Conditions, condition=>{
-                        and = and && TreatCondition(condition);
+                        newCondition = newCondition && TreatCondition(condition);
                     })
-                    hidden = hidden || and;
                 }
             } else {
-                hidden = hidden || TreatCondition(modifier);
+                newCondition = TreatCondition(modifier);
             }
-            
+            if(setTo) {
+                hidden = hidden || newCondition;
+            } else  {
+                hidden = hidden && newCondition;
+            }
         });
+        console.log(hidden);
         return hidden;
     }
     DisplayStats():ProfilesDisplayData|Array<ProfilesDisplayData>{
@@ -556,8 +575,8 @@ export default class Selection extends PrivateSelection {
                 } return s.Profiles[0];
             }
             function sortMelee(sv1:Selection, sv2:Selection) :number {
-                if (getUpgradeProfile(sv1).Characteristics.length===1) return 1;
-                if (getUpgradeProfile(sv2).Characteristics.length===1) return -1;
+                if (!getUpgradeProfile(sv1) || getUpgradeProfile(sv1).Characteristics.length===1) return 1;
+                if (!getUpgradeProfile(sv2) || getUpgradeProfile(sv2).Characteristics.length===1) return -1;
                 return getUpgradeProfile(sv1).Characteristics[0].Value==="Melee" && getUpgradeProfile(sv2).Characteristics[0].Value!=="Melee" ?-1:0;
             }
             if(/Warlord/gi.test(sv1.Name)) return -1;
@@ -601,7 +620,7 @@ export default class Selection extends PrivateSelection {
         return this.Parent.getFirstModelParent();
     }
 
-    GetUnitRaw(index:number):UnitRaw{
+    GetUnitRaw(detachmentName:string):UnitRaw{
         let ur = new UnitRaw();
         function toCharacteristicRaw(characteristics:Array<Characteristic>):Array<DescriptorRaw> {
             return characteristics.map(c=>{return{Name:c.Name, Value:c.Value}});
@@ -669,7 +688,7 @@ export default class Selection extends PrivateSelection {
         const models = this.GetModelsWithDifferentProfiles();
         ur.Models = models.length===1?[toModelRaw(models[0], this.Name)]:models.map(m=>toModelRaw(m));
         ur.Categories = this.Categories;
-        ur.Cost = this.GetCost();
+        ur.Cost = this.GetCost(detachmentName);
         ur.BaseName = this.Name;
         ur.CustomName = this.CustomName;
         const abilities = this.GetAbilities(true);
@@ -689,11 +708,11 @@ export default class Selection extends PrivateSelection {
         return ur;
     }
 
-    Print(current:{category:string}=null, count:number=0, space:string=""):string {
+    Print(detachmentName:string, current:{category:string}=null, count:number=0, space:string=""):string {
         function doSelections(next:Array<Selection>, s:string):string {
             let toAdd = new Array<{value:string, sel:Selection, count:number}>();
             Each<Selection>(next, n=>{
-                const test = n.Print();
+                const test = n.Print(detachmentName);
                 const found = toAdd.find(a=>a.value===test);
                 if(found) {
                     found.count+= n.Count;
@@ -701,9 +720,9 @@ export default class Selection extends PrivateSelection {
                     toAdd.push({value:test, sel:n, count:n.Count});
                 }
             })
-            return toAdd.map(a=>a.sel.Print(current, a.count, s)).join("");
+            return toAdd.map(a=>a.sel.Print(detachmentName, current, a.count, s)).join("");
         }
-        const cost = this.GetCost();
+        const cost = this.GetCost(detachmentName);
         const first = this.ID === this.Ancestor.ID;
         let toString = "";
         if(first && current!==null) {

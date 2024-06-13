@@ -1,7 +1,6 @@
-import Each from "../../Components/Each";
 import { DescriptorRaw } from "../../Roster/RosterRaw";
 import { ProfilesDisplayData } from "../ProfilesDisplay";
-import { Constraint, ProfileData, TargetSelectionData } from "../RosterSelectionData";
+import { Constraint, ProfileData } from "../RosterSelectionData";
 import Selection from "../UnitSelection";
 
 export default class DetachmentSelection extends Selection {

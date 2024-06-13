@@ -27,7 +27,6 @@ class props{
     OnSaveRoster:(roster:RosterRaw)=>void;
     OnExit:CallableFunction;
 }
-const COLUMN_WIDTH = Variables.width * 0.50;
 export default class BuilderMenuBackend extends Component<props> {
     static contextType = KameContext; 
     declare context: React.ContextType<typeof KameContext>;
@@ -76,6 +75,7 @@ export default class BuilderMenuBackend extends Component<props> {
             this.state.progress= "0%";
             this.state.catalogueId= found.CatalogueID;
             this.state.factionName= found.Name;
+            this.state.detachmentSelection.SetValue(this.props.EditingRoster.Detachment);
             this.LoadRosterSelectionFile(found.Name, found.URL);
         } 
     }
@@ -94,7 +94,7 @@ export default class BuilderMenuBackend extends Component<props> {
         if(Platform.OS==="web") {
             axios.get(url).then(async(res)=>{
                 then(res.data);
-            })
+            }).catch((error)=>{console.log(error);})
         } else {
             //TODO: add date to file, see if it already exists, and update only if too old (more than 1 day maybe even?)
             const DR = FileSystem.createDownloadResumable(
@@ -136,7 +136,6 @@ export default class BuilderMenuBackend extends Component<props> {
         new RosterSelectionExtractor(catalogue.toRead, data, catalogue.Name, index===1, (progress:string, cont, rse:RosterSelectionExtractor, data?:RosterSelectionData, options?:Array<TargetSelectionData>)=>{
             if (data){
                 if(catalogues.length===0) {
-                    console.log(data.Selections)
                     data.Units = data.Units.sort((unit1, unit2)=>{
                         const target1 = data.GetTarget(unit1);
                         const target2 = data.GetTarget(unit2);
@@ -170,8 +169,6 @@ export default class BuilderMenuBackend extends Component<props> {
                     const pop = catalogues.pop();
                     that.nextRoster(index+1, count, pop, catalogues, that, data);
                 }
-                console.log("data")
-                console.log(options);
                 that.state.options.Set(options);
             } else {
                 that.setState({progress:progress}, ()=>this.cont(rse, cont));
@@ -179,6 +176,23 @@ export default class BuilderMenuBackend extends Component<props> {
         }, ()=>{
             that.ErrorLoadingRosterFile(that);
         })
+    }
+
+    
+    private nextCatalogue(that:BuilderMenuBackend, toDownload, catalogues:Array<{toRead:any, Name:string}>, data) {
+        if(toDownload.length===0) {
+            catalogues.reverse();
+            const pop = catalogues.pop();
+            that.readRoster(1, catalogues.length+1, pop, catalogues, that, data);
+        } else {
+            const binding = toDownload.pop();
+            that.downloadFileThen(binding.Name, binding.URL, that, (content)=>{
+                catalogues.push({
+                    toRead:new fastXMLParser.XMLParser({ignoreAttributes:false, attributeNamePrefix :"_", textNodeName:"textValue"}).parse(content).catalogue,
+                    Name:binding.Name});
+                that.nextCatalogue(that, toDownload, catalogues, data);
+            });
+        }
     }
 
     LoadRosterSelectionFile(name:string, url:string){
@@ -196,22 +210,7 @@ export default class BuilderMenuBackend extends Component<props> {
                     if(!found) console.error(link._targetId + " not found in FactionFiles");
                     toDownload.push(found);
                 });
-                function cont(that:BuilderMenuBackend) {
-                    if(toDownload.length===0) {
-                        catalogues.reverse();
-                        const pop = catalogues.pop();
-                        that.readRoster(1, catalogues.length+1, pop, catalogues, that, data);
-                    } else {
-                        const binding = toDownload.pop();
-                        that.downloadFileThen(binding.Name, binding.URL, that, (content)=>{
-                            catalogues.push({
-                                toRead:new fastXMLParser.XMLParser({ignoreAttributes:false, attributeNamePrefix :"_", textNodeName:"textValue"}).parse(content).catalogue,
-                                Name:binding.Name});
-                            cont(that);
-                        });
-                    }
-                }
-                cont(that);
+                that.nextCatalogue(that, toDownload, catalogues, data);
             }
         });
     }
@@ -279,8 +278,9 @@ export default class BuilderMenuBackend extends Component<props> {
         rr.CatalogueID = this.state.catalogueId;
         rr.Faction = this.state.factionName;
         rr.Name= this.state.rosterName;
-        rr.Units = this.state.units.map((u, i)=>u.GetUnitRaw(i));
-        rr.Cost = this.state.units.map(u=>u.GetCost()).reduce((current, sum)=>current+sum, 0);
+        rr.Units = this.state.units.map((u, i)=>u.GetUnitRaw(this.state.detachmentSelection.Value()));
+        rr.Cost = this.state.units.map(u=>u.GetCost(this.state.detachmentSelection.Value())).reduce((current, sum)=>current+sum, 0);
+        rr.Detachment = this.state.detachmentSelection.Value();
         if(this.props.EditingRoster && this.props.EditingRoster.NextNewUnitIndex !== undefined) {
             rr.LeaderData = this.props.EditingRoster.LeaderData.filter(ld=>rr.Units.findIndex(u=>u.UniqueID===ld.UniqueId)!==-1);
             Each<LeaderDataRaw>(rr.LeaderData, leader=>{
@@ -322,8 +322,8 @@ export default class BuilderMenuBackend extends Component<props> {
         let cost = 0;
         let units = new Array<{val:string, count:number, sel:Selection}>();
         Each<Selection>(this.state.units, unit=> {
-            cost += unit.GetCost();
-            const print = unit.Print({category:""}) + "\n";
+            cost += unit.GetCost(this.state.detachmentSelection.Value());
+            const print = unit.Print(this.state.detachmentSelection.Value(), {category:""}) + "\n";
             const foundIndex = units.findIndex(u=>u.val===print);
             if(foundIndex!==-1) {
                 units[foundIndex].count++;
@@ -333,7 +333,7 @@ export default class BuilderMenuBackend extends Component<props> {
         });
         let current = {category:""};
         return this.state.rosterName + " - " + cost + "pts \n" + 
-            units.map(u=>u.sel.Print(current, u.count)).join("\n") + 
+            units.map(u=>u.sel.Print(this.state.detachmentSelection.Value(), current, u.count)).join("\n") + 
             "Made with Sammie's App";    
     }
 }

@@ -93,7 +93,7 @@ export default class RosterSelectionExtractor {
                                     unitData.Modifiers.push({Type: ModifierType.MAX, Comparator:condition._type, Comparison:condition._value, Value:modifier._value, Field:""})
                                 }
                                 if(modifier._field="hidden") {
-                                    unitData.Modifiers.push({Type: ModifierType.HIDE, Comparator:"", Comparison:"", Value:"", Field:condition._childId})
+                                    unitData.Modifiers.push({Type: ModifierType.HIDE, Comparator:"", Comparison:"", Value:modifier._value, Field:condition._childId})
                                 }
                             });
                         } else if (modifier.conditionGroups) {
@@ -109,7 +109,7 @@ export default class RosterSelectionExtractor {
                         if(modifier.conditions) {
                             Each(modifier.conditions.condition, (condition)=>{
                                 if(condition._type==="notInstanceOf" && condition._scope==="primary-catalogue") {
-                                    unitData.Modifiers.push({Type: ModifierType.HIDE, Comparator:"", Comparison:"", Value:"", Field:condition._childId})
+                                    unitData.Modifiers.push({Type: ModifierType.HIDE, Comparator:"", Comparison:"", Value:modifier.value, Field:condition._childId})
                                 }
                             });
                         }
