@@ -407,7 +407,6 @@ export default class Selection extends PrivateSelection {
         }
 
         let hidden = this.hidden;
-        console.log(this.hidden);
         Each<Modifier>(this._modifiers.filter(m=>m.Type===ModifierType.HIDE), modifier=>{
             const setTo = modifier.Value === "true";
             let newCondition;
@@ -432,7 +431,6 @@ export default class Selection extends PrivateSelection {
                 hidden = hidden && newCondition;
             }
         });
-        console.log(hidden);
         return hidden;
     }
     DisplayStats():ProfilesDisplayData|Array<ProfilesDisplayData>{

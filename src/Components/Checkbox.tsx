@@ -2,6 +2,7 @@ import { Component } from "react"
 import { Pressable, StyleProp, TextStyle, View, ViewStyle } from "react-native"
 import ExpoCheckbox from "expo-checkbox";
 import Text from "./Text";
+import React from "react";
 
 class Props {
     Style?:StyleProp<ViewStyle>;

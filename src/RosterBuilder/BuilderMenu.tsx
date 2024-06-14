@@ -16,6 +16,7 @@ import * as Clipboard from "expo-clipboard";
 import BuilderMenuBackend from "./BuilderMenuBackend";
 import DetachmentSelection from "./SpecificSelections/DetachmentSelection";
 import { RadioButton } from 'react-native-paper';
+import RadioButtonHack from "../Components/RadioButtonHack";
 
 enum BuildPhase{
     FACTION, LOADING, LOADING_ERROR, ADD, EQUIP
@@ -35,7 +36,7 @@ export default class BuilderMenu extends BuilderMenuBackend {
         if(selection instanceof DetachmentSelection) {
             return <View style={{width:"100%", paddingBottom:10}} key={index}>
                 <View style={{flexDirection:"row", backgroundColor:this.context.LightAccent}}>
-                    <RadioButton value={selection.Name} />
+                    <RadioButtonHack value={selection.Name} onValueChange={(value)=>{this.state.detachmentSelection.SetValue(value);this.setState({update:this.state.update+1})}} checked={this.state.detachmentSelection.Value()===selection.Name} />  
                     <Text style={{justifyContent:"center", alignSelf:"center"}}>{selection.Name}</Text>
                 </View>
                 {selection.DetachmentProfiles.map(dp=><Text><Text style={{fontFamily:Variables.fonts.WHBI}}>{dp.Name} : </Text> {dp.Value}</Text>)}
@@ -79,7 +80,7 @@ export default class BuilderMenu extends BuilderMenuBackend {
                         else eeIDs.splice(eeIDs.findIndex(eeID=> eeID === selection.ID), 1);
                         this.setState({equipedEnhancementIDs:eeIDs});
                     }
-                }}/>
+                }}/>;
         }
         if(!option) return null;
         return <View key={index} style={{flexDirection:"row", backgroundColor:this.context.Bg, marginBottom:6, marginTop:6}}>
@@ -153,7 +154,6 @@ export default class BuilderMenu extends BuilderMenuBackend {
             }
             if(!skip) value.push(this.ViewSelectionRecursive(child, currentIndex++, depth+1, child.IsHidden(), /Enhancement/gi.test(child.Name)));
         });
-
         return <View key={this.state.currentUnit + selection.Name + currentIndex + this.state.update} style={{flexGrow:1, width:"100%", paddingLeft:6}}>
             {value}
         </View>;
@@ -205,17 +205,15 @@ export default class BuilderMenu extends BuilderMenuBackend {
                 newUnitDisplay(unitModel.Name, unitModel.DisplayStats(), index);
             });
         }
-        
-        console.log(unit.Rules);
 
         return <View key={this.state.currentUnit} style={{height:"100%", backgroundColor:this.context.Bg, marginLeft:10}}>
             <ScrollView>
-                <View style={{flexDirection:"row"}}>
+                <View key="models" style={{flexDirection:"row"}}>
                     <View style={{height:48*unitModels.length+6}}>
                         {unitModelsDisplay}
                     </View>
                 </View>
-                <RadioButton.Group onValueChange={(value)=>{this.state.detachmentSelection.SetValue(value);this.setState({update:this.state.update+1})}} value={this.state.detachmentSelection.Value()}> {this.ViewSelectionRecursive(unit)}</RadioButton.Group>
+                {this.ViewSelectionRecursive(unit)}
                 {unit.Rules&&<Text key="rules" style={{padding:10}}><Text style={{fontFamily:Variables.fonts.WHB}}>Rules : </Text>{unit.Rules.join(", ")}</Text>}
                 {this.ViewUnitAbilties(unit)}
                 {unit.Categories&&<Text key="cats" style={{padding:10}}><Text style={{fontFamily:Variables.fonts.WHB}}>Categories : </Text>{unit.Categories.join(", ")}</Text>}
