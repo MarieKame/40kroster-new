@@ -194,6 +194,7 @@ export default class RosterSelectionExtractor {
                         profiles.push({Name:rule._name, Value:rule.description})
                     });
                 }
+                console.log(profiles)
                 return profiles;
             }
             function TreatDetachment(entry, rse:RosterSelectionExtractor){

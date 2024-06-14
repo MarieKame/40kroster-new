@@ -12,6 +12,8 @@ import Checkbox from "expo-checkbox";
 import { GestureHandlerRootView, PanGestureHandler } from "react-native-gesture-handler";
 import RosterRaw, { DescriptorRaw, LeaderDataRaw, NoteRaw, RuleDataRaw, UnitRaw } from "../Roster/RosterRaw";
 import Each from "../Components/Each";
+import axios from "axios";
+import * as FileSystem from 'expo-file-system';
 
 class Reminder{
     Data:DescriptorRaw;
@@ -28,6 +30,39 @@ interface Props {
 
 enum NoteState{
     CLOSED, CUSTOM, WPN, SCAR, TRAIT
+}
+
+function StratagemsFromJson(parsedJson):Array<Stratagem> {
+    function getPhases(when:string): Array<"Any" | "Command" | "Movement" | "Shooting" | "Charge" | "Fight" | number> {
+        let phases = new Array<"Any" | "Command" | "Movement" | "Shooting" | "Charge" | "Fight" | number>();
+        Each<string>(when.split(" "), (word)=>{
+            const capitalized = word.substring(0, 1).toLocaleUpperCase() + word.substring(1).toLocaleLowerCase();
+            if (capitalized === "Any") phases.push(capitalized);
+            if (capitalized === "Command") phases.push(capitalized);
+            if (capitalized === "Movement") phases.push(capitalized);
+            if (capitalized === "Shooting") phases.push(capitalized);
+            if (capitalized === "Charge") phases.push(capitalized);
+            if (capitalized === "Fight") phases.push(capitalized);
+        });
+        return phases;
+    }
+    function fromParsed(name, item):Stratagem{
+        return {
+            Name: name,
+            CP: item["cost"],
+            Flavor: item["flavor"]??"",
+            When: item["when"],
+            Target: item["target"]??"",
+            Effect: item["effect"],
+            Restrictions: item["restrictions"]??"",
+            Phases: getPhases(item["when"])
+        }
+    }
+    let strats = new Array<Stratagem>();
+    for(const key in parsedJson) {
+        strats.push(fromParsed(key, parsedJson[key]));
+    }
+    return strats;
 }
 
 class Roster extends React.Component<Props> {
@@ -56,6 +91,33 @@ class Roster extends React.Component<Props> {
         wpnMod6:false
     }
 
+    private async downloadFileThen(name:string, url:string, that:Roster, then:(contents)=>void) {
+        if(Platform.OS==="web") {
+            axios.get(url).then(async(res)=>{
+                then(res.data);
+            }).catch((error)=>{console.error(error);})
+        } else {
+            //TODO: add date to file, see if it already exists, and update only if too old (more than 1 day maybe even?)
+            const DR = FileSystem.createDownloadResumable(
+                url,
+                FileSystem.documentDirectory + name + ".json",
+                {},
+                (data)=>{
+                    that.setState({progress:(Math.min(Math.max(data.totalBytesWritten, 0) / (data.totalBytesExpectedToWrite + data.totalBytesWritten), 1) * 100) + "%"})
+                }
+            );
+            DR.downloadAsync().then((file)=>{
+                FileSystem.readAsStringAsync(file.uri).catch(()=>{
+                }).then((contents)=>{
+                    if (contents) {
+                        then(contents);
+                    } else {
+                    }
+                });
+            });
+        }
+    }
+
     constructor(props:Props) {
         super(props);
         Roster.Instance = this;
@@ -80,8 +142,13 @@ class Roster extends React.Component<Props> {
                 }
             });
         });
-
-        this.state.DetachmentStratagems = [...STRATAGEMS].filter(s=>s.Faction === this.props.Data.Faction);
+        this.downloadFileThen("strats", "https://raw.githubusercontent.com/MarieKame/warhammer40k10th-stratagems/main/stratagems.json", this, (json)=>{
+            try {
+                this.state.DetachmentStratagems = StratagemsFromJson(json[this.props.Data.Faction][this.props.Data.Detachment]);
+            } catch(e){
+                this.state.DetachmentStratagems = [];
+            }
+        });
     }
 
     private checkAddReminder(data:DescriptorRaw, unitName:string){

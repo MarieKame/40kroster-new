@@ -3,6 +3,7 @@ import Text from './Text';
 import {Component, Context, ReactNode, useContext} from 'react';
 import Variables from '../Variables';
 import {KameContext} from '../../Style/KameContext';
+import React from 'react';
 
 export interface ButtonProps extends TextProps {
     textStyle?:TextStyle,

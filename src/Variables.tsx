@@ -5,6 +5,7 @@ const zoom = Platform.OS=="web"? 1.4:1;
 const baseUnitMargin = 16;
 const androidMenuSpace = Platform.OS=="web"?0:48;
 const Variables = {
+    LoggedUser:{email:"", displayName:"", uid:""},
     boxBorder:"solid 1px",
     boxBorderStyle:"solid",
     boxBorderWidth:1,

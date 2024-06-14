@@ -29,6 +29,7 @@ class AutoExpandingTextInput extends Component<AEProps> {
             multiline={true}
             blurOnSubmit={true}
             onSubmitEditing ={(e)=> this.props.onSubmit(this.state.value)}
+            onBlur={(e)=>this.props.onSubmit(this.state.value)}
             onContentSizeChange={(event) => {
                 this.setState({ height: event.nativeEvent.contentSize.height })
             }}

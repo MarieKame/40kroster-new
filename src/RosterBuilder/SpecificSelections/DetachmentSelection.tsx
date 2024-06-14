@@ -1,4 +1,4 @@
-import { DescriptorRaw } from "../../Roster/RosterRaw";
+import { DescriptorRaw, RuleDataRaw } from "../../Roster/RosterRaw";
 import { ProfilesDisplayData } from "../ProfilesDisplay";
 import { Constraint, ProfileData } from "../RosterSelectionData";
 import Selection from "../UnitSelection";
@@ -20,6 +20,14 @@ export default class DetachmentSelection extends Selection {
 
     Value():string{
         return this.value.Name;
+    }
+
+    DetachmentRules():RuleDataRaw {
+        return {
+            Name:this.value.DetachmentProfiles[0].Name,
+            ID:this.value.DetachmentProfiles[0].Name,
+            Description:this.value.DetachmentProfiles[0].Value
+        };
     }
 
     AddDetachment(name:string, profiles:Array<DescriptorRaw>) {

@@ -1,7 +1,5 @@
 
 export interface Stratagem {
-    Faction?: string;
-    Detachment?: string;
     Name: string;
     CP: number;
     Flavor?: string;
@@ -56,8 +54,6 @@ Restrictions:"You cannot select SAINT CELESTINE as the target of this Stratagem.
 //then just remove the extra bits you don't need!
 export const STRATAGEMS: Array<Stratagem> = [
     {
-        Faction: "Adepta Sororitas",
-        Detachment: "Hallowed Martyrs",
         Name: "Divine Intervention",
         Phases: ["Any"],
         CP: 1,
@@ -68,8 +64,6 @@ export const STRATAGEMS: Array<Stratagem> = [
         Restrictions: "You cannot select SAINT CELESTINE as the target of this Stratagem. You cannot select the same CHARACTER as the target of this Stratagem more than once per battle."
     },
     {
-        Faction: "Adepta Sororitas",
-        Detachment: "Hallowed Martyrs",
         Name: "Holy Rage",
         Phases: ["Fight"],
         CP: 1,
@@ -79,8 +73,6 @@ export const STRATAGEMS: Array<Stratagem> = [
         Effect: "Until the end of the phase, each time a model in your unit makes a melee attack, add 1 to the Wound roll."
     },
     {
-        Faction: "Adepta Sororitas",
-        Detachment: "Hallowed Martyrs",
         Name: "Suffering & Sacrifice",
         Phases: ["Fight"],
         CP: 1,
@@ -90,8 +82,6 @@ export const STRATAGEMS: Array<Stratagem> = [
         Effect: "Until the end of the phase, each time an enemy model within Engagement range of your unit selects targets, it must select your unit as the target of its attacks."
     },
     {
-        Faction: "Adepta Sororitas",
-        Detachment: "Hallowed Martyrs",
         Name: "Light of the Emperor",
         Phases: ["Command"],
         CP: 1,
@@ -101,8 +91,6 @@ export const STRATAGEMS: Array<Stratagem> = [
         Effect: " Until the end of the turn, your unit can ignore any or all modifiers to its characteristics and/or to any roll or test made for it (excluding modifiers to saving throws)."
     },
     {
-        Faction: "Adepta Sororitas",
-        Detachment: "Hallowed Martyrs",
         Name: "Rejoice the Fallen",
         Phases: ["Shooting"],
         CP: 1,
@@ -112,8 +100,6 @@ export const STRATAGEMS: Array<Stratagem> = [
         Effect: "Your unit can shoot as if it were your Shooting phase, but it must target only that enemy unit when doing so, and can only do so if that enemy unit is an eligible target."
     },
     {
-        Faction: "Adepta Sororitas",
-        Detachment: "Hallowed Martyrs",
         Name: "Spirit of the Martyr",
         Phases: ["Fight"],
         CP: 2,

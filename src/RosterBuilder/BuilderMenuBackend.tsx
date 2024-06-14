@@ -94,7 +94,7 @@ export default class BuilderMenuBackend extends Component<props> {
         if(Platform.OS==="web") {
             axios.get(url).then(async(res)=>{
                 then(res.data);
-            }).catch((error)=>{console.log(error);})
+            }).catch((error)=>{console.error(error);})
         } else {
             //TODO: add date to file, see if it already exists, and update only if too old (more than 1 day maybe even?)
             const DR = FileSystem.createDownloadResumable(
@@ -293,7 +293,7 @@ export default class BuilderMenuBackend extends Component<props> {
             rr.LeaderData = new Array<LeaderDataRaw>();
             rr.Notes = new Array<NoteRaw>();
         }
-        rr.Rules = [...this.state.rosterSelectionData.Rules];
+        rr.Rules = [this.state.rosterSelectionData.Rules[0], this.state.detachmentSelection.DetachmentRules()];
         rr.NextNewUnitIndex = this.state.nextNewUnitIndex;
         Each<UnitRaw>(rr.Units, unit=>{
             if(rr.LeaderData.findIndex(ld=>ld.UniqueId === unit.UniqueID)!==-1) return;

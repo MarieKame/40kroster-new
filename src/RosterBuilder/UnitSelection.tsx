@@ -383,8 +383,6 @@ export default class Selection extends PrivateSelection {
             if(/Enhancements/gi.test(name)) return /([a-z0-9]*).*(Enhancements)/gi.exec(name)[1];
             return /[a-z0-9]*/gi.exec(name)[0];
         }
-        console.log(this.Parent.Name+" _ " + Extract(this.Parent.Name) + " >> " + /([a-z0-9]*)(Enhancements)/gi.exec(this.Parent.Name));
-        console.log(detachmentName+" > " + Extract(detachmentName));
         return Extract(this.Parent.Name) === Extract(detachmentName);
     }
 
@@ -400,7 +398,6 @@ export default class Selection extends PrivateSelection {
                 case "notInstanceOf":
                     return that.Ancestor.ID !== condition.Field && that.Ancestor.ExtraID !== condition.Field;
                 case "instanceOf":
-                    console.log(that.Ancestor.ID + " - " + that.Ancestor.ExtraID  + " : " + condition.Field)
                     return that.Ancestor.ID === condition.Field || that.Ancestor.ExtraID === condition.Field;
                 default:
                     console.error("IsHidden condition comparator not taken into account : " + condition.Comparator);

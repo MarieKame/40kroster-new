@@ -25,6 +25,9 @@ import RosterMenu from "./RosterView/RosterMenu";
 import BuilderMenu from "./RosterBuilder/BuilderMenu";
 import RosterRaw, { LeaderDataRaw, NoteRaw } from "./Roster/RosterRaw";
 import { FlatList, GestureHandlerRootView, ScrollView } from "react-native-gesture-handler";
+import { Circle, Path, Svg } from "react-native-svg";
+import Auth from "./Auth";
+import { readFromDatabase, saveToDatabase } from "../firebase.config";
 
 const STORAGE_KEY = "stored_rosters_40k_app";
 const COLOURS_KEY = "stored_colours_40k_app";
@@ -87,7 +90,7 @@ class Menu extends React.Component{
     };
 
     updateRosterList(newRosterList) {
-        this.DoSave(newRosterList);
+        Menu.Instance.DoSave(newRosterList);
     }
 
     jszipLoadAsync(that, file) {
@@ -317,7 +320,7 @@ class Menu extends React.Component{
 
     private DoSave(rosters:Array<RosterRaw>) {
         AsyncStorage.setItem(ROSTERS_KEY, JSON.stringify(rosters));
-        Menu.Instance.setState({rosters:rosters});
+        Menu.Instance.setState({Rosters:rosters});
     }
 
     render() {
@@ -343,7 +346,7 @@ class Menu extends React.Component{
                     <NavigationContainer theme={{...DefaultTheme, colors:{...DefaultTheme.colors, background:"transparent"}}} >
                         <Stack.Navigator initialRouteName="Home" screenOptions={{headerShown: false}}>
                             <Stack.Screen name="Home" options={{animation:"slide_from_left"}}>
-                                {(props)=> <MenuDisplay {...props} that={this} Popup={this.CallPopup}/>}
+                                {(props)=> <MenuDisplay {...props} that={this} Popup={this.CallPopup} loggedIn={Variables.LoggedUser.email!==""} />}
                             </Stack.Screen>
                             <Stack.Screen name="Roster" options={{animation:"slide_from_right", animationTypeForReplace:"pop"}}>
                                 {(props)=> <Roster {...props} 
@@ -380,10 +383,18 @@ interface MenuDisplayProps{
     that:Menu;
     navigation:{navigate};
     Popup:(question:string, options:Array<PopupOption>,def:string)=>void;
+    loggedIn:boolean;
 }
 class MenuDisplay extends Component<MenuDisplayProps> {
     static contextType = KameContext; 
     declare context: React.ContextType<typeof KameContext>;
+
+    state = {
+        loggingIn: false,
+        newLogin: false,
+        newLogout: false,
+        update:1
+    }
 
     viewRoster(index) {
         Menu.Instance.setState({
@@ -455,12 +466,39 @@ class MenuDisplay extends Component<MenuDisplayProps> {
     }
  
     render(){
-        return [<GestureHandlerRootView key="rosters"><View style={{padding:10, width:Variables.width}}>
+        return [
+        <GestureHandlerRootView key="rosters"><View style={{padding:10, width:Variables.width}}>
             <View style={{flexDirection:"row", width:"100%", backgroundColor:this.context.Bg, borderRadius:4}}>
                 <Text style={{fontFamily:Variables.fonts.spaceMarine, verticalAlign:"middle", flex:1, textAlign:"center", textDecorationLine:"underline"}}>{Variables.username}'s Roster List</Text>
+                {((!this.props.loggedIn && !this.state.newLogin) || this.state.newLogout)&&<Button onPress={(e)=>{
+                    this.setState({loggingIn:true});
+                }}>
+                    👤
+                </Button>}
+                {((this.props.loggedIn || this.state.newLogin)&& !this.state.newLogout)&&<Button onPress={(e)=>{
+                    this.setState({newLogin:false, newLogout:true});
+                    Variables.LoggedUser={email:"", displayName:"",uid:""};
+                }}>
+                    🚪
+                </Button>}
+                {((this.props.loggedIn || this.state.newLogin)&& !this.state.newLogout)&&<Button onPress={(e)=>{
+                    readFromDatabase(Variables.LoggedUser.uid, (json)=>{
+                        Menu.Instance.updateRosterList(JSON.parse(json));
+                        this.setState({update:this.state.update+1})
+                    });
+                }}>
+                    ⟳
+                </Button>}
+                {((this.props.loggedIn || this.state.newLogin)&& !this.state.newLogout)&&<Button onPress={(e)=>{
+                    saveToDatabase(Variables.LoggedUser.uid, JSON.stringify(this.props.that.state.Rosters));
+                }}>
+                    💾
+                </Button>}
                 <Button onPress={(e)=>
                 {
-                    Menu.Instance.CallPopup(
+                    this.props.navigation.navigate("RosterBuilder");
+                    //TODO: bring this selection back if we add battlescribe importation support again
+                    /*Menu.Instance.CallPopup(
                         "How do you want to add a new roster?", [
                             {option:"Import from BattleScribe", callback:()=>{
                                 this.props.that.docPicker(Menu.Instance)
@@ -469,13 +507,14 @@ class MenuDisplay extends Component<MenuDisplayProps> {
                                 this.props.navigation.navigate("RosterBuilder");
                             }},
                         ],
-                        "Cancel")
+                        "Cancel")*/
                 }} textStyle={{fontSize:20}}>+</Button>
                 <Button onPress={(e)=>this.props.navigation.navigate('Options')} image={true}><Image style={{width:20, height:20, marginLeft:3}} tintColor={this.context.Dark} source={require("../assets/images/gear.png")}/></Button>
             </View>
-            <View style={{height:Variables.height*0.8}}>{this.displayMenuItem(this.props.that.state.Rosters)}</View>
+            <View style={{height:Variables.height*0.8}} key={this.state.update+"test"}>{this.displayMenuItem(this.props.that.state.Rosters)}</View>
         </View></GestureHandlerRootView>,
-        <View key="app version" style={{position:"absolute", right:20, bottom:0}}><Text>App Version : {require('../app.json').expo.version}</Text></View>]
+        <View key="app version" style={{position:"absolute", right:20, bottom:0}}><Text>App Version : {require('../app.json').expo.version}</Text></View>,
+        this.state.loggingIn&&<Auth Close={(loggedIn:boolean)=>{this.setState({loggingIn:false, newLogin:loggedIn, newLogout:false})}}></Auth>]
     }
 }
 

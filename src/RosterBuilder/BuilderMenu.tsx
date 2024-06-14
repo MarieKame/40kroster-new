@@ -205,6 +205,8 @@ export default class BuilderMenu extends BuilderMenuBackend {
                 newUnitDisplay(unitModel.Name, unitModel.DisplayStats(), index);
             });
         }
+        
+        console.log(unit.Rules);
 
         return <View key={this.state.currentUnit} style={{height:"100%", backgroundColor:this.context.Bg, marginLeft:10}}>
             <ScrollView>
