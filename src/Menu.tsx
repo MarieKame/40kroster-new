@@ -7,8 +7,9 @@ import * as NavigationBar from 'expo-navigation-bar';
 import * as Font from 'expo-font';
 import * as expoFS from 'expo-file-system';
 import fastXMLParser from 'fast-xml-parser';
-import { DefaultTheme, NavigationContainer, NavigationProp } from '@react-navigation/native';
+import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import {auth} from "../firebase.config";
 const Stack = createNativeStackNavigator();
 
 import Text from './Components/Text';
@@ -24,10 +25,10 @@ import Popup, { PopupOption } from "./Components/Popup";
 import RosterMenu from "./RosterView/RosterMenu";
 import BuilderMenu from "./RosterBuilder/BuilderMenu";
 import RosterRaw, { LeaderDataRaw, NoteRaw } from "./Roster/RosterRaw";
-import { FlatList, GestureHandlerRootView, ScrollView } from "react-native-gesture-handler";
-import { Circle, Path, Svg } from "react-native-svg";
+import { FlatList, GestureHandlerRootView } from "react-native-gesture-handler";
 import Auth from "./Auth";
 import { readFromDatabase, saveToDatabase } from "../firebase.config";
+import { User, onAuthStateChanged } from "firebase/auth";
 
 const STORAGE_KEY = "stored_rosters_40k_app";
 const COLOURS_KEY = "stored_colours_40k_app";
@@ -66,6 +67,7 @@ class Menu extends React.Component{
         popupQuestion:null,
         popupOptions:null,
         popupDefault:null,
+        logged:false
     };
 
     async fetchFonts (that) {
@@ -80,6 +82,12 @@ class Menu extends React.Component{
     
     constructor(props) {
         super(props);
+        auth.onAuthStateChanged((user:User|null)=>{
+            if(user) {
+                Variables.LoggedUser = user;
+                this.setState({logged:true});
+            }
+        });
         this.loadData(this);
         this.fetchFonts(this);
         Menu.Instance = this;
@@ -346,7 +354,7 @@ class Menu extends React.Component{
                     <NavigationContainer theme={{...DefaultTheme, colors:{...DefaultTheme.colors, background:"transparent"}}} >
                         <Stack.Navigator initialRouteName="Home" screenOptions={{headerShown: false}}>
                             <Stack.Screen name="Home" options={{animation:"slide_from_left"}}>
-                                {(props)=> <MenuDisplay {...props} that={this} Popup={this.CallPopup} loggedIn={Variables.LoggedUser.email!==""} />}
+                                {(props)=> <MenuDisplay {...props} that={this} Popup={this.CallPopup} loggedIn={Variables.LoggedUser.email!=="" || this.state.logged} />}
                             </Stack.Screen>
                             <Stack.Screen name="Roster" options={{animation:"slide_from_right", animationTypeForReplace:"pop"}}>
                                 {(props)=> <Roster {...props} 

@@ -1,6 +1,6 @@
 import React from "react";
 import { KameContext } from "../Style/KameContext";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, UserCredential, updateProfile } from "firebase/auth";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, UserCredential, updateProfile } from "firebase/auth";
 import Variables from "./Variables";
 import { TextInput, View } from "react-native";
 import Text from "./Components/Text";

@@ -218,7 +218,7 @@ export default class BuilderMenu extends BuilderMenuBackend {
                 {this.ViewUnitAbilties(unit)}
                 {unit.Categories&&<Text key="cats" style={{padding:10}}><Text style={{fontFamily:Variables.fonts.WHB}}>Categories : </Text>{unit.Categories.join(", ")}</Text>}
             </ScrollView>
-            {Platform.OS!=="web"&&<Button style={{position:"absolute", top:0, right:0}} onPress={e=>{
+            {(Platform.OS !== "web" || Variables.width <= 1400)&&<Button style={{position:"absolute", top:0, right:0}} onPress={e=>{
                 if(this.state.phase === BuildPhase.EQUIP) {
                     Animated.timing(that.state.addColumnWidth, {
                         toValue:1,
@@ -509,7 +509,7 @@ export default class BuilderMenu extends BuilderMenuBackend {
                 break;
             case BuildPhase.ADD:
             case BuildPhase.EQUIP:
-                if(Platform.OS==="web") {
+                if(Platform.OS==="web" && Variables.width > 1400) {
                     contents= <View style={{flexDirection:"row"}}>
                         <View style={{
                                 overflow:"hidden", 
