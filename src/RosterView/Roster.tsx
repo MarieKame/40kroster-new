@@ -6,7 +6,7 @@ import Variables from "../Variables";
 import Button from "../Components/Button";
 import {Text} from "../Components/Text";
 import {KameContext} from "../../Style/KameContext";
-import { STRATAGEMS, Stratagem } from "./Stratagems";
+import { Stratagem } from "./Stratagems";
 import AutoExpandingTextInput from "../Components/AutoExpandingTextInput";
 import Checkbox from "expo-checkbox";
 import { GestureHandlerRootView, PanGestureHandler } from "react-native-gesture-handler";
@@ -50,7 +50,7 @@ function StratagemsFromJson(parsedJson):Array<Stratagem> {
         return {
             Name: name,
             CP: item["cost"],
-            Flavor: item["flavor"]??"",
+            Flavor: item["flavour"]??"",
             When: item["when"],
             Target: item["target"]??"",
             Effect: item["effect"],
