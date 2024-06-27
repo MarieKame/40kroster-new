@@ -62,7 +62,7 @@ class RosterMenu extends Component<Props> {
                     {// @ts-ignore
                         getPhases(stratagem.item).map((phase, index)=> {
                             let content;
-                            const imageStyle={width:24, height:24, top:2, left:-5};
+                            const imageStyle={width:24, height:24, top:2+(30*index), left:-5};
                             switch(phase) {
                                 case "Any":
                                     content = <Image style={imageStyle} tintColor={this.context.Dark} source={require("../../assets/images/stratAny.png")}/>;
@@ -80,7 +80,7 @@ class RosterMenu extends Component<Props> {
                                     content = <Image style={imageStyle} tintColor={this.context.Dark} source={require("../../assets/images/stratCharge.png")}/>;
                                     break;
                                 case "Fight":
-                                    content = <Image style={imageStyle} tintColor={this.context.Dark} source={require("../../assets/images/stratFight.png")}/>;
+                                    content = <Image style={imageStyle} tintColor={this.context.Dark} source={require("../../assets/images/stratFight.png")} />;
                                     break;
                                 default:
                                     content=<Text key="value" style={{position:"absolute", width:40, left:-13, top:(8+ (30*index)), textAlign:"center"}}>{phase} CP</Text>

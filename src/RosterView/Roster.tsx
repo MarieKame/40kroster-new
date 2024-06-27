@@ -143,10 +143,14 @@ class Roster extends React.Component<Props> {
             });
         });
         this.downloadFileThen("strats", "https://raw.githubusercontent.com/MarieKame/warhammer40k10th-stratagems/main/stratagems.json", this, (json)=>{
-            try {
+            try { 
                 this.state.DetachmentStratagems = StratagemsFromJson(json[this.props.Data.Faction][this.props.Data.Detachment]);
             } catch(e){
-                this.state.DetachmentStratagems = [];
+                try{
+                    this.state.DetachmentStratagems = StratagemsFromJson(JSON.parse(json)[this.props.Data.Faction][this.props.Data.Detachment]);
+                } catch(e) {
+                    this.state.DetachmentStratagems = [];
+                }
             }
         });
     }
