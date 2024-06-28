@@ -1,15 +1,15 @@
 import React, { Component, ReactNode } from "react";
 import { KameContext } from "../../Style/KameContext";
-import { ScrollView, View, Image } from "react-native";
+import { ScrollView, View } from "react-native";
 import Variables from "../Variables";
 import Roster from "./Roster";
 import Button from "../Components/Button";
 import Text, { ComplexText } from "../Components/Text";
-import { Background } from "../../Style/svgs";
 import { CORE_STRATAGEMS, Stratagem } from "./Stratagems";
 import MasonryList from '@react-native-seoul/masonry-list';
 import { GestureHandlerRootView, PanGestureHandler } from "react-native-gesture-handler";
-import { DescriptorRaw, RuleDataRaw } from "../Roster/RosterRaw";
+import { RuleDataRaw } from "../Roster/RosterRaw";
+import StratagemDisplay from "../Roster/StratagemDisplay";
 
 enum RosterMenuCategories {
     UNIT_LIST, RULES, REMINDERS, STRATAGEMS, CORE
@@ -28,71 +28,11 @@ class RosterMenu extends Component<Props> {
         gesture:false
     }
 
-    ShowStratagemSection(name:string, text:string) {
-        return <View key={name} style={{flexDirection:"row", flexWrap:"wrap", paddingLeft:10}}>
-            <Text key="name"style={{fontFamily:Variables.fonts.WHB}}></Text>
-            <ComplexText key="text" fontSize={Variables.fontSize.normal} boldFirstWord={name+": "}>{text}</ComplexText>
-        </View>;
-    }
-
     ShowStratagems(stratagems:Array<Stratagem>) {
-        function getPhases(stratagem:Stratagem){
-            return stratagem.Phases.concat([stratagem.CP]);
-        }
         return <MasonryList style={{margin:6, flexGrow:0}} numColumns={2} data={stratagems} renderItem={(stratagem)=>
-            <View key={stratagem.i} style={{width:"100%", paddingLeft:40, paddingRight:16, paddingBottom:20, paddingTop:6}}>
-                <Text key="name" style={{width:"100%", borderBottomWidth:2, borderColor:this.context.Main, fontFamily:Variables.fonts.spaceMarine, padding:5, marginBottom:4}}>
-                    {// @ts-ignore
-                    stratagem.item.Name}
-                </Text>
-                {// @ts-ignore
-                stratagem.item.Flavor&&<Text key="flavor" style={{minHeight:30, fontFamily:Variables.fonts.WHI, padding:5, marginBottom:4, paddingLeft:20, fontSize:Variables.fontSize.small}}>— 
-                    {// @ts-ignore
-                    stratagem.item.Flavor}
-                </Text>}
-                {// @ts-ignore
-                        this.ShowStratagemSection("When", stratagem.item.When)}
-                {// @ts-ignore
-                        stratagem.item.Target&&this.ShowStratagemSection("Target", stratagem.item.Target)}
-                {// @ts-ignore
-                        this.ShowStratagemSection("Effect", stratagem.item.Effect)}
-                {// @ts-ignore
-                        stratagem.item.Restrictions&&this.ShowStratagemSection("Restrictions", stratagem.item.Restrictions)}
-                <View key="bar" style={{position:"absolute", height:"100%", backgroundColor:this.context.Main, top:10, width:15, left:15}}>
-                    {// @ts-ignore
-                        getPhases(stratagem.item).map((phase, index)=> {
-                            let content;
-                            const imageStyle={width:24, height:24, top:2+(30*index), left:-5};
-                            switch(phase) {
-                                case "Any":
-                                    content = <Image style={imageStyle} tintColor={this.context.Dark} source={require("../../assets/images/stratAny.png")}/>;
-                                    break;
-                                case "Command":
-                                    content = <Image style={imageStyle} tintColor={this.context.Dark} source={require("../../assets/images/stratCommand.png")}/>;
-                                    break;
-                                case "Movement":
-                                    content = <Image style={imageStyle} tintColor={this.context.Dark} source={require("../../assets/images/stratMovement.png")}/>;
-                                    break;
-                                case "Shooting":
-                                    content = <Image style={imageStyle} tintColor={this.context.Dark} source={require("../../assets/images/stratShooting.png")}/>;
-                                    break;
-                                case "Charge":
-                                    content = <Image style={imageStyle} tintColor={this.context.Dark} source={require("../../assets/images/stratCharge.png")}/>;
-                                    break;
-                                case "Fight":
-                                    content = <Image style={imageStyle} tintColor={this.context.Dark} source={require("../../assets/images/stratFight.png")} />;
-                                    break;
-                                default:
-                                    content=<Text key="value" style={{position:"absolute", width:40, left:-13, top:(8+ (30*index)), textAlign:"center"}}>{phase} CP</Text>
-                                    break;
-                            }
-                            return <View key={index}><Background key="bg" style={{position:"absolute", left:-18, top:(-10 + (30*index)), width:10}} scale={0.9} />{content}</View>;
-                            }
-
-                        )
-                    }
-                </View>
-            </View>}
+            // @ts-ignore
+            <StratagemDisplay Stratagem={stratagem.item} Index={stratagem.i}/>
+        }
         />
     }
 

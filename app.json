@@ -3,7 +3,7 @@
     "name": "BattleCards",
     "slug": "40kroster-new",
     "scheme": "BattleCards",
-    "version": "beta 2.5.4",
+    "version": "beta 2.6.0",
     "orientation": "landscape",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",

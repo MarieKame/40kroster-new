@@ -4,7 +4,7 @@ import Variables from "../Variables";
 import { FlatList, GestureHandlerRootView, PanGestureHandler, ScrollView } from "react-native-gesture-handler";
 import Text from '../Components/Text';
 import Button from "../Components/Button";
-import { LogicalModifier, Modifier, SelectionEntry, TargetSelectionData } from "./RosterSelectionData";
+import { LogicalModifier, SelectionEntry, TargetSelectionData } from "./RosterSelectionData";
 import Selection from "./UnitSelection";
 import Each from "../Components/Each";
 import ProfilesDisplay, { ProfilesDisplayData } from "./ProfilesDisplay";
@@ -15,8 +15,10 @@ import Info from "../Components/Info";
 import * as Clipboard from "expo-clipboard";
 import BuilderMenuBackend from "./BuilderMenuBackend";
 import DetachmentSelection from "./SpecificSelections/DetachmentSelection";
-import { RadioButton } from 'react-native-paper';
 import RadioButtonHack from "../Components/RadioButtonHack";
+import { Stratagem, fetchStratagemsFor } from "../RosterView/Stratagems";
+import MasonryList from '@react-native-seoul/masonry-list';
+import StratagemDisplay from "../Roster/StratagemDisplay";
 
 enum BuildPhase{
     FACTION, LOADING, LOADING_ERROR, ADD, EQUIP
@@ -40,6 +42,13 @@ export default class BuilderMenu extends BuilderMenuBackend {
                     <Text style={{justifyContent:"center", alignSelf:"center"}}>{selection.Name}</Text>
                 </View>
                 {selection.DetachmentProfiles.map(dp=><Text><Text style={{fontFamily:Variables.fonts.WHBI}}>{dp.Name} : </Text> {dp.Value}</Text>)}
+                <Button
+                    onPress={e=>{
+                        fetchStratagemsFor(this.state.factionName, selection.Name).then((strats:Stratagem[])=>{
+                            this.setState({previewStratagems:strats})
+                        });
+                    }}
+                >Preview Stratagems</Button>
             </View>
         } else if((selection.Parent.ID !== selection.Ancestor.ID && !/Enhancement/gi.test(selection.Parent.Name) && selection.Parent.Type !=="model") || !selection.Changeable()) {
             if(selection.Count===0) return;
@@ -594,6 +603,18 @@ export default class BuilderMenu extends BuilderMenuBackend {
                             </View>
                         )}
                     </ScrollView>
+                </View>
+            </View>
+        } else if (this.state.previewStratagems.length>0) {
+            overlay = 
+            <View style={{height:Variables.height, width:Variables.width, position:"absolute", backgroundColor:"rgba(0,0,0,0.6)", justifyContent: 'center', alignItems: 'center', zIndex:1000}}>
+                <View style={{backgroundColor:this.context.Bg, position:"absolute", padding:10, borderColor:this.context.Accent, borderWidth:1, borderRadius:Variables.boxBorderRadius, width:Variables.width*0.9, maxHeight:Variables.height*0.9}}>
+                    <Button onPress={e=>this.setState({previewStratagems:[]})}>X</Button>
+                    <MasonryList style={{margin:6, flexGrow:0}} numColumns={2} data={this.state.previewStratagems} renderItem={(stratagem)=>
+                        // @ts-ignore
+                        <StratagemDisplay Stratagem={stratagem.item} Index={stratagem.i}/>
+                    }
+                    />
                 </View>
             </View>
         }

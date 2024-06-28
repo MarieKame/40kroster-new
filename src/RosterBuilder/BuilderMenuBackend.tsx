@@ -13,6 +13,7 @@ import fastXMLParser from 'fast-xml-parser';
 import OptionSelection from "./SpecificSelections/OptionSelection";
 import axios from "axios";
 import DetachmentSelection from "./SpecificSelections/DetachmentSelection";
+import { fetchStratagemsFor } from "../RosterView/Stratagems";
 
 enum BuildPhase{
     FACTION, LOADING, LOADING_ERROR, ADD, EQUIP
@@ -56,7 +57,8 @@ export default class BuilderMenuBackend extends Component<props> {
         newUnit: new Animated.Value(0),
         catalogueNames: new Array<string>(),
         displayCatalogue: new Array<string>(),
-        nextNewUnitIndex:0
+        nextNewUnitIndex:0,
+        previewStratagems:[]
     }
 
     constructor(props) {
@@ -75,7 +77,6 @@ export default class BuilderMenuBackend extends Component<props> {
             this.state.progress= "0%";
             this.state.catalogueId= found.CatalogueID;
             this.state.factionName= found.Name;
-            this.state.detachmentSelection.SetValue(this.props.EditingRoster.Detachment);
             this.LoadRosterSelectionFile(found.Name, found.URL);
         } 
     }
@@ -160,7 +161,7 @@ export default class BuilderMenuBackend extends Component<props> {
                             else this.setState({equipedEnhancementIDs:eeIDs});
                             units.push(sel);
                         });
-                        //TODO: select detachment from editingroster data
+                        data.DetachmentChoice.SetValue(this.props.EditingRoster.Detachment);
                         that.setState({phase:BuildPhase.ADD, rosterSelectionData:data, progress:progress, detachmentSelection:data.DetachmentChoice, units:units, nextNewUnitIndex:index})
                     } else {
                         that.setState({phase:BuildPhase.ADD, rosterSelectionData:data, progress:progress, detachmentSelection:data.DetachmentChoice})

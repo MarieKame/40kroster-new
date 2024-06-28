@@ -1,3 +1,7 @@
+import { Platform } from "react-native";
+import Each from "../Components/Each";
+import axios from "axios";
+import * as FileSystem from 'expo-file-system';
 
 export interface Stratagem {
     Name: string;
@@ -8,6 +12,80 @@ export interface Stratagem {
     Effect: string;
     Restrictions?: string;
     Phases: Array<"Any" | "Command" | "Movement" | "Shooting" | "Charge" | "Fight" | number>;
+}
+
+export function StratagemsFromJson(parsedJson):Array<Stratagem> {
+    function getPhases(when:string): Array<"Any" | "Command" | "Movement" | "Shooting" | "Charge" | "Fight" | number> {
+        let phases = new Array<"Any" | "Command" | "Movement" | "Shooting" | "Charge" | "Fight" | number>();
+        Each<string>(when.split(" "), (word)=>{
+            const capitalized = word.substring(0, 1).toLocaleUpperCase() + word.substring(1).toLocaleLowerCase();
+            if (capitalized === "Any") phases.push(capitalized);
+            if (capitalized === "Command") phases.push(capitalized);
+            if (capitalized === "Movement") phases.push(capitalized);
+            if (capitalized === "Shooting") phases.push(capitalized);
+            if (capitalized === "Charge") phases.push(capitalized);
+            if (capitalized === "Fight") phases.push(capitalized);
+        });
+        return phases;
+    }
+    function fromParsed(name, item):Stratagem{
+        return {
+            Name: name,
+            CP: item["cost"],
+            Flavor: item["flavour"]??"",
+            When: item["when"],
+            Target: item["target"]??"",
+            Effect: item["effect"],
+            Restrictions: item["restrictions"]??"",
+            Phases: getPhases(item["when"])
+        }
+    }
+    let strats = new Array<Stratagem>();
+    for(const key in parsedJson) {
+        strats.push(fromParsed(key, parsedJson[key]));
+    }
+    return strats;
+}
+
+async function downloadFileThen(name:string, url:string, then:(contents)=>void) {
+    if(Platform.OS==="web") {
+        axios.get(url).then(async(res)=>{
+            then(res.data);
+        }).catch((error)=>{console.error(error);})
+    } else {
+        //TODO: add date to file, see if it already exists, and update only if too old (more than 1 day maybe even?)
+        const DR = FileSystem.createDownloadResumable(
+            url,
+            FileSystem.documentDirectory + name + ".json",
+            {},
+            ()=>{}
+        );
+        DR.downloadAsync().then((file)=>{
+            FileSystem.readAsStringAsync(file.uri).catch(()=>{
+            }).then((contents)=>{
+                if (contents) {
+                    then(contents);
+                } else {
+                }
+            });
+        });
+    }
+}
+
+export async function fetchStratagemsFor(faction:string, detachment:string = null):Promise<Stratagem[]>{
+    return new Promise<Stratagem[]>((resolve, reject)=>{
+        downloadFileThen("strats", "https://raw.githubusercontent.com/MarieKame/warhammer40k10th-stratagems/main/stratagems.json", (json)=>{
+            try {
+                resolve(StratagemsFromJson(json[faction][detachment]));
+            } catch(e){
+                try{
+                    resolve(StratagemsFromJson(JSON.parse(json)[faction][detachment]));
+                } catch(e) {
+                    resolve([]);
+                }
+            }
+        });
+    });
 }
 
 export const CORE_STRATAGEMS: Array<Stratagem> = [
