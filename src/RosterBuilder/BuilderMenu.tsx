@@ -144,6 +144,7 @@ export default class BuilderMenu extends BuilderMenuBackend {
                     child.IsHidden()||disabled));
                 skip = child.Count == 0;
             } else if(child.Type=="group"){
+                console.log(child);
                 value.push(this.DisplayGroup(
                     child, 
                     valid?colour:this.context.Main, 

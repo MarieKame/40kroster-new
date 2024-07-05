@@ -102,6 +102,9 @@ class Unit extends React.Component<Props> {
         }
         const selectedLeadersWeapons = selectedLeaders.map(sl=>ExtractWeaponData(sl.Weapons));
         const notes=this.props.Notes;
+        function DisplayLeaderAbility(abilityName:string) {
+            return !/.*(leader)|(invulnerable save)|(aura)|(damaged).*/gi.test(abilityName);
+        }
         return  <View style={[Style.unit, {backgroundColor:this.context.Bg, borderColor:this.context.Dark}]} key={this.props.data.Name()+this.props.data.Count}>
                     <View key="name" style={Style.nameView}>
                         <Text style={Style.name}>{((this.props.data.CustomName() !== null && this.props.data.CustomName() !== "")?this.props.data.CustomName():this.props.data.Name()) + ((this.props.data.Count>1)?" (x" + this.props.data.Count + ")":"")}</Text>
@@ -167,7 +170,7 @@ class Unit extends React.Component<Props> {
                         <View key="data" style={{flexDirection: 'row', flexWrap: 'wrap', width:"100%"}}>
                             {leaders.map((leader, index1) =>
                                 leader.Effects.map((effect, index2)=>
-                                    leader.CurrentlyLeading==this.props.data.Key()&&<View style={Style.rule} key={index1+index2+Name(leader)}>
+                                    (leader.CurrentlyLeading==this.props.data.Key() && DisplayLeaderAbility(effect.Name))&&<View style={Style.rule} key={index1+index2+Name(leader)}>
                                         <Text key="name" style={[Style.ruleTitle, {backgroundColor:this.context.LightAccent}]}>{effect.Name + " (" + leader.BaseName + ")"}</Text>
                                         <ComplexText key="desc" style={Style.more} fontSize={Variables.fontSize.small}>{effect.Value}</ComplexText>
                                     </View>    

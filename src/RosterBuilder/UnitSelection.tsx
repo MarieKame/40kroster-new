@@ -542,6 +542,9 @@ export default class Selection extends PrivateSelection {
                 otherSel.Name += " or " + data.Name;
             } else {
                 if(sel.Type==="group" || sel.Type=="unit" || sel.NoOptions() || count === 0){
+                    if(count===0 && sel.Type==="upgrade" && sel.Parent.min == 1 && sel.Parent.GetSelectionCount() == 0) {
+                        count=1;
+                    }
                     sel.Count=count;
                     if(sel.Parent.Type === "group" && !sel.Parent.Valid(count) || (/Enhancement/gi.test(sel.Parent.Name) && !isDefault)) {
                         sel.Count=0;
