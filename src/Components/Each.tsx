@@ -1,4 +1,4 @@
-function isIterable(obj) {
+export function isIterable(obj) {
     if (obj == null) {
       return false;
     }

@@ -1,4 +1,5 @@
 import RosterSelectionData, { Condition, Constraint, LogicalModifier, Modifier, ModifierType, ProfileData, SelectionData, SelectionEntry, TargetSelectionData } from './RosterSelectionData';
+import { isIterable } from '../Components/Each'; 
 import Each from '../Components/Each';
 import { DescriptorRaw, RuleDataRaw } from '../Roster/RosterRaw';
 import DetachmentSelection from './SpecificSelections/DetachmentSelection';
@@ -218,13 +219,19 @@ export default class RosterSelectionExtractor {
                 let selection = new SelectionEntry();
                 let costId;
                 if(entry.costs){
-                    selection.Cost = entry.costs.cost._value;
-                    costId = entry.costs.cost._typeId;
+                    if(isIterable(entry.costs.cost)) {
+                        selection.Cost = entry.costs.cost[0]._value;
+                        costId = entry.costs.cost[0]._typeId;
+                    } else {
+                        selection.Cost = entry.costs.cost._value;
+                        costId = entry.costs.cost._typeId;
+                    }
                 } else {
                     selection.Cost=0;
                 }
                 selection.Type = group?"group":entry._type;
                 selection.Name = entry._name;
+                if(selection.Name === "Morvenn Vahl") console.log(entry.costs);
                 selection.ID = entry._id;
                 selection.Hidden = entry.hidden?entry.hidden==="true":false;
                 if (entry._defaultSelectionEntryId) {
@@ -322,12 +329,12 @@ export default class RosterSelectionExtractor {
                                 } else if (modifier._field==="name") {
                                     selection.Name=modifier._value
                                 } else {
-                                    console.error(modifier)
                                     console.error("Modifier set with condition not found");
+                                    console.error(modifier);
                                 }
                             } else {
-                                console.error(modifier)
-                                console.error("moew modifier without condition");
+                                console.error("Modifier without condition");
+                                console.error(modifier);
                             }
                         }
                     });

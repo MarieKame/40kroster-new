@@ -3,10 +3,11 @@
     "name": "BattleCards",
     "slug": "40kroster-new",
     "scheme": "BattleCards",
-    "version": "beta 2.6.1",
+    "version": "beta 2.6.2",
     "orientation": "landscape",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
@@ -36,7 +37,7 @@
       }
     },
     "plugins": [
-      "expo-share-intent"
+      "expo-font"
     ]
   }
 }

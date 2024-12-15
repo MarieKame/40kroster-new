@@ -2,7 +2,6 @@ import React from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { ImageBackground, View } from 'react-native';
 import Menu from './src/Menu';
-import { useShareIntent } from "expo-share-intent";
 //const { hasShareIntent, shareIntent, resetShareIntent } = useShareIntent();
 
 export default function App() {
